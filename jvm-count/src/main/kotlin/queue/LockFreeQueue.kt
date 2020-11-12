@@ -38,10 +38,25 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
     }
 
     fun push(value: T) {
+        val beforeTimestamp = value.timestamp
         pushImpl(value, false)
+        val afterTimestamp = value.timestamp
+        require(beforeTimestamp == afterTimestamp)
     }
 
     fun pushAndAcquireTimestamp(value: T): Long {
         return pushImpl(value, true)
+    }
+
+    fun getMaxTimestamp(): Long {
+        while (true) {
+            val curTail = tail.get()
+            val nextTail = curTail.next.get()
+            if (nextTail == null) {
+                return curTail.data.timestamp
+            } else {
+                tail.compareAndSet(curTail, nextTail)
+            }
+        }
     }
 }

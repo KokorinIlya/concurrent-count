@@ -10,18 +10,22 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.jupiter.api.Test
-import java.util.ArrayDeque
+import kotlin.properties.Delegates
 
-data class Dummy(val value: Int) : TimestampedValue {
-    override var timestamp: Long = 1L
+data class Dummy(val value: Int, override var timestamp: Long = 0L) : TimestampedValue {
 }
 
 class LockFreeQueueTest : VerifierState() {
-    private val queue = LockFreeQueue(initValue = Dummy(0))
+    private val queue: LockFreeQueue<Dummy>
+
+    init {
+        val initValue = Dummy(0)
+        queue = LockFreeQueue(initValue = initValue)
+    }
 
     @Operation
     fun push(@Param(gen = IntGen::class) x: Int) {
-        queue.push(Dummy(x))
+        queue.pushAndAcquireTimestamp(Dummy(x))
     }
 
     @Operation

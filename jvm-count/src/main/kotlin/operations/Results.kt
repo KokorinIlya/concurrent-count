@@ -20,10 +20,22 @@ class SingleKeyOperationResult<R> : OperationResult<R>() {
 }
 
 class CountResult : OperationResult<Int>() {
+    // Let's pretend these data structures are lock-free
     private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
     private val answerNodes = ConcurrentHashMap<Long, Int>()
 
     override fun getResult(): Int? {
-        TODO("Not yet implemented")
+        val totalDeleteNodes = answerNodes.size
+        val totalInsertNodes = visitedNodes.size
+        assert(totalDeleteNodes <= totalInsertNodes)
+        return if (totalDeleteNodes == totalInsertNodes) { // There are no more active descriptors
+            /*
+            Traversing hash map is safe, since new descriptors cannot be added to the map
+            (since there are no active descriptors)
+             */
+            answerNodes.values.sum()
+        } else {
+            null
+        }
     }
 }

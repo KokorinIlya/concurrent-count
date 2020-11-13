@@ -1,7 +1,6 @@
 package operations
 
 import common.TimestampedValue
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.properties.Delegates
 
 sealed class Descriptor<T> : TimestampedValue {

@@ -59,4 +59,28 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
             }
         }
     }
+
+    fun pop(): T? {
+        while (true) {
+            val curTail = tail.get()
+            val curHead = head.get()
+            val nextHead = curHead.next.get()
+            if (curHead == curTail) {
+                if (nextHead == null) {
+                    return null
+                } else {
+                    tail.compareAndSet(curTail, nextHead)
+                }
+            } else {
+                if (nextHead == null) {
+                    throw IllegalStateException("Program is ill-formed")
+                } else {
+                    val result = nextHead.data
+                    if (head.compareAndSet(curHead, nextHead)) {
+                        return result
+                    }
+                }
+            }
+        }
+    }
 }

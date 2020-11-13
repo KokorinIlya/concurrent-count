@@ -16,20 +16,6 @@ data class Dummy(val value: Int) : TimestampedValue {
     override var timestamp: Long = 1L
 }
 
-class SequentialQueue : VerifierState() {
-    private val q = ArrayDeque<Int>()
-
-    fun push(x: Int) {
-        q.add(x)
-    }
-
-    fun pop(): Int? {
-        return q.poll()
-    }
-
-    override fun extractState() = 1
-}
-
 class LockFreeQueueTest : VerifierState() {
     private val queue = LockFreeQueue(initValue = Dummy(0))
 
@@ -48,8 +34,7 @@ class LockFreeQueueTest : VerifierState() {
         .threads(3)
         .actorsPerThread(3)
         .verifier(LinearizabilityVerifier::class.java)
-        .sequentialSpecification(SequentialQueue::class.java)
         .check(this::class)
 
-    override fun extractState() = 1
+    override fun extractState() = queue.elements()
 }

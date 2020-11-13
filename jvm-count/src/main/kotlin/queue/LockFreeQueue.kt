@@ -84,4 +84,16 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
         }
     }
 
+    fun elements(): List<T> {
+        /*
+        Only for testing purposes!
+         */
+        val result = mutableListOf<T>()
+        var curNode = head.get().next.get()
+        while (curNode != null) {
+            result.add(curNode.data)
+            curNode = curNode.next.get()
+        }
+        return result.toList()
+    }
 }

@@ -14,15 +14,37 @@ class SingleKeyOperationResult<R> : OperationResult<R>() {
 
     override fun getResult(): R? = result.get()
 
-    fun trySetResult(res: R): Boolean {
-        return result.compareAndSet(null, res)
+    fun trySetResult(res: R) {
+        val setResult = result.compareAndSet(null, res)
+        /*
+        All operations are deterministic, cannot have different results for the same operation
+         */
+        assert(setResult || result.get() == res)
     }
 }
 
 class CountResult : OperationResult<Int>() {
-    // Let's pretend these data structures are lock-free
+    /*
+    Let's pretend these data structures are lock-free.
+    If you want real lock-freedom, AtomicReference<PersistentTreeMap> can be used.
+    AtomicReference<Pair<PersistentTreeSet, PersistentTreeMap>> can be used to update both
+    set and map atomically.
+    Here we use blocking data structures for performance reasons.
+     */
     private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
     private val answerNodes = ConcurrentHashMap<Long, Int>()
+
+    fun visitNewNode(nodeId: Long) {
+        visitedNodes.add(nodeId)
+    }
+
+    fun removeFromNode(nodeId: Long, nodeAnswer: Int) {
+        val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)
+        /*
+        All operations are deterministic, different answers cannot be calculated for the same node
+         */
+        assert(result == null || result == nodeAnswer)
+    }
 
     override fun getResult(): Int? {
         val totalDeleteNodes = answerNodes.size

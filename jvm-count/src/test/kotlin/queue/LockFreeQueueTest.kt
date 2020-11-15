@@ -12,7 +12,12 @@ import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVe
 import org.junit.jupiter.api.Test
 import kotlin.properties.Delegates
 
-data class Dummy(val value: Int, override var timestamp: Long = 0L) : TimestampedValue {
+data class Dummy(val value: Int) : TimestampedValue {
+    override var timestamp by Delegates.notNull<Long>()
+
+    override fun toString(): String {
+        return "{value=$value, timestamp=$timestamp}"
+    }
 }
 
 class LockFreeQueueTest : VerifierState() {
@@ -20,6 +25,7 @@ class LockFreeQueueTest : VerifierState() {
 
     init {
         val initValue = Dummy(0)
+        initValue.timestamp = 0L
         queue = LockFreeQueue(initValue = initValue)
     }
 

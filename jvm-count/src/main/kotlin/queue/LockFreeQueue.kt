@@ -78,14 +78,6 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
             val curHead = head.get()
             val nextHead = curHead.next.get()
 
-            if (nextHead === curTail) {
-                val nextTail = curTail.next.get()
-                if (nextTail != null) {
-                    tail.compareAndSet(curTail, nextTail)
-                    continue
-                }
-            }
-
             if (curHead === curTail) {
                 if (nextHead === null) {
                     return null

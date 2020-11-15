@@ -3,6 +3,10 @@ package queue
 import common.TimestampedValue
 import java.util.concurrent.atomic.AtomicReference
 
+/*
+TODO: use different queues for root and non-root nodes. Queue in root nodes push provide only push operation,
+while queue in root node should provide only pushAndAcquireTimestamp operation. THey both should extend BaseQueue
+ */
 class LockFreeQueue<T : TimestampedValue>(initValue: T) {
     private val head: AtomicReference<Node<T>>
     private val tail: AtomicReference<Node<T>>
@@ -18,31 +22,24 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
 
         while (true) {
             val curTail = tail.get()
-            val maxTimestamp = curTail.data.timestamp
-            val newTimestamp = maxTimestamp + 1
-            if (timestampSetRequired) {
+
+            val result = if (timestampSetRequired) {
+                val maxTimestamp = curTail.data.timestamp
+                val newTimestamp = maxTimestamp + 1
                 value.timestamp = newTimestamp
+                newTimestamp
+            } else {
+                -1L
             }
+
             if (curTail.next.compareAndSet(null, newTail)) {
-
-                if (newTail.data.timestamp < curTail.data.timestamp) {
-                    println("PUSH CAS: $newTail; $curTail")
-                    throw IllegalStateException()
-                }
-
                 tail.compareAndSet(curTail, newTail)
-                return newTimestamp
+                return result
             } else {
                 val otherThreadTail = curTail.next.get()
                 if (otherThreadTail === null) {
                     throw IllegalStateException("Program is ill-formed")
                 } else {
-
-                    if (otherThreadTail.data.timestamp < curTail.data.timestamp) {
-                        println("PUSH HELP: $otherThreadTail; $curTail")
-                        throw IllegalStateException()
-                    }
-
                     tail.compareAndSet(curTail, otherThreadTail)
                 }
             }
@@ -53,7 +50,7 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
         val beforeTimestamp = value.timestamp
         pushImpl(value, false)
         val afterTimestamp = value.timestamp
-        require(beforeTimestamp == afterTimestamp)
+        assert(beforeTimestamp == afterTimestamp)
     }
 
     fun pushAndAcquireTimestamp(value: T): Long {
@@ -61,6 +58,7 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
     }
 
     fun getMaxTimestamp(): Long {
+        // TODO: can we make it wait-free, by reading only tail.get().data.timestamp?
         while (true) {
             val curTail = tail.get()
             val nextTail = curTail.next.get()
@@ -76,25 +74,24 @@ class LockFreeQueue<T : TimestampedValue>(initValue: T) {
         while (true) {
             val curTail = tail.get()
             val curHead = head.get()
+
+            assert(curTail.data.timestamp >= curHead.data.timestamp)
+
             val nextHead = curHead.next.get()
 
             if (curHead === curTail) {
+                assert(curTail.data.timestamp == curHead.data.timestamp)
+
                 if (nextHead === null) {
                     return null
                 } else {
+                    assert(nextHead === curTail.next.get())
                     tail.compareAndSet(curTail, nextHead)
                 }
             } else {
                 if (nextHead === null) {
-                    println("MAIN HEAD=$curHead; TAIL=$curTail")
                     throw IllegalStateException("Program is ill-formed")
                 } else {
-
-                    if (nextHead.data.timestamp > curTail.data.timestamp) {
-                        println("OTHER NEXT_HEAD=$nextHead; TAIL=$curTail")
-                        throw IllegalStateException("Program is ill-formed")
-                    }
-
                     val result = nextHead.data
                     if (head.compareAndSet(curHead, nextHead)) {
                         return result

@@ -15,8 +15,8 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
 
     fun pop(): T? {
         while (true) {
-            val curTail = tail.get()
             val curHead = head.get()
+            val curTail = tail.get()
 
             assert(curTail.data.timestamp >= curHead.data.timestamp)
 

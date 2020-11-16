@@ -10,7 +10,27 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.jupiter.api.Test
-import java.util.concurrent.atomic.AtomicLong
+import java.util.ArrayDeque
+
+class SequentialNonRootQueue : VerifierState() {
+    private var maxTimestamp = 0L
+    private val deque = ArrayDeque<NonRootLockFreeQueueTest.Companion.Dummy>()
+
+    fun push(x: Int, ts: Long) {
+        if (maxTimestamp >= ts) {
+            return
+        }
+        val element = NonRootLockFreeQueueTest.Companion.Dummy(x, ts)
+        maxTimestamp = ts
+        deque.addLast(element)
+    }
+
+    fun pop(): Int? {
+        return deque.pollFirst()?.value
+    }
+
+    override fun extractState() = deque.asIterable().toList()
+}
 
 class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
     companion object {
@@ -48,6 +68,7 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
         .threads(3)
         .actorsPerThread(4)
         .verifier(LinearizabilityVerifier::class.java)
+        .sequentialSpecification(SequentialNonRootQueue::class.java)
         .check(this::class)
 
     override fun extractState() = queue.elements()

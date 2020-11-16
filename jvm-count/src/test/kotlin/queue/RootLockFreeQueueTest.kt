@@ -9,7 +9,26 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.jupiter.api.Test
+import java.util.ArrayDeque
 import kotlin.properties.Delegates
+
+class SequentialRootQueue : VerifierState() {
+    private var maxTimestamp = 0L
+    private val deque = ArrayDeque<RootLockFreeQueueTest.Companion.Dummy>()
+
+    fun pushAndAcquireTimestamp(x: Int) {
+        val element = RootLockFreeQueueTest.Companion.Dummy(x)
+        val newTimestamp = ++maxTimestamp
+        element.timestamp = newTimestamp
+        deque.addLast(element)
+    }
+
+    fun pop(): Int? {
+        return deque.pollFirst()?.value
+    }
+
+    override fun extractState() = deque.asIterable().toList()
+}
 
 class RootLockFreeQueueTest : VerifierState() {
     companion object {
@@ -42,6 +61,7 @@ class RootLockFreeQueueTest : VerifierState() {
         .threads(3)
         .actorsPerThread(4)
         .verifier(LinearizabilityVerifier::class.java)
+        .sequentialSpecification(SequentialRootQueue::class.java)
         .check(this::class)
 
     override fun extractState() = queue.elements()

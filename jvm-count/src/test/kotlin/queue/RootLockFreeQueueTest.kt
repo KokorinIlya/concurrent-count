@@ -29,7 +29,7 @@ class RootLockFreeQueueTest : VerifierState() {
     }
 
     @Operation
-    fun push(@Param(gen = IntGen::class) x: Int) {
+    fun pushAndAcquireTimestamp(@Param(gen = IntGen::class, conf = "-100:100") x: Int) {
         queue.pushAndAcquireTimestamp(Dummy(x))
     }
 

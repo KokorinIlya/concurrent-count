@@ -27,7 +27,7 @@ class SequentialRootQueue : VerifierState() {
         return deque.pollFirst()?.value
     }
 
-    override fun extractState() = deque.asIterable().toList()
+    override fun extractState() = deque.asIterable().toList().map { it.value }
 }
 
 class RootLockFreeQueueTest : VerifierState() {
@@ -64,5 +64,5 @@ class RootLockFreeQueueTest : VerifierState() {
         .sequentialSpecification(SequentialRootQueue::class.java)
         .check(this::class)
 
-    override fun extractState() = queue.elements()
+    override fun extractState() = queue.elements().map { it.value }
 }

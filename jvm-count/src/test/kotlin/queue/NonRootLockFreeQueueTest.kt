@@ -29,7 +29,7 @@ class SequentialNonRootQueue : VerifierState() {
         return deque.pollFirst()?.value
     }
 
-    override fun extractState() = deque.asIterable().toList()
+    override fun extractState() = deque.asIterable().toList().map { it.value }
 }
 
 class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
@@ -46,7 +46,7 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
     private val queue: NonRootLockFreeQueue<Dummy>
 
     init {
-        val initValue = Dummy(0, 0)
+        val initValue = Dummy(0, 0L)
         queue = NonRootLockFreeQueue(initValue = initValue)
     }
 
@@ -71,5 +71,5 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
         .sequentialSpecification(SequentialNonRootQueue::class.java)
         .check(this::class)
 
-    override fun extractState() = queue.elements()
+    override fun extractState() = queue.elements().map { it.value }
 }

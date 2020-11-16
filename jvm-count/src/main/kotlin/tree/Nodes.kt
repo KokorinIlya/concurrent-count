@@ -1,7 +1,8 @@
 package tree
 
 import operations.Descriptor
-import queue.LockFreeQueue
+import queue.NonRootLockFreeQueue
+import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -12,7 +13,7 @@ interface NodeWithId<T> {
 }
 
 data class RootNode<T>(
-    val queue: LockFreeQueue<Descriptor<T>>, // TODO: RootQueue
+    val queue: RootLockFreeQueue<Descriptor<T>>,
     val root: AtomicReference<Node<T>?>,
     override val id: Long
 ) : Node<T>(), NodeWithId<T>
@@ -31,7 +32,7 @@ data class InnerNodeParams<T>(
 )
 
 data class InnerNode<T>(
-    val queue: LockFreeQueue<Descriptor<T>>, // TODO: NonRootQueue
+    val queue: NonRootLockFreeQueue<Descriptor<T>>,
     val left: AtomicReference<TreeNode<T>>, val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<InnerNodeParams<T>>,
     val rightSubtreeMin: T, override val id: Long

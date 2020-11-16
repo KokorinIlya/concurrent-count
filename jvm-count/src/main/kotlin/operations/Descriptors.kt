@@ -3,11 +3,11 @@ package operations
 import common.TimestampedValue
 import kotlin.properties.Delegates
 
-sealed class Descriptor<T> : TimestampedValue {
+sealed class Descriptor<out T> : TimestampedValue {
     override var timestamp by Delegates.notNull<Long>()
 }
 
-data class InsertDescriptor<T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
+data class InsertDescriptor<out T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
     companion object {
         fun <T> new(key: T): InsertDescriptor<T> {
             return InsertDescriptor(key, SingleKeyOperationResult())
@@ -15,7 +15,7 @@ data class InsertDescriptor<T>(val key: T, val result: SingleKeyOperationResult<
     }
 }
 
-data class DeleteDescriptor<T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
+data class DeleteDescriptor<out T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
     companion object {
         fun <T> new(key: T): DeleteDescriptor<T> {
             return DeleteDescriptor(key, SingleKeyOperationResult())
@@ -23,7 +23,7 @@ data class DeleteDescriptor<T>(val key: T, val result: SingleKeyOperationResult<
     }
 }
 
-data class ExistsDescriptor<T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
+data class ExistsDescriptor<out T>(val key: T, val result: SingleKeyOperationResult<Boolean>) : Descriptor<T>() {
     companion object {
         fun <T> new(key: T): ExistsDescriptor<T> {
             return ExistsDescriptor(key, SingleKeyOperationResult())
@@ -31,7 +31,7 @@ data class ExistsDescriptor<T>(val key: T, val result: SingleKeyOperationResult<
     }
 }
 
-data class CountDescriptor<T>(
+data class CountDescriptor<out T>(
     val leftBorder: T, val rightBorder: T,
     val result: CountResult
 ) : Descriptor<T>() {
@@ -40,4 +40,12 @@ data class CountDescriptor<T>(
             return CountDescriptor(leftBorder, rightBorder, CountResult())
         }
     }
+}
+
+object DummyDescriptor : Descriptor<Nothing>() {
+    override var timestamp: Long
+        get() = 0L
+        set(_) {
+            throw UnsupportedOperationException("Cannot change timestamp of dummy descriptor")
+        }
 }

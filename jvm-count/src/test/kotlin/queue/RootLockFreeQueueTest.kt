@@ -1,7 +1,6 @@
 package queue
 
 import common.TimestampedValue
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -20,13 +19,13 @@ data class Dummy(val value: Int) : TimestampedValue {
     }
 }
 
-class LockFreeQueueTest : VerifierState() {
-    private val queue: LockFreeQueue<Dummy>
+class RootLockFreeQueueTest : VerifierState() {
+    private val queue: RootLockFreeQueue<Dummy>
 
     init {
         val initValue = Dummy(0)
         initValue.timestamp = 0L
-        queue = LockFreeQueue(initValue = initValue)
+        queue = RootLockFreeQueue(initValue = initValue)
     }
 
     @Operation

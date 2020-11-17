@@ -14,28 +14,33 @@ interface NodeWithId<T> {
 
 data class RootNode<T>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
-    val root: AtomicReference<Node<T>?>,
+    val root: AtomicReference<NonRootNode<T>?>,
     override val id: Long
 ) : Node<T>(), NodeWithId<T>
 
-abstract class TreeNode<T> : Node<T>()
+abstract class NonRootNode<T> : Node<T>()
+
+abstract class TreeNode<T> : NonRootNode<T>()
 
 data class LeafNode<T>(
     val key: T,
-    val tombstone: AtomicBoolean, override val id: Long
+    val tombstone: AtomicBoolean,
+    override val id: Long
 ) : TreeNode<T>(), NodeWithId<T>
-
-data class InnerNodeParams<T>(
-    val minKey: T, val maxKey: T,
-    val subtreeSize: Int, val lastModificationTimestamp: Long,
-    val modificationsCount: Int
-)
 
 data class InnerNode<T>(
     val queue: NonRootLockFreeQueue<Descriptor<T>>,
     val left: AtomicReference<TreeNode<T>>, val right: AtomicReference<TreeNode<T>>,
-    val nodeParams: AtomicReference<InnerNodeParams<T>>,
+    val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T, override val id: Long
-) : TreeNode<T>(), NodeWithId<T>
+) : TreeNode<T>(), NodeWithId<T> {
+    companion object {
+        data class Params<T>(
+            val minKey: T, val maxKey: T,
+            val subtreeSize: Int, val lastModificationTimestamp: Long,
+            val modificationsCount: Int
+        )
+    }
+}
 
-data class RebuildNode<T>(val node: InnerNode<T>) : TreeNode<T>()
+data class RebuildNode<T>(val node: InnerNode<T>) : NonRootNode<T>()

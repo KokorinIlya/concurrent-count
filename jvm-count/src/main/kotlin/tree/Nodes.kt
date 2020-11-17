@@ -44,7 +44,11 @@ data class RootNode<T : Comparable<T>>(
                 The answer isn't needed anymore, since somebody else either moved the descriptor
                 downwards or removed it from the tree.
                 This optimization guarantees, that at each node the thread will traverse only
-                finite number of queue nodes
+                finite number of queue nodes.
+                Note, that if the descriptor has been moved, either the answer is known, or we can find the
+                descriptor, following routing information from the inner nodes
+                (because none of the nodes on correct path has been rebuilt, otherwise, te answer would have been
+                known, since subtree rebuilding can be done only after all the operations in the subtree are finished).
                  */
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }

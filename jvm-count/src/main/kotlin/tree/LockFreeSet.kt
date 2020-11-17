@@ -5,20 +5,29 @@ import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
-class LockFreeSet<T> {
+class LockFreeSet<T : Comparable<T>> {
     private val curId = AtomicLong(0L)
 
     private fun allocateNodeId(): Long = curId.getAndIncrement()
 
     private val root = RootNode<T>(
         queue = RootLockFreeQueue(initValue = DummyDescriptor),
-        root = AtomicReference(null),
+        root = AtomicReference(EmptySubtreeNode()),
         id = allocateNodeId()
     )
 
     private fun checkExistence(descriptor: SingleKeyOperationDescriptor<T>): Boolean {
         assert(root.queue.getHead().data.timestamp >= descriptor.timestamp)
-        TODO()
+        var curNodeRef = root.root
+
+        while (true) {
+            when (val curNode = curNodeRef.get()) {
+                is EmptySubtreeNode -> return false
+                is InnerNode -> curNodeRef = curNode.route(descriptor.key)
+                is RebuildNode -> curNode.rebuild(curNodeRef = curNodeRef)
+                is LeafNode -> return curNode.key == descriptor.key
+            }
+        }
     }
 
     fun insert(x: T): Boolean {

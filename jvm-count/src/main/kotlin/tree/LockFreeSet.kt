@@ -16,7 +16,7 @@ class LockFreeSet<T : Comparable<T>> {
         id = allocateNodeId()
     )
 
-    private fun checkExistence(descriptor: SingleKeyOperationDescriptor<T>): Boolean {
+    private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean {
         assert(root.queue.getHead().data.timestamp >= descriptor.timestamp)
         var curNodeRef = root.root
 
@@ -48,8 +48,9 @@ class LockFreeSet<T : Comparable<T>> {
         TODO()
     }
 
-    fun count(left: T, right: T): Boolean {
+    fun count(left: T, right: T): Int {
         val descriptor = CountDescriptor.new(left, right)
+        descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }

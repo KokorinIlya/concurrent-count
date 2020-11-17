@@ -15,7 +15,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
 
     fun getHead(): Node<T> = head.get()
 
-    fun pop(): T? {
+    fun pop(): T? { // TODO: use peek + popIf instead
         while (true) {
             val curHead = head.get()
             val curTail = tail.get()

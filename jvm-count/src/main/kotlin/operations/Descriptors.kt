@@ -7,15 +7,17 @@ sealed class Descriptor<out T> : TimestampedValue {
     override var timestamp by Delegates.notNull<Long>()
 }
 
-abstract class SingleKeyOperationDescriptor<out T> : Descriptor<T>() {
+abstract class SingleKeyOperationDescriptor<out T, R> : Descriptor<T>() {
     abstract val key: T
-    abstract val result: SingleKeyOperationResult<Boolean>
+    abstract val result: SingleKeyOperationResult<R>
 }
+
+abstract class SingleKeyWriteOperationDescriptor<out T, R> : SingleKeyOperationDescriptor<T, R>()
 
 data class InsertDescriptor<out T>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyOperationDescriptor<T>() {
+) : SingleKeyWriteOperationDescriptor<T, Boolean>() {
     companion object {
         fun <T> new(key: T): InsertDescriptor<T> {
             return InsertDescriptor(key, SingleKeyOperationResult())
@@ -26,7 +28,7 @@ data class InsertDescriptor<out T>(
 data class DeleteDescriptor<out T>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyOperationDescriptor<T>() {
+) : SingleKeyWriteOperationDescriptor<T, Boolean>() {
     companion object {
         fun <T> new(key: T): DeleteDescriptor<T> {
             return DeleteDescriptor(key, SingleKeyOperationResult())
@@ -37,7 +39,7 @@ data class DeleteDescriptor<out T>(
 data class ExistsDescriptor<out T>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyOperationDescriptor<T>() {
+) : SingleKeyOperationDescriptor<T, Boolean>() {
     companion object {
         fun <T> new(key: T): ExistsDescriptor<T> {
             return ExistsDescriptor(key, SingleKeyOperationResult())

@@ -34,11 +34,11 @@ class CountResult : OperationResult<Int>() {
     private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
     private val answerNodes = ConcurrentHashMap<Long, Int>()
 
-    fun visitNewNode(nodeId: Long) {
+    fun preVisitNode(nodeId: Long) {
         visitedNodes.add(nodeId)
     }
 
-    fun removeFromNode(nodeId: Long, nodeAnswer: Int) {
+    fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
         val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)
         /*
         All operations are deterministic, different answers cannot be calculated for the same node

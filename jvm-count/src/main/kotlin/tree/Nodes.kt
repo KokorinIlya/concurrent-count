@@ -166,7 +166,7 @@ data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>(
     fun rebuild(curNodeRef: AtomicReference<TreeNode<T>?>) {
         if (curNodeRef.get() != this) {
             /*
-            Needed for optimization, to reduce time, spent on unnecessary operations
+            Needed for optimization, to reduce amount of time, spent on unnecessary operations
              */
             return
         }

@@ -16,14 +16,49 @@ class LockFreeSet<T : Comparable<T>> {
         id = allocateNodeId()
     )
 
-    private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean {
-        assert(root.queue.getHead().data.timestamp >= descriptor.timestamp)
+    /*
+    TODO: exist query can be executed with traversing tree + queues, instead
+     */
+    // TODO: move this logic to RootNode class
+    private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean? {
+        // TODO: assert(root.queue.peek().timestamp? == null OR >= descriptor.timestamp)
         var curNodeRef = root.root
 
         while (true) {
             val curNode = curNodeRef.get() ?: return false
             when (curNode) {
-                is InnerNode -> curNodeRef = curNode.route(descriptor.key)
+                is InnerNode -> {
+                    var curQueueNode = curNode.queue.getHead()
+                    while (curQueueNode != null) {
+                        val curDescriptor = curQueueNode.data
+
+                        if (curDescriptor.timestamp >= descriptor.timestamp) {
+                            /*
+                            The answer isn't needed anymore, since somebody else moved the descriptor
+                            This optimization guarantees, that at each node the thread will traverse only
+                            finite number of queue nodes
+                             */
+                            return null
+                        }
+
+                        when (curDescriptor) {
+                            is InsertDescriptor -> {
+                                if (curDescriptor.key == descriptor.key) {
+                                    return true
+                                }
+                            }
+                            is DeleteDescriptor -> {
+                                if (curDescriptor.key == descriptor.key) {
+                                    return false
+                                }
+                            }
+                            else -> {
+                            }
+                        }
+                        curQueueNode = curQueueNode.next.get()
+                    }
+                    curNodeRef = curNode.route(descriptor.key)
+                }
                 is RebuildNode -> curNode.rebuild(curNodeRef = curNodeRef)
                 is LeafNode -> return curNode.key == descriptor.key
             }

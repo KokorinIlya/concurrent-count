@@ -13,7 +13,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
         head = AtomicReference(dummyNode)
     }
 
-    fun getHead(): Node<T> = head.get()
+    fun getHead(): Node<T>? = head.get().next.get()
 
     fun pop(): T? { // TODO: use peek + popIf instead
         while (true) {

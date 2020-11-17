@@ -110,7 +110,11 @@ abstract class TreeNode<T : Comparable<T>> : Node<T>()
 TODO: should we consider storing last update timestamp in each node (including leaf and null ones)
 to prevent stalled delete and update operations from updating such nodes?
 Maybe, we should store timestamp in each AtomicReference, i.e. store a
-AtomicReference<Pair<Timestamp, Node>>
+AtomicReference<Pair<Timestamp, Node>>.
+As I can see now, the best decision is to have EmptyNode class instead of using nulls.
+After that, both EmptyNode and LeafNode should be augmented with last modification timestamp
+(InnerNode is already augmented with modification timestamp, RootNode never changes and RebuildNode doesn't
+store any data)
  */
 data class LeafNode<T : Comparable<T>>(
     val key: T,
@@ -139,8 +143,13 @@ data class InnerNode<T : Comparable<T>>(
             right
         }
     }
-}
+    }
 
+/*
+TODO: add timestamp of operation, which triggered rebuild procedure.
+This should be done in order to augment each node in new subtree with such timestamp.
+(Since such timestamp is the time of the last modification of each node in the new subtree).
+ */
 data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>() {
     private fun finishOperationsInSubtree(root: InnerNode<T>) {
         TODO()

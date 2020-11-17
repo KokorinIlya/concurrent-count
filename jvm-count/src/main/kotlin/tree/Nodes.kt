@@ -1,6 +1,9 @@
 package tree
 
+import operations.DeleteDescriptor
 import operations.Descriptor
+import operations.InsertDescriptor
+import operations.SingleKeyWriteOperationDescriptor
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -18,7 +21,84 @@ data class RootNode<T : Comparable<T>>(
      */
     val root: AtomicReference<TreeNode<T>?>,
     override val id: Long
-) : Node<T>(), NodeWithId<T>
+) : Node<T>(), NodeWithId<T> {
+    companion object {
+        private enum class QueueTraverseResult {
+            KEY_EXISTS,
+            KEY_NOT_EXISTS,
+            UNABLE_TO_LEARN,
+            ANSWER_NOT_NEEDED
+        }
+    }
+
+    private fun <R> traverseQueue(
+        queue: NonRootLockFreeQueue<Descriptor<T>>,
+        descriptor: SingleKeyWriteOperationDescriptor<T, R>
+    ): QueueTraverseResult {
+        var curQueueNode = queue.getHead()
+        while (curQueueNode != null) {
+            val curDescriptor = curQueueNode.data
+
+            if (curDescriptor.timestamp >= descriptor.timestamp) {
+                /*
+                The answer isn't needed anymore, since somebody else either moved the descriptor
+                downwards or removed it from the tree.
+                This optimization guarantees, that at each node the thread will traverse only
+                finite number of queue nodes
+                 */
+                return QueueTraverseResult.ANSWER_NOT_NEEDED
+            }
+
+            when (curDescriptor) {
+                is InsertDescriptor -> {
+                    if (curDescriptor.key == descriptor.key) {
+                        return QueueTraverseResult.KEY_EXISTS
+                    }
+                }
+                is DeleteDescriptor -> {
+                    if (curDescriptor.key == descriptor.key) {
+                        return QueueTraverseResult.KEY_NOT_EXISTS
+                    }
+                }
+                else -> {
+                }
+            }
+            curQueueNode = curQueueNode.next.get()
+        }
+        return QueueTraverseResult.UNABLE_TO_LEARN
+    }
+
+    /*
+    TODO: Note, that exist query can be executed with traversing tree + queues, instead
+     */
+    private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean? {
+        // TODO: assert(queue.peek().timestamp? == null OR >= descriptor.timestamp)
+        var curNodeRef = root
+
+        while (true) {
+            val curNode = curNodeRef.get() ?: return false
+            when (curNode) {
+                is InnerNode -> {
+                    when (traverseQueue(curNode.queue, descriptor)) {
+                        QueueTraverseResult.KEY_EXISTS -> return true
+                        QueueTraverseResult.KEY_NOT_EXISTS -> return false
+                        QueueTraverseResult.ANSWER_NOT_NEEDED -> return null
+                        QueueTraverseResult.UNABLE_TO_LEARN -> {
+                            curNodeRef = curNode.route(descriptor.key)
+                        }
+                    }
+                }
+                is RebuildNode -> {
+                    curNode.rebuild(curNodeRef = curNodeRef)
+                    assert(curNodeRef.get() != curNode)
+                }
+                is LeafNode -> {
+                    return curNode.key == descriptor.key
+                }
+            }
+        }
+    }
+}
 
 abstract class TreeNode<T : Comparable<T>> : Node<T>()
 
@@ -61,7 +141,19 @@ data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>(
     }
 
     fun rebuild(curNodeRef: AtomicReference<TreeNode<T>?>) {
+        if (curNodeRef.get() != this) {
+            /*
+            Needed for optimization, to reduce time, spent on unnecessary operations
+             */
+            return
+        }
         finishOperationsInSubtree(root = node)
+        if (curNodeRef.get() != this) {
+            /*
+            The same reason, as above
+             */
+            return
+        }
         val newNode = buildNewNode()
         curNodeRef.compareAndSet(this, newNode)
     }

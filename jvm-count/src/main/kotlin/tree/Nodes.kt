@@ -98,10 +98,20 @@ data class RootNode<T : Comparable<T>>(
             }
         }
     }
+
+    fun executeUntilTimestamp(timestamp: Long): Boolean {
+        TODO()
+    }
 }
 
 abstract class TreeNode<T : Comparable<T>> : Node<T>()
 
+/*
+TODO: should we consider storing last update timestamp in each node (including leaf and null ones)
+to prevent stalled delete and update operations from updating such nodes?
+Maybe, we should store timestamp in each AtomicReference, i.e. store a
+AtomicReference<Pair<Timestamp, Node>>
+ */
 data class LeafNode<T : Comparable<T>>(
     val key: T,
     override val id: Long

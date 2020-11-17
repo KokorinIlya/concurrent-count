@@ -13,6 +13,8 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
         head = AtomicReference(dummyNode)
     }
 
+    fun getHead(): Node<T> = head.get()
+
     fun pop(): T? {
         while (true) {
             val curHead = head.get()

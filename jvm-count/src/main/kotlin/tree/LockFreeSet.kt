@@ -16,30 +16,31 @@ class LockFreeSet<T> {
         id = allocateNodeId()
     )
 
+    private fun checkExistence(descriptor: SingleKeyOperationDescriptor<T>): Boolean {
+        assert(root.queue.getHead().data.timestamp >= descriptor.timestamp)
+        TODO()
+    }
+
     fun insert(x: T): Boolean {
-        val result = SingleKeyOperationResult<Boolean>()
-        val descriptor = InsertDescriptor(key = x, result = result)
+        val descriptor = InsertDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }
 
     fun delete(x: T): Boolean {
-        val result = SingleKeyOperationResult<Boolean>()
-        val descriptor = DeleteDescriptor(key = x, result = result)
+        val descriptor = DeleteDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }
 
     fun exists(x: T): Boolean {
-        val result = SingleKeyOperationResult<Boolean>()
-        val descriptor = ExistsDescriptor(key = x, result = result)
+        val descriptor = ExistsDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }
 
     fun count(left: T, right: T): Boolean {
-        val result = CountResult()
-        val descriptor = CountDescriptor(leftBorder = left, rightBorder = right, result = result)
+        val descriptor = CountDescriptor.new(left, right)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }

@@ -14,13 +14,11 @@ interface NodeWithId<T> {
 
 data class RootNode<T>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
-    val root: AtomicReference<NonRootNode<T>?>,
+    val root: AtomicReference<TreeNode<T>?>,
     override val id: Long
 ) : Node<T>(), NodeWithId<T>
 
-abstract class NonRootNode<T> : Node<T>()
-
-abstract class TreeNode<T> : NonRootNode<T>()
+abstract class TreeNode<T> : Node<T>()
 
 data class LeafNode<T>(
     val key: T,
@@ -43,4 +41,4 @@ data class InnerNode<T>(
     }
 }
 
-data class RebuildNode<T>(val node: InnerNode<T>) : NonRootNode<T>()
+data class RebuildNode<T>(val node: InnerNode<T>) : TreeNode<T>()

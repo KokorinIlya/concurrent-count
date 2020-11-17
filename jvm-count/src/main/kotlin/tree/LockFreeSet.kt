@@ -12,7 +12,7 @@ class LockFreeSet<T : Comparable<T>> {
 
     private val root = RootNode<T>(
         queue = RootLockFreeQueue(initValue = DummyDescriptor),
-        root = AtomicReference(EmptySubtreeNode()),
+        root = AtomicReference(null),
         id = allocateNodeId()
     )
 
@@ -21,8 +21,8 @@ class LockFreeSet<T : Comparable<T>> {
         var curNodeRef = root.root
 
         while (true) {
-            when (val curNode = curNodeRef.get()) {
-                is EmptySubtreeNode -> return false
+            val curNode = curNodeRef.get() ?: return false
+            when (curNode) {
                 is InnerNode -> curNodeRef = curNode.route(descriptor.key)
                 is RebuildNode -> curNode.rebuild(curNodeRef = curNodeRef)
                 is LeafNode -> return curNode.key == descriptor.key

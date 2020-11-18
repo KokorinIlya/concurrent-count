@@ -51,7 +51,6 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
 
     fun popIf(timestamp: Long): Boolean {
         return processTail(false) { curHead, nextHead ->
-            assert(nextHead.data.timestamp >= timestamp)
             if (nextHead.data.timestamp != timestamp) {
                 false
             } else {

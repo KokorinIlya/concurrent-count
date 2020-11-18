@@ -25,8 +25,18 @@ class SequentialNonRootQueue : VerifierState() {
         deque.addLast(element)
     }
 
-    fun pop(): Int? {
-        return deque.pollFirst()?.value
+    fun peek(): Int? {
+        return deque.peekFirst()?.value
+    }
+
+    fun popIf(timestamp: Long): Boolean {
+        val curHead = deque.peekFirst() ?: return false
+        return if (curHead.timestamp == timestamp) {
+            deque.removeFirst()
+            true
+        } else {
+            false
+        }
     }
 
     override fun extractState() = deque.asIterable().toList().map { it.value }
@@ -53,14 +63,19 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
     @Operation
     fun push(
         @Param(gen = IntGen::class, conf = "-100:100") x: Int,
-        @Param(gen = LongGen::class, conf = "1:1000000") ts: Long
+        @Param(gen = LongGen::class, conf = "1:20") ts: Long
     ) {
         queue.push(Dummy(x, ts))
     }
 
     @Operation
-    fun pop(): Int? {
-        return queue.pop()?.value
+    fun peek(): Int? {
+        return queue.peek()?.value
+    }
+
+    @Operation
+    fun popIf(@Param(gen = LongGen::class, conf = "1:20") timestamp: Long): Boolean {
+        return queue.popIf(timestamp)
     }
 
     @Test

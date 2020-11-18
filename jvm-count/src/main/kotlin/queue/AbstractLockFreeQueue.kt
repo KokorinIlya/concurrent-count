@@ -59,6 +59,13 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
         }
     }
 
+    /*
+    Should be used in wait-free exists requests. It is safe to assume, that timestamp at
+    tail is the maximal timestamp in the queue (even if head.next != null), because we can say, that
+    getMaxTimestamp request linearized before in-progress push operation.
+     */
+    fun getMaxTimestamp(): Long = tail.get().data.timestamp
+
     fun elements(): List<T> {
         /*
         Only for testing purposes!

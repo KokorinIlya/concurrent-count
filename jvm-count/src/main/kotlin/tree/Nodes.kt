@@ -139,17 +139,19 @@ data class InnerNode<T : Comparable<T>>(
     }
 }
 
-/*
-TODO: add timestamp of operation, which triggered rebuild procedure.
-This should be done in order to augment each node in new subtree with such timestamp.
-(Since such timestamp is the time of the last modification of each node in the new subtree).
- */
-data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>() {
+data class RebuildNode<T : Comparable<T>>(
+    val node: InnerNode<T>,
+    /*
+    Timestamp of the procedure, which triggered rebuild operation. This timestamp should be stored in order to
+    set creation timestamp of each nodes in the rebuilt subtree.
+     */
+    val timestamp: Long
+) : TreeNode<T>() {
     private fun finishOperationsInSubtree(root: InnerNode<T>) {
         TODO()
     }
 
-    private fun buildNewNode(): TreeNode<T> {
+    private fun buildNewSubtree(): TreeNode<T> {
         TODO()
     }
 
@@ -167,7 +169,7 @@ data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>(
              */
             return
         }
-        val newNode = buildNewNode()
+        val newNode = buildNewSubtree()
         curNodeRef.compareAndSet(this, newNode)
     }
 }

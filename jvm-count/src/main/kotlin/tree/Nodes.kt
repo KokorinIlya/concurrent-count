@@ -257,7 +257,7 @@ data class RebuildNode<T : Comparable<T>>(
         TODO()
     }
 
-    private fun buildNewSubtree(): TreeNode<T> {
+    private fun buildNewSubtree(): TreeNode<T> { // TODO: move to separate class (tree rebuilder) and test separately
         val curSubtreeKeys = mutableListOf<T>()
         collectKeysInSubtree(node, curSubtreeKeys)
         val sortedKeys = curSubtreeKeys.toList()

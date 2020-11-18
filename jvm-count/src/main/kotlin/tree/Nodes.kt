@@ -76,7 +76,6 @@ data class RootNode<T : Comparable<T>>(
     TODO: Note, that exist query can be executed with traversing tree + queues, instead
      */
     private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean? {
-        // TODO: assert(queue.peek().timestamp? == null OR >= descriptor.timestamp)
         var curNodeRef = root
 
         while (true) {
@@ -147,7 +146,7 @@ data class InnerNode<T : Comparable<T>>(
             right
         }
     }
-    }
+}
 
 /*
 TODO: add timestamp of operation, which triggered rebuild procedure.

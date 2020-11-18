@@ -3,6 +3,7 @@ package tree
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
 sealed class Node<T : Comparable<T>>
@@ -11,13 +12,11 @@ interface NodeWithId<T : Comparable<T>> {
     val id: Long
 }
 
-interface NodeWithChildren<T : Comparable<T>>
-
 data class RootNode<T : Comparable<T>>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
     val root: AtomicReference<TreeNode<T>>,
     override val id: Long
-) : Node<T>(), NodeWithId<T>, NodeWithChildren<T> {
+) : Node<T>(), NodeWithId<T> {
     companion object {
         private enum class QueueTraverseResult {
             KEY_EXISTS,
@@ -84,6 +83,10 @@ data class RootNode<T : Comparable<T>>(
                     }
                 }
                 is RebuildNode -> {
+                    /*
+                     TODO: maybe, we don't have to participate in rebuilding procedure.
+                     Nevertheless, participation won't break the algorithm.
+                     */
                     curNode.rebuild(curNodeRef = curNodeRef)
                     assert(curNodeRef.get() != curNode)
                 }
@@ -112,7 +115,7 @@ data class RootNode<T : Comparable<T>>(
                 /*
                 The same for count queries
                  */
-                is CountDescriptor -> curDescriptor.processNextNodes(this, listOf(root))
+                is CountDescriptor -> curDescriptor.processRootChild(this)
                 /*
                 Insert and delete should be executed only if such key exists in the set
                  */
@@ -168,7 +171,7 @@ data class InnerNode<T : Comparable<T>>(
     val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T, override val id: Long
-) : TreeNode<T>(), NodeWithId<T>, NodeWithChildren<T> {
+) : TreeNode<T>(), NodeWithId<T> {
     companion object {
         data class Params<T>(
             val minKey: T, val maxKey: T,
@@ -186,15 +189,28 @@ data class InnerNode<T : Comparable<T>>(
         }
     }
 
-    fun executeUntilTimestamp(timestamp: Long) {
+    fun executeUntilTimestamp(timestamp: Long?) {
         /*
-        The same logic, as above, except that all operations are executed unconditionally
+        The same logic, as above, except that all operations are executed unconditionally.
+        If timestamp is null, should execute all operations in the node queue (until queue.peek() returns null)
          */
         do {
             val curDescriptor = queue.peek() ?: return
 
-            TODO()
-        } while (curDescriptor.timestamp < timestamp)
+            /*
+            TODO: for optimization purposes, it may be necessary to return (at least, try to return)
+            next direction for descriptor with specified timestamp. However, not doing this isn't going to
+            break correctness of the algorithm.
+             */
+            when (curDescriptor) {
+                is ExistsDescriptor -> curDescriptor.processNextNode(route(curDescriptor.key))
+                is CountDescriptor -> curDescriptor.processInnerNode(this)
+                is SingleKeyWriteOperationDescriptor<T> -> curDescriptor.processNextNode(route(curDescriptor.key))
+                else -> throw IllegalStateException("Program is ill-formed")
+            }
+
+            queue.popIf(curDescriptor.timestamp)
+        } while (timestamp == null || curDescriptor.timestamp < timestamp)
     }
 }
 
@@ -207,11 +223,46 @@ data class RebuildNode<T : Comparable<T>>(
     val timestamp: Long
 ) : TreeNode<T>() {
     private fun finishOperationsInSubtree(root: InnerNode<T>) {
+        root.executeUntilTimestamp(null)
+
+        val curLeft = root.left.get()
+        val curRight = root.right.get()
+
+        if (curLeft is InnerNode) {
+            finishOperationsInSubtree(curLeft)
+        }
+        if (curRight is InnerNode) {
+            finishOperationsInSubtree(curRight)
+        }
+    }
+
+    private fun collectKeysInChildSubtree(child: Node<T>, keys: MutableList<T>) {
+        when (child) {
+            is LeafNode -> keys.add(child.key)
+            is InnerNode -> collectKeysInSubtree(child, keys)
+            else -> {
+            }
+        }
+    }
+
+    private fun collectKeysInSubtree(root: InnerNode<T>, keys: MutableList<T>) {
+        val curLeft = root.left.get()
+        val curRight = root.right.get()
+
+        collectKeysInChildSubtree(curLeft, keys)
+        collectKeysInChildSubtree(curRight, keys)
+    }
+
+    private fun buildSubtreeFromKeys(keys: List<T>, startIndex: Int, stopIndex: Int): TreeNode<T> {
         TODO()
     }
 
     private fun buildNewSubtree(): TreeNode<T> {
-        TODO()
+        val curSubtreeKeys = mutableListOf<T>()
+        collectKeysInSubtree(node, curSubtreeKeys)
+        val sortedKeys = curSubtreeKeys.toList()
+        assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
+        return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size)
     }
 
     fun rebuild(curNodeRef: AtomicReference<TreeNode<T>>) {

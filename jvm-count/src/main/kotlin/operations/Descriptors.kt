@@ -1,7 +1,8 @@
 package operations
 
 import common.TimestampedValue
-import tree.NodeWithChildren
+import tree.InnerNode
+import tree.RootNode
 import tree.TreeNode
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.properties.Delegates
@@ -69,6 +70,10 @@ data class ExistsDescriptor<T : Comparable<T>>(
     }
 }
 
+/*
+TODO: consider adding nodes, that contain descriptors for the count request to a stack
+(to search such nodes faster)
+ */
 data class CountDescriptor<T : Comparable<T>>(
     val leftBorder: T, val rightBorder: T,
     val result: CountResult
@@ -76,7 +81,11 @@ data class CountDescriptor<T : Comparable<T>>(
     /*
     The same contract, as in processNextNode
      */
-    fun processNextNodes(curNode: NodeWithChildren<T>, nodeRefs: List<AtomicReference<TreeNode<T>>>) {
+    fun processRootChild(curNode: RootNode<T>) {
+        TODO()
+    }
+
+    fun processInnerNode(curNode: InnerNode<T>) {
         TODO()
     }
 

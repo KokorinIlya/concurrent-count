@@ -185,6 +185,17 @@ data class InnerNode<T : Comparable<T>>(
             right
         }
     }
+
+    fun executeUntilTimestamp(timestamp: Long) {
+        /*
+        The same logic, as above, except that all operations are executed unconditionally
+         */
+        do {
+            val curDescriptor = queue.peek() ?: return
+
+            TODO()
+        } while (curDescriptor.timestamp < timestamp)
+    }
 }
 
 data class RebuildNode<T : Comparable<T>>(

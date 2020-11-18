@@ -12,7 +12,7 @@ class LockFreeSet<T : Comparable<T>> {
 
     private val root = RootNode<T>(
         queue = RootLockFreeQueue(initValue = DummyDescriptor),
-        root = AtomicReference(null),
+        root = AtomicReference(EmptyNode(0L)),
         id = allocateNodeId()
     )
 
@@ -31,6 +31,10 @@ class LockFreeSet<T : Comparable<T>> {
     fun exists(x: T): Boolean {
         val descriptor = ExistsDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+        TODO()
+    }
+
+    fun waitFreeExists(x: T): Boolean {
         TODO()
     }
 

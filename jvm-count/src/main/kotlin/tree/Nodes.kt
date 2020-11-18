@@ -16,10 +16,7 @@ interface NodeWithId<T : Comparable<T>> {
 
 data class RootNode<T : Comparable<T>>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
-    /*
-    null corresponds to empty child subtree (the same principe is applicable below)
-     */
-    val root: AtomicReference<TreeNode<T>?>,
+    val root: AtomicReference<TreeNode<T>>,
     override val id: Long
 ) : Node<T>(), NodeWithId<T> {
     companion object {
@@ -72,15 +69,11 @@ data class RootNode<T : Comparable<T>>(
         return QueueTraverseResult.UNABLE_TO_LEARN
     }
 
-    /*
-    TODO: Note, that exist query can be executed with traversing tree + queues, instead
-     */
     private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean? {
         var curNodeRef = root
 
         while (true) {
-            val curNode = curNodeRef.get() ?: return false
-            when (curNode) {
+            when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
                     when (traverseQueue(curNode.queue, descriptor)) {
                         QueueTraverseResult.KEY_EXISTS -> return true
@@ -98,6 +91,9 @@ data class RootNode<T : Comparable<T>>(
                 is LeafNode -> {
                     return curNode.key == descriptor.key
                 }
+                is EmptyNode -> {
+                    return false
+                }
             }
         }
     }
@@ -109,37 +105,32 @@ data class RootNode<T : Comparable<T>>(
 
 abstract class TreeNode<T : Comparable<T>> : Node<T>()
 
-/*
-TODO: should we consider storing last update timestamp in each node (including leaf and null ones)
-to prevent stalled delete and update operations from updating such nodes?
-Maybe, we should store timestamp in each AtomicReference, i.e. store a
-AtomicReference<Pair<Timestamp, Node>>.
-As I can see now, the best decision is to have EmptyNode class instead of using nulls.
-After that, both EmptyNode and LeafNode should be augmented with last modification timestamp
-(InnerNode is already augmented with modification timestamp, RootNode never changes and RebuildNode doesn't
-store any data)
- */
 data class LeafNode<T : Comparable<T>>(
     val key: T,
-    override val id: Long
-) : TreeNode<T>(), NodeWithId<T>
+    val creationTimestamp: Long
+) : TreeNode<T>()
+
+data class EmptyNode<T : Comparable<T>>(
+    val creationTimestamp: Long
+) : TreeNode<T>()
 
 data class InnerNode<T : Comparable<T>>(
     val queue: NonRootLockFreeQueue<Descriptor<T>>,
-    val left: AtomicReference<TreeNode<T>?>,
-    val right: AtomicReference<TreeNode<T>?>,
+    val left: AtomicReference<TreeNode<T>>,
+    val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T, override val id: Long
 ) : TreeNode<T>(), NodeWithId<T> {
     companion object {
         data class Params<T>(
             val minKey: T, val maxKey: T,
-            val subtreeSize: Int, val lastModificationTimestamp: Long,
+            val subtreeSize: Int,
+            val lastModificationTimestamp: Long,
             val modificationsCount: Int
         )
     }
 
-    fun route(x: T): AtomicReference<TreeNode<T>?> {
+    fun route(x: T): AtomicReference<TreeNode<T>> {
         return if (x < rightSubtreeMin) {
             left
         } else {
@@ -162,7 +153,7 @@ data class RebuildNode<T : Comparable<T>>(val node: InnerNode<T>) : TreeNode<T>(
         TODO()
     }
 
-    fun rebuild(curNodeRef: AtomicReference<TreeNode<T>?>) {
+    fun rebuild(curNodeRef: AtomicReference<TreeNode<T>>) {
         if (curNodeRef.get() != this) {
             /*
             Needed for optimization, to reduce amount of time, spent on unnecessary operations

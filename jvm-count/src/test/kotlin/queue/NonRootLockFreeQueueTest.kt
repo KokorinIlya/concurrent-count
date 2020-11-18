@@ -10,11 +10,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.jupiter.api.Test
-import java.util.ArrayDeque
 
-class SequentialNonRootQueue : VerifierState() {
+class SequentialNonRootQueue : AbstractSequentialQueue<NonRootLockFreeQueueTest.Companion.Dummy>() {
     private var maxTimestamp = 0L
-    private val deque = ArrayDeque<NonRootLockFreeQueueTest.Companion.Dummy>()
 
     fun push(x: Int, ts: Long) {
         if (maxTimestamp >= ts) {
@@ -24,27 +22,13 @@ class SequentialNonRootQueue : VerifierState() {
         maxTimestamp = ts
         deque.addLast(element)
     }
-
-    fun peek(): Int? {
-        return deque.peekFirst()?.value
-    }
-
-    fun popIf(timestamp: Long): Boolean {
-        val curHead = deque.peekFirst() ?: return false
-        return if (curHead.timestamp == timestamp) {
-            deque.removeFirst()
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun extractState() = deque.asIterable().toList().map { it.value }
 }
 
 class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
     companion object {
-        data class Dummy(val value: Int, val ts: Long) : TimestampedValue {
+        data class Dummy(val x: Int, val ts: Long) : IntContainer {
+            override fun getValue(): Int = x
+
             override var timestamp: Long
                 get() = ts
                 set(_) {
@@ -64,13 +48,13 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
     fun push(
         @Param(gen = IntGen::class, conf = "-100:100") x: Int,
         @Param(gen = LongGen::class, conf = "1:20") ts: Long
-    ) {
-        queue.push(Dummy(x, ts))
+    ): Boolean {
+        return queue.push(Dummy(x, ts))
     }
 
     @Operation
     fun peek(): Int? {
-        return queue.peek()?.value
+        return queue.peek()?.getValue()
     }
 
     @Operation
@@ -86,5 +70,5 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
         .sequentialSpecification(SequentialNonRootQueue::class.java)
         .check(this::class)
 
-    override fun extractState() = queue.elements().map { it.value }
+    override fun extractState() = queue.elements().map { it.getValue() }
 }

@@ -11,24 +11,24 @@ class LockFreeSet<T : Comparable<T>> {
     private fun allocateNodeId(): Long = curId.getAndIncrement()
 
     private val root = RootNode<T>(
-        queue = RootLockFreeQueue(initValue = DummyDescriptor),
+        queue = RootLockFreeQueue(initValue = DummyDescriptor()),
         root = AtomicReference(EmptyNode(0L)),
         id = allocateNodeId()
     )
 
-    fun insert(x: T): Boolean {
+    fun insert(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = InsertDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }
 
-    fun delete(x: T): Boolean {
+    fun delete(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = DeleteDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
     }
 
-    fun exists(x: T): Boolean {
+    fun exists(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = ExistsDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         TODO()
@@ -38,7 +38,7 @@ class LockFreeSet<T : Comparable<T>> {
         TODO()
     }
 
-    fun count(left: T, right: T): Int {
+    fun count(left: T, right: T): TimestampLinearizedResult<Int> {
         val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)

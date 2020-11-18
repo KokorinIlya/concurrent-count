@@ -1,9 +1,6 @@
 package tree
 
-import operations.DeleteDescriptor
-import operations.Descriptor
-import operations.InsertDescriptor
-import operations.SingleKeyWriteOperationDescriptor
+import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -14,11 +11,13 @@ interface NodeWithId<T : Comparable<T>> {
     val id: Long
 }
 
+interface NodeWithChildren<T : Comparable<T>>
+
 data class RootNode<T : Comparable<T>>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
     val root: AtomicReference<TreeNode<T>>,
     override val id: Long
-) : Node<T>(), NodeWithId<T> {
+) : Node<T>(), NodeWithId<T>, NodeWithChildren<T> {
     companion object {
         private enum class QueueTraverseResult {
             KEY_EXISTS,
@@ -98,8 +97,27 @@ data class RootNode<T : Comparable<T>>(
         }
     }
 
-    fun executeUntilTimestamp(timestamp: Long): Boolean {
-        TODO()
+    fun executeUntilTimestamp(timestamp: Long) {
+        do {
+            /*
+            Some other thread has moved our descriptor, since there are no active descriptors in the queue
+             */
+            val curDescriptor = queue.peek() ?: return
+
+            when (curDescriptor) {
+                is ExistsDescriptor -> curDescriptor.processNextNode(root)
+                is CountDescriptor -> curDescriptor.processNextNodes(this, listOf(root))
+                is SingleKeyWriteOperationDescriptor<T, *> -> {
+                    val keyExists = checkExistence(curDescriptor)
+                    if (keyExists == true) {
+                        curDescriptor.processNextNode(root)
+                    }
+                }
+                else -> throw IllegalStateException("Program is ill-formed")
+            }
+
+            queue.popIf(curDescriptor.timestamp)
+        } while (curDescriptor.timestamp < timestamp)
     }
 }
 
@@ -120,7 +138,7 @@ data class InnerNode<T : Comparable<T>>(
     val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T, override val id: Long
-) : TreeNode<T>(), NodeWithId<T> {
+) : TreeNode<T>(), NodeWithId<T>, NodeWithChildren<T> {
     companion object {
         data class Params<T>(
             val minKey: T, val maxKey: T,

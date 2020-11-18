@@ -105,14 +105,26 @@ data class RootNode<T : Comparable<T>>(
             val curDescriptor = queue.peek() ?: return
 
             when (curDescriptor) {
+                /*
+                Exist queries are processed unconditionally
+                 */
                 is ExistsDescriptor -> curDescriptor.processNextNode(root)
+                /*
+                The same for count queries
+                 */
                 is CountDescriptor -> curDescriptor.processNextNodes(this, listOf(root))
+                /*
+                Insert and delete should be executed only if such key exists in the set
+                 */
                 is SingleKeyWriteOperationDescriptor<T, *> -> {
                     val keyExists = checkExistence(curDescriptor)
                     if (keyExists == true) {
                         curDescriptor.processNextNode(root)
                     }
                 }
+                /*
+                Dummy descriptors are never returned from queue.peek()
+                 */
                 else -> throw IllegalStateException("Program is ill-formed")
             }
 

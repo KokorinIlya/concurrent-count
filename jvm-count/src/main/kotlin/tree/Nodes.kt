@@ -27,9 +27,9 @@ data class RootNode<T : Comparable<T>>(
         }
     }
 
-    private fun <R> traverseQueue(
+    private fun traverseQueue(
         queue: NonRootLockFreeQueue<Descriptor<T>>,
-        descriptor: SingleKeyWriteOperationDescriptor<T, R>
+        descriptor: SingleKeyWriteOperationDescriptor<T>
     ): QueueTraverseResult {
         var curQueueNode = queue.getHead()
         while (curQueueNode != null) {
@@ -68,7 +68,7 @@ data class RootNode<T : Comparable<T>>(
         return QueueTraverseResult.UNABLE_TO_LEARN
     }
 
-    private fun <R> checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T, R>): Boolean? {
+    private fun checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T>): Boolean? {
         var curNodeRef = root
 
         while (true) {
@@ -106,7 +106,7 @@ data class RootNode<T : Comparable<T>>(
 
             when (curDescriptor) {
                 /*
-                Exist queries are processed unconditionally
+                Exist queries are executed unconditionally
                  */
                 is ExistsDescriptor -> curDescriptor.processNextNode(root)
                 /*
@@ -116,11 +116,26 @@ data class RootNode<T : Comparable<T>>(
                 /*
                 Insert and delete should be executed only if such key exists in the set
                  */
-                is SingleKeyWriteOperationDescriptor<T, *> -> {
+                is SingleKeyWriteOperationDescriptor<T> -> {
                     val keyExists = checkExistence(curDescriptor)
                     if (keyExists == true) {
+                        /*
+                        Descriptor will itself perform all necessary actions (except for removing node
+                        from the queue)
+                         */
                         curDescriptor.processNextNode(root)
+                    } else if (keyExists == false) {
+                        /*
+                        Result should be set to false and descriptor removed from the queue,
+                        without being propagated downwards
+                         */
+                        curDescriptor.result.trySetResult(false)
                     }
+                    /*
+                    Otherwise, other thread has moved the descriptor (either from the tree or downwards).
+                    Since the answer is set before removing the descriptor from the queue, we shouldn't
+                    set the answer
+                     */
                 }
                 /*
                 Dummy descriptors are never returned from queue.peek()
@@ -128,6 +143,9 @@ data class RootNode<T : Comparable<T>>(
                 else -> throw IllegalStateException("Program is ill-formed")
             }
 
+            /*
+            Safe operation: removes only the descriptor, that has been just processed
+             */
             queue.popIf(curDescriptor.timestamp)
         } while (curDescriptor.timestamp < timestamp)
     }

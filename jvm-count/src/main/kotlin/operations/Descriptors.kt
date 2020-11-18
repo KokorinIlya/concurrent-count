@@ -17,17 +17,17 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     /*
     Tries to propagate descriptor downwards, tries to replace EmptyNode with LeafNode
     (or LeafNode with EmptyNode), tries to update answer, and performs any other necessary actions,
-    except removing descriptor from parent queue.
+    except for removing descriptor from parent queue.
      */
     abstract fun processNextNode(nodeRef: AtomicReference<TreeNode<T>>)
 }
 
-abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>, R> : SingleKeyOperationDescriptor<T, R>()
+abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>()
 
 data class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyWriteOperationDescriptor<T, Boolean>() {
+) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T): InsertDescriptor<T> {
             return InsertDescriptor(key, SingleKeyOperationResult())
@@ -42,7 +42,7 @@ data class InsertDescriptor<T : Comparable<T>>(
 data class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyWriteOperationDescriptor<T, Boolean>() {
+) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T): DeleteDescriptor<T> {
             return DeleteDescriptor(key, SingleKeyOperationResult())

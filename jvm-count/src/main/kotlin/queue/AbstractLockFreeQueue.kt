@@ -15,34 +15,6 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
 
     fun getHead(): Node<T>? = head.get().next.get()
 
-    companion object {
-        private enum class PossiblyEmptyQueueProcessResult {
-            QUEUE_IS_EMPTY,
-            TAIL_MOVED,
-            QUEUE_NOT_EMPTY
-        }
-    }
-
-    private fun processPossiblyEmptyQueue(
-        curHead: Node<T>,
-        curTail: Node<T>,
-        nextHead: Node<T>?
-    ): PossiblyEmptyQueueProcessResult {
-        return if (curHead === curTail) {
-            assert(curTail.data.timestamp == curHead.data.timestamp)
-
-            if (nextHead === null) {
-                PossiblyEmptyQueueProcessResult.QUEUE_IS_EMPTY
-            } else {
-                assert(nextHead === curTail.next.get())
-                tail.compareAndSet(curTail, nextHead)
-                PossiblyEmptyQueueProcessResult.TAIL_MOVED
-            }
-        } else {
-            PossiblyEmptyQueueProcessResult.QUEUE_NOT_EMPTY
-        }
-    }
-
     private fun <R> processTail(emptyQueueResult: R, nonEmptyQueueAction: (Node<T>, Node<T>) -> R): R {
         while (true) {
             val curHead = head.get()

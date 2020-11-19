@@ -156,6 +156,76 @@ data class RootNode<T : Comparable<T>>(
     }
 
     /**
+     * Executes all necessary operations for the descriptor (i.e. for remove and insert operation descriptors
+     * it includes determining, if specified key exists in the tree), except removing descriptor from the
+     * head of the queue.
+     */
+    private fun executeSingleDescriptor(curDescriptor: Descriptor<T>) {
+        when (curDescriptor) {
+            /*
+            Exist queries are executed unconditionally
+             */
+            is ExistsDescriptor -> curDescriptor.processNextNode(root)
+            /*
+            The same for count queries
+             */
+            is CountDescriptor -> curDescriptor.processRootNode(this)
+            /*
+            Insert should be executed only if such key doesn't exist in the set
+             */
+            is InsertDescriptor<T> -> {
+                when (checkExistence(curDescriptor)) {
+                    false -> {
+                        /*
+                        Descriptor will itself perform all necessary actions (except for removing node
+                        from the queue)
+                         */
+                        curDescriptor.processNextNode(root)
+                    }
+                    true -> {
+                        /*
+                        Result should be set to false and descriptor removed from the queue,
+                        without being propagated downwards
+                         */
+                        curDescriptor.result.trySetResult(false)
+                    }
+                    null -> {
+                        /*
+                        Otherwise, the answer is not needed, since some other thread has moved the descriptor
+                        (either dropped it from the root queue or propagated it downwards).
+                        Since the answer is set before removing the descriptor from the queue, we shouldn't
+                        set the answer manually (because it was set by some another ).
+                         */
+                        assert(curDescriptor.result.getResult() != null)
+                        assert(checkDescriptorMoved(curDescriptor.timestamp))
+                    }
+                }
+            }
+            /*
+            The opposite for the delete descriptor
+             */
+            is DeleteDescriptor<T> -> {
+                when (checkExistence(curDescriptor)) {
+                    true -> {
+                        curDescriptor.processNextNode(root)
+                    }
+                    false -> {
+                        curDescriptor.result.trySetResult(false)
+                    }
+                    null -> {
+                        assert(curDescriptor.result.getResult() != null)
+                        assert(checkDescriptorMoved(curDescriptor.timestamp))
+                    }
+                }
+            }
+            /*
+            Dummy descriptors are never returned from queue.peek()
+             */
+            else -> throw IllegalStateException("Program is ill-formed")
+        }
+    }
+
+    /**
      * Helps execute all operation in the queue, until queue is empty (queue.peek() returns null),
      * or descriptor with greater timestamp is encountered. I.e. helps execute all operations in the queue,
      * that have less or equal timestamp.
@@ -169,50 +239,7 @@ data class RootNode<T : Comparable<T>>(
             Some other thread has moved our descriptor, since there are no active descriptors in the queue
              */
             val curDescriptor = queue.peek() ?: return
-
-            when (curDescriptor) {
-                /*
-                Exist queries are executed unconditionally
-                 */
-                is ExistsDescriptor -> curDescriptor.processNextNode(root)
-                /*
-                The same for count queries
-                 */
-                is CountDescriptor -> curDescriptor.processRootNode(this)
-                /*
-                Insert and delete should be executed only if such key exists in the set
-                 */
-                is SingleKeyWriteOperationDescriptor<T> -> {
-                    val keyExists = checkExistence(curDescriptor)
-                    if (keyExists == true) {
-                        /*
-                        Descriptor will itself perform all necessary actions (except for removing node
-                        from the queue)
-                         */
-                        curDescriptor.processNextNode(root)
-                    } else if (keyExists == false) {
-                        /*
-                        Result should be set to false and descriptor removed from the queue,
-                        without being propagated downwards
-                         */
-                        curDescriptor.result.trySetResult(false)
-                    } else {
-                        /*
-                        Otherwise, the answer is not needed, since some other thread has moved the descriptor
-                        (either dropped it from the root queue or propagated it downwards).
-                        Since the answer is set before removing the descriptor from the queue, we shouldn't
-                        set the answer manually (because it was set by some another ).
-                         */
-                        assert(curDescriptor.result.getResult() != null)
-                        assert(checkDescriptorMoved(curDescriptor.timestamp))
-                    }
-                }
-                /*
-                Dummy descriptors are never returned from queue.peek()
-                 */
-                else -> throw IllegalStateException("Program is ill-formed")
-            }
-
+            executeSingleDescriptor(curDescriptor)
             /*
             Safe operation: removes only the descriptor, that has been just processed
              */

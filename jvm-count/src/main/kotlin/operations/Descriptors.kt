@@ -5,8 +5,10 @@ import tree.InnerNode
 import tree.RootNode
 import tree.TreeNode
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.properties.Delegates
 
+/**
+ * Base class for descriptors of all operations
+ */
 sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
     /*
     Note, that timestamp property is backed by non-atomic field. Thus, it's not safe to modify it in
@@ -27,6 +29,10 @@ sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
         }
 }
 
+/**
+ * Base class for descriptors of operations, that operate on single key. Note, that for such operations answer is
+ * atomic (it is either known completely or not known at all, it cannot be known partially).
+ */
 abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T>() {
     abstract val key: T
     abstract val result: SingleKeyOperationResult<R>
@@ -43,6 +49,9 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     abstract fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>)
 }
 
+/**
+ * Base class for insert and delete operation descriptors
+ */
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>()
 
 data class InsertDescriptor<T : Comparable<T>>(
@@ -90,9 +99,6 @@ data class ExistsDescriptor<T : Comparable<T>>(
     }
 }
 
-/**
- * Descriptor, corresponding to count operations
- */
 data class CountDescriptor<T : Comparable<T>>(
     val leftBorder: T, val rightBorder: T,
     val result: CountResult

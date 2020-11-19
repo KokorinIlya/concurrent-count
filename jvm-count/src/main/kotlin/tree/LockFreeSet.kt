@@ -26,6 +26,14 @@ class LockFreeSet<T : Comparable<T>> {
             if (curResult != null) {
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
+            /*
+            Since result is not known yet, there is still nodes with queues, containing descriptor for the request.
+            Also, it means, that tree rebuilding hasn't been done yet (since rebuilding finishes all operations
+            in the subtree, being rebuilt).
+            Note, that only nodes on appropriate path (determined by node.route()) can contain descriptors
+             or the request. Since there are still nodes, containing descriptors for the request, such nodes can be only
+             InnerNodes.
+             */
             val curNode = curNodeRef.get() as InnerNode
             curNode.executeUntilTimestamp(descriptor.timestamp)
             curNodeRef = curNode.route(descriptor.key)
@@ -57,11 +65,62 @@ class LockFreeSet<T : Comparable<T>> {
         TODO()
     }
 
+    private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
+        curNode.executeUntilTimestamp(descriptor.timestamp)
+        if (descriptor.result.getResult() != null) {
+            return
+        }
+
+        val curLeft = curNode.left.get()
+        val curRight = curNode.right.get()
+        val curNodeParams = curNode.nodeParams.get()
+        when (descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)) {
+            CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN -> {
+                /*
+                If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by
+                descriptor.processRootNode (or descriptor.processInnerRootNode)
+                 */
+                if (curLeft is InnerNode) {
+                    countInNode(curLeft, descriptor)
+                }
+                if (curRight is InnerNode) {
+                    countInNode(curRight, descriptor)
+                }
+
+            }
+            else -> {
+                /*
+                There are only to possible opportunities:
+                    Either current subtree has been rebuilt (it means, that the request in current
+                    subtree has been executed).
+
+                    Or current subtree hasn't been rebuilt. It means, that keys range could only be expanded.
+                    If key range (even after the expansion) either lies inside request borders or doesn't intersect
+                    with request borders, there is no need to perform any actions.
+                 */
+            }
+        }
+    }
+
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
+        require(left <= right)
         val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         assert(descriptor.timestamp == timestamp)
-        TODO()
+
+        root.executeUntilTimestamp(timestamp)
+        when (val realRoot = root.root.get()) {
+            is InnerNode -> countInNode(realRoot, descriptor)
+            else -> {
+            }
+        }
+
+        val result = descriptor.result.getResult()
+        if (result == null) {
+            throw IllegalStateException("Program is ill-formed")
+        } else {
+            return TimestampLinearizedResult(result = result, timestamp = timestamp)
+        }
     }
 }

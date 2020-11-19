@@ -19,6 +19,9 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     Tries to propagate descriptor downwards, tries to replace EmptyNode with LeafNode
     (or LeafNode with EmptyNode), tries to update answer, and performs any other necessary actions,
     except for removing descriptor from parent queue.
+    Note, that this function never tries to insert descriptor to the queues of LeafNode or EmptyNode
+    (since neither LeafNode nor EmptyNode contain descriptor queues). If this function encounters LeafNode
+    (or EmptyNode) in the nextNodeRef, it should finish the request.
      */
     abstract fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>)
 }
@@ -78,8 +81,16 @@ data class CountDescriptor<T : Comparable<T>>(
     val leftBorder: T, val rightBorder: T,
     val result: CountResult
 ) : Descriptor<T>() {
+    init {
+        assert(leftBorder <= rightBorder)
+    }
+
     /*
-    The same contract, as in processNextNode
+    The same contract, as in processNextNode.
+    Note, that this function never tries to insert descriptor to the queues of LeafNode or EmptyNode
+    (since neither LeafNode nor EmptyNode contain descriptor queues). If this function encounters LeafNode
+    (or EmptyNode) in the children list of the current node, it should perform any action, necessary to take
+    answer for these children into account, in this function.
      */
     fun processRootNode(curNode: RootNode<T>) {
         TODO()
@@ -92,6 +103,23 @@ data class CountDescriptor<T : Comparable<T>>(
     companion object {
         fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T): CountDescriptor<T> {
             return CountDescriptor(leftBorder, rightBorder, CountResult())
+        }
+
+        enum class IntersectionResult {
+            NO_INTERSECTION,
+            NODE_INSIDE_REQUEST,
+            GO_TO_CHILDREN
+        }
+    }
+
+    fun intersectBorders(minKey: T, maxKey: T): IntersectionResult {
+        assert(minKey <= maxKey)
+        return if (minKey >= rightBorder || maxKey <= leftBorder) {
+            IntersectionResult.NO_INTERSECTION
+        } else if (leftBorder <= minKey && maxKey <= rightBorder) {
+            IntersectionResult.NODE_INSIDE_REQUEST
+        } else {
+            IntersectionResult.GO_TO_CHILDREN
         }
     }
 }

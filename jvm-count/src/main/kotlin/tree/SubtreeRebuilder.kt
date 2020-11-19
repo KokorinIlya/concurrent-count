@@ -8,7 +8,14 @@ import java.util.concurrent.atomic.AtomicReference
 // TODO: test it
 class SubtreeRebuilder<T : Comparable<T>>(
     private val oldSubtreeRoot: InnerNode<T>,
+    /*
+    Timestamp of the operation, that triggered rebuilding. This timestamp will be set to all the nodes in the rebuilt
+    subtree as creation/last modification timestamp.
+     */
     private val timestamp: Long,
+    /*
+    Id allocator, used for rebuilding, should be the same allocator, which is used by the whole tree.
+     */
     private val nodeIdAllocator: IdAllocator
 ) {
     private fun collectKeysInChildSubtree(child: Node<T>, keys: MutableList<T>) {

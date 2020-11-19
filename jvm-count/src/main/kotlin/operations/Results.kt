@@ -63,7 +63,8 @@ class CountResult : OperationResult<Int>() {
      * Should be called before removing count node from node queue. All answers, with which the function is called,
      * should be the same. It means, that the function should be called only if creation/last modification
      * timestamps of all nodes, answers for which is included in the nodeAnswer, is less or equal, than timestamp
-     * of the count operation.
+     * of the count operation (since greater timestamp can indicate, that other node parameters have changed, thus
+     * indicating, that the nodeAnswer may have changed too).
      */
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
         val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)

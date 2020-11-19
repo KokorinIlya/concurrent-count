@@ -249,7 +249,7 @@ data class RebuildNode<T : Comparable<T>>(
              */
             return
         }
-        val newNode = SubtreeRebuilder(node).buildNewSubtree()
+        val newNode = SubtreeRebuilder(node, timestamp).buildNewSubtree()
         curNodeRef.compareAndSet(this, newNode)
     }
 }

@@ -59,10 +59,20 @@ class SubtreeRebuilder<T : Comparable<T>>(
         )
     }
 
+    /**
+     * Traverses subtree (that doesn't contain unfinished operations) and rebuilds it, disregarding
+     * EmptyNodes, setting exact key ranges in each InnerNode and building balanced subtree.
+     * Subtree traverse is done in a sequential manner, so, to make it safe to use, no new operations should
+     * appear in the subtree being rebuilt.
+     * @return root of the rebuilt subtree
+     */
     fun buildNewSubtree(): TreeNode<T> {
         val curSubtreeKeys = mutableListOf<T>()
         collectKeysInSubtree(oldSubtreeRoot, curSubtreeKeys)
         val sortedKeys = curSubtreeKeys.toList()
+        /*
+        Asserts, that key list is sorted (it should be true, since we perform inorder traversal)
+         */
         assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
         return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size)
     }

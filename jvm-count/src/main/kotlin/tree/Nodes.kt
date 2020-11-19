@@ -1,5 +1,6 @@
 package tree
 
+import allocation.IdAllocator
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
@@ -99,6 +100,14 @@ data class RootNode<T : Comparable<T>>(
         }
     }
 
+    /**
+     * Helps execute all operation in the queue, until queue is empty (queue.peek() returns null),
+     * or descriptor with greater timestamp is encountered. I.e. helps execute all operations in the queue,
+     * that have less or equal timestamp.
+     * To make the operation behave correctly, descriptor of operation with the timestamp, specified in argument,
+     * should be inserted to the queue, before calling this function.
+     * @param timestamp - timestamp to look for in the queue
+     */
     fun executeUntilTimestamp(timestamp: Long) {
         do {
             /*
@@ -188,14 +197,13 @@ data class InnerNode<T : Comparable<T>>(
         }
     }
 
+    /**
+     * The same logic, as above, except that all operations are executed unconditionally.
+     * If timestamp is null, should execute all operations in the node queue (until queue.peek() returns null)
+     */
     fun executeUntilTimestamp(timestamp: Long?) {
-        /*
-        The same logic, as above, except that all operations are executed unconditionally.
-        If timestamp is null, should execute all operations in the node queue (until queue.peek() returns null)
-         */
         do {
             val curDescriptor = queue.peek() ?: return
-
             /*
             TODO: for optimization purposes, it may be necessary to return (at least, try to return)
             next direction for descriptor with specified timestamp. However, not doing this isn't going to
@@ -219,7 +227,11 @@ data class RebuildNode<T : Comparable<T>>(
     Timestamp of the procedure, which triggered rebuild operation. This timestamp should be stored in order to
     set creation timestamp of each nodes in the rebuilt subtree.
      */
-    val timestamp: Long
+    val timestamp: Long,
+    /*
+    Node id allocator, which is used to allocate all node ids in the tree, to which this node belongs to
+     */
+    private val nodeIdAllocator: IdAllocator
 ) : TreeNode<T>() {
     private fun finishOperationsInSubtree(root: InnerNode<T>) {
         root.executeUntilTimestamp(null)
@@ -249,7 +261,7 @@ data class RebuildNode<T : Comparable<T>>(
              */
             return
         }
-        val newNode = SubtreeRebuilder(node, timestamp).buildNewSubtree()
+        val newNode = SubtreeRebuilder(node, timestamp, nodeIdAllocator).buildNewSubtree()
         curNodeRef.compareAndSet(this, newNode)
     }
 }

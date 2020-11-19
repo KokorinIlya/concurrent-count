@@ -1,12 +1,13 @@
 package tree
 
 import allocation.IdAllocator
+import allocation.SequentialIdAllocator
 import operations.*
 import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
 
 class LockFreeSet<T : Comparable<T>> {
-    private val nodeIdAllocator = IdAllocator()
+    private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
 
     private val root = RootNode<T>(
         queue = RootLockFreeQueue(initValue = DummyDescriptor()),

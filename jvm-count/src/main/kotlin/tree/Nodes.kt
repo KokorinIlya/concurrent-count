@@ -235,35 +235,6 @@ data class RebuildNode<T : Comparable<T>>(
         }
     }
 
-    private fun collectKeysInChildSubtree(child: Node<T>, keys: MutableList<T>) {
-        when (child) {
-            is LeafNode -> keys.add(child.key)
-            is InnerNode -> collectKeysInSubtree(child, keys)
-            else -> {
-            }
-        }
-    }
-
-    private fun collectKeysInSubtree(root: InnerNode<T>, keys: MutableList<T>) {
-        val curLeft = root.left.get()
-        val curRight = root.right.get()
-
-        collectKeysInChildSubtree(curLeft, keys)
-        collectKeysInChildSubtree(curRight, keys)
-    }
-
-    private fun buildSubtreeFromKeys(keys: List<T>, startIndex: Int, stopIndex: Int): TreeNode<T> {
-        TODO()
-    }
-
-    private fun buildNewSubtree(): TreeNode<T> { // TODO: move to separate class (tree rebuilder) and test separately
-        val curSubtreeKeys = mutableListOf<T>()
-        collectKeysInSubtree(node, curSubtreeKeys)
-        val sortedKeys = curSubtreeKeys.toList()
-        assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
-        return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size)
-    }
-
     fun rebuild(curNodeRef: AtomicReference<TreeNode<T>>) {
         if (curNodeRef.get() != this) {
             /*
@@ -278,7 +249,7 @@ data class RebuildNode<T : Comparable<T>>(
              */
             return
         }
-        val newNode = buildNewSubtree()
+        val newNode = SubtreeRebuilder(node).buildNewSubtree()
         curNodeRef.compareAndSet(this, newNode)
     }
 }

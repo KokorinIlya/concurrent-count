@@ -16,22 +16,41 @@ class LockFreeSet<T : Comparable<T>> {
         id = allocateNodeId()
     )
 
+    private fun <R> executeSingleKeyOperation(
+        descriptor: SingleKeyOperationDescriptor<T, R>
+    ): TimestampLinearizedResult<R> {
+        root.executeUntilTimestamp(descriptor.timestamp)
+        var curNodeRef = root.root
+        while (true) {
+            val curResult = descriptor.result.getResult()
+            if (curResult != null) {
+                return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
+            }
+            val curNode = curNodeRef.get() as InnerNode
+            curNode.executeUntilTimestamp(descriptor.timestamp)
+            curNodeRef = curNode.route(descriptor.key)
+        }
+    }
+
     fun insert(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = InsertDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        TODO()
+        assert(descriptor.timestamp == timestamp)
+        return executeSingleKeyOperation(descriptor)
     }
 
     fun delete(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = DeleteDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        TODO()
+        assert(descriptor.timestamp == timestamp)
+        return executeSingleKeyOperation(descriptor)
     }
 
     fun exists(x: T): TimestampLinearizedResult<Boolean> {
         val descriptor = ExistsDescriptor.new(x)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        TODO()
+        assert(descriptor.timestamp == timestamp)
+        return executeSingleKeyOperation(descriptor)
     }
 
     fun waitFreeExists(x: T): Boolean {
@@ -42,6 +61,7 @@ class LockFreeSet<T : Comparable<T>> {
         val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+        assert(descriptor.timestamp == timestamp)
         TODO()
     }
 }

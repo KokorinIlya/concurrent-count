@@ -3,7 +3,6 @@ package tree
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
-import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
 sealed class Node<T : Comparable<T>>
@@ -115,7 +114,7 @@ data class RootNode<T : Comparable<T>>(
                 /*
                 The same for count queries
                  */
-                is CountDescriptor -> curDescriptor.processRootChild(this)
+                is CountDescriptor -> curDescriptor.processRootNode(this)
                 /*
                 Insert and delete should be executed only if such key exists in the set
                  */

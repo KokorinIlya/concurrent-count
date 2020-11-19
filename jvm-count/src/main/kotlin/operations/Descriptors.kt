@@ -20,7 +20,7 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     (or LeafNode with EmptyNode), tries to update answer, and performs any other necessary actions,
     except for removing descriptor from parent queue.
      */
-    abstract fun processNextNode(nodeRef: AtomicReference<TreeNode<T>>)
+    abstract fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>)
 }
 
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>()
@@ -35,7 +35,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processNextNode(nodeRef: AtomicReference<TreeNode<T>>) {
+    override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         TODO("Not yet implemented")
     }
 }
@@ -50,7 +50,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processNextNode(nodeRef: AtomicReference<TreeNode<T>>) {
+    override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         TODO("Not yet implemented")
     }
 }
@@ -65,7 +65,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processNextNode(nodeRef: AtomicReference<TreeNode<T>>) {
+    override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         TODO("Not yet implemented")
     }
 }
@@ -81,7 +81,7 @@ data class CountDescriptor<T : Comparable<T>>(
     /*
     The same contract, as in processNextNode
      */
-    fun processRootChild(curNode: RootNode<T>) {
+    fun processRootNode(curNode: RootNode<T>) {
         TODO()
     }
 

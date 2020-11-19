@@ -5,8 +5,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 sealed class OperationResult<R> {
     abstract fun getResult(): R?
-
-    fun isFinished(): Boolean = getResult() != null
 }
 
 class SingleKeyOperationResult<R> : OperationResult<R>() {

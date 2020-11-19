@@ -3,11 +3,23 @@ package operations
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Result of some operation (operation is either finished or not).
+ * Each descriptor of some particular operation should contain reference to operation result.
+ * Even if multiple independent copies of descriptor exist, they should all share a single operation result
+ * (by referring shared result it instead of storing multiple independent copies of the result).
+ */
 sealed class OperationResult<R> {
+    /**
+     * Returns null, if operation execution hasn't finished yet. Otherwise, returns non-null operation result
+     */
     abstract fun getResult(): R?
 }
 
 class SingleKeyOperationResult<R> : OperationResult<R>() {
+    /*
+    Result can be set multiple times, but all set values should be the same
+     */
     private val result: AtomicReference<R?> = AtomicReference(null)
 
     override fun getResult(): R? = result.get()
@@ -45,10 +57,10 @@ class CountResult : OperationResult<Int>() {
     }
 
     override fun getResult(): Int? {
-        val totalDeleteNodes = answerNodes.size
-        val totalInsertNodes = visitedNodes.size
-        assert(totalDeleteNodes <= totalInsertNodes)
-        return if (totalDeleteNodes == totalInsertNodes) { // There are no more active descriptors
+        val totalNodesWithKnownAnswer = answerNodes.size
+        val totalVisitedNodes = visitedNodes.size
+        assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
+        return if (totalNodesWithKnownAnswer == totalVisitedNodes) { // There are no more active descriptors
             /*
             Traversing hash map is safe, since new descriptors cannot be added to the map
             (since there are no active descriptors)

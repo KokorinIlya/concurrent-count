@@ -8,7 +8,23 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.properties.Delegates
 
 sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
-    override var timestamp by Delegates.notNull<Long>()
+    /*
+    Note, that timestamp property is backed by non-atomic field. Thus, it's not safe to modify it in
+    concurrent environment. Instead, originator thread should initialize timestamp of it's descriptor before
+    request is visible to other threads (i.e. before descriptor is added to the root queue). Since root queue
+    uses AtomicReference internally, reference publication is correct and it s safe to read this field after
+    publication.
+     */
+    private var timestampValue: Long? = null
+    override var timestamp: Long
+        get() = timestampValue ?: throw IllegalStateException("Timestamp not initialized")
+        set(value) {
+            if (timestampValue == null) {
+                timestampValue = value
+            } else {
+                throw IllegalStateException("Timestamp already initialized")
+            }
+        }
 }
 
 abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T>() {

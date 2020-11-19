@@ -15,10 +15,15 @@ class LockFreeSet<T : Comparable<T>> {
         id = nodeIdAllocator.allocateId()
     )
 
+    /**
+     * Executes single-key operation, traversing from root to the appropriate leaf.
+     */
     private fun <R> executeSingleKeyOperation(
         descriptor: SingleKeyOperationDescriptor<T, R>
     ): TimestampLinearizedResult<R> {
-        root.executeUntilTimestamp(descriptor.timestamp)
+        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+        assert(descriptor.timestamp == timestamp)
+        root.executeUntilTimestamp(timestamp)
         var curNodeRef = root.root
         while (true) {
             val curResult = descriptor.result.getResult()
@@ -34,30 +39,21 @@ class LockFreeSet<T : Comparable<T>> {
             be only InnerNodes.
              */
             val curNode = curNodeRef.get() as InnerNode
-            curNode.executeUntilTimestamp(descriptor.timestamp)
+            curNode.executeUntilTimestamp(timestamp)
             curNodeRef = curNode.route(descriptor.key)
         }
     }
 
     fun insert(x: T): TimestampLinearizedResult<Boolean> {
-        val descriptor = InsertDescriptor.new(x)
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
-        return executeSingleKeyOperation(descriptor)
+        return executeSingleKeyOperation(InsertDescriptor.new(x))
     }
 
     fun delete(x: T): TimestampLinearizedResult<Boolean> {
-        val descriptor = DeleteDescriptor.new(x)
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
-        return executeSingleKeyOperation(descriptor)
+        return executeSingleKeyOperation(DeleteDescriptor.new(x))
     }
 
     fun exists(x: T): TimestampLinearizedResult<Boolean> {
-        val descriptor = ExistsDescriptor.new(x)
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
-        return executeSingleKeyOperation(descriptor)
+        return executeSingleKeyOperation(ExistsDescriptor.new(x))
     }
 
     fun waitFreeExists(x: T): Boolean {

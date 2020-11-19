@@ -21,7 +21,8 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     except for removing descriptor from parent queue.
     Note, that this function never tries to insert descriptor to the queues of LeafNode or EmptyNode
     (since neither LeafNode nor EmptyNode contain descriptor queues). If this function encounters LeafNode
-    (or EmptyNode) in the nextNodeRef, it should finish the request.
+    (or EmptyNode) in the nextNodeRef, it should finish the request (by CAS, replacing EmptyNode with LeafNode,
+    for example).
      */
     abstract fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>)
 }
@@ -73,9 +74,8 @@ data class ExistsDescriptor<T : Comparable<T>>(
     }
 }
 
-/*
-TODO: consider adding nodes, that contain descriptors for the count request to a stack
-(to search such nodes faster)
+/**
+ * Descriptor, corresponding to count operations
  */
 data class CountDescriptor<T : Comparable<T>>(
     val leftBorder: T, val rightBorder: T,
@@ -112,6 +112,13 @@ data class CountDescriptor<T : Comparable<T>>(
         }
     }
 
+    /**
+     * Determines, which case holds for current request and a given key rage. The possible opportunities are
+     * the following:
+     *      1) The whole key range lies inside request borders
+     *      2) Key range has empty intersection with request borders
+     *      3) Key range intersects with request borders, and such intersection isn't equal to the whole key range.
+     */
     fun intersectBorders(minKey: T, maxKey: T): IntersectionResult {
         assert(minKey <= maxKey)
         return if (minKey >= rightBorder || maxKey <= leftBorder) {
@@ -124,6 +131,10 @@ data class CountDescriptor<T : Comparable<T>>(
     }
 }
 
+/**
+ * Descriptor, not corresponding to any operation. We use it as an initial dummy value in Michael-Scott queue.
+ * It has a constant timestamp, which is less, than any valid timestamp (logic of root queue will guarantee that).
+ */
 class DummyDescriptor<T : Comparable<T>> : Descriptor<T>() { // TODO: consider making it an object
     override var timestamp: Long
         get() = 0L

@@ -16,6 +16,10 @@ sealed class OperationResult<R> {
     abstract fun getResult(): R?
 }
 
+/**
+ * Result of exist, remove or insert operation. For such operation, answer is either known completely or
+ * not known at all. It makes setting answer for such operations atomic.
+ */
 class SingleKeyOperationResult<R> : OperationResult<R>() {
     /*
     Result can be set multiple times, but all set values should be the same
@@ -33,6 +37,10 @@ class SingleKeyOperationResult<R> : OperationResult<R>() {
     }
 }
 
+/**
+ * Result of count operation. Answer for the count operation is the sum of sizes of some subtrees, thus making
+ * setting the count result non-atomic.
+ */
 class CountResult : OperationResult<Int>() {
     /*
     Let's pretend these data structures are lock-free.
@@ -44,10 +52,19 @@ class CountResult : OperationResult<Int>() {
     private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
     private val answerNodes = ConcurrentHashMap<Long, Int>()
 
+    /**
+     * Should be called before adding count descriptor to some node.
+     */
     fun preVisitNode(nodeId: Long) {
         visitedNodes.add(nodeId)
     }
 
+    /**
+     * Should be called before removing count node from node queue. All answers, with which the function is called,
+     * should be the same. It means, that the function should be called only if creation/last modification
+     * timestamps of all nodes, answers for which is included in the nodeAnswer, is less or equal, than timestamp
+     * of the count operation.
+     */
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
         val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)
         /*

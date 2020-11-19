@@ -69,6 +69,12 @@ class LockFreeSet<T : Comparable<T>> {
         val curLeft = curNode.left.get()
         val curRight = curNode.right.get()
         val curNodeParams = curNode.nodeParams.get()
+        /*
+        We should determine, if we should go deeper, to the children of the current node. Note, that current
+        thread could have been stalled, and other operation (for example, insert) could have been executed in
+        current node, thus changing key range borders. It means, that sometimes we can go deeper, even if we don't
+        need to. However, it's not going to break neither linearizability not lock-freedom of the algorithm.
+         */
         if (
             descriptor.intersectBorders(
                 curNodeParams.minKey,
@@ -77,11 +83,14 @@ class LockFreeSet<T : Comparable<T>> {
         ) {
             /*
             If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by
-            descriptor.processRootNode (or descriptor.processInnerRootNode)
+            descriptor.processRootNode(curNode) (or descriptor.processInnerRootNode(curNode))
              */
             if (curLeft is InnerNode) {
                 countInNode(curLeft, descriptor)
             }
+            /*
+            The same for right node
+             */
             if (curRight is InnerNode) {
                 countInNode(curRight, descriptor)
             }
@@ -91,9 +100,9 @@ class LockFreeSet<T : Comparable<T>> {
             1) Either current subtree has been rebuilt (it means, that the request in current
             subtree has been executed).
 
-            2) Or current subtree hasn't been rebuilt. It means, that keys range could only be expanded.
+            2) Or current subtree hasn't been rebuilt. It means, that keys range could have only been expanded.
             If key range (even after the expansion) either lies inside request borders or doesn't intersect
-            with request borders, there is no need to perform any actions.
+            with request borders, there is no need to go to the chilren.
          */
     }
 

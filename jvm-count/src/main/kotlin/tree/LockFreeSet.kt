@@ -30,17 +30,31 @@ class LockFreeSet<T : Comparable<T>> {
             if (curResult != null) {
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
-            /*
-            Since result is not known yet, there is still nodes with queues, containing descriptor for the request.
-            Also, it means, that tree rebuilding hasn't happened yet (since rebuilding finishes all operations
-            in the subtree, being rebuilt).
-            Note, that only nodes on appropriate path (determined by node.route()) can contain descriptors
-            or the request. Since there are still nodes, containing descriptors for the request, such nodes can
-            be only InnerNodes.
-             */
-            val curNode = curNodeRef.get() as InnerNode
-            curNode.executeUntilTimestamp(timestamp)
-            curNodeRef = curNode.route(descriptor.key)
+            when (val curNode = curNodeRef.get()) {
+                is InnerNode -> {
+                    /*
+                    Process current operation in the inner node (possible, affecting it's child, if it's child is
+                    either LeafNode or EmptyNode), also, rebuilding the tree, if needed. After that, go to next node.
+                     */
+                    curNode.executeUntilTimestamp(timestamp)
+                    curNodeRef = curNode.route(descriptor.key)
+                }
+                is RebuildNode -> {
+                    /*
+                    Help other threads rebuild the subtree. Since after rebuilding curNodeRef won't reference
+                    the same node, continue without rooting.
+                     */
+                    curNode.rebuild(curNodeRef)
+                    assert(curNodeRef.get() != curNode)
+                }
+                else -> {
+                    /*
+                    Program is ill-formed, since LeafNode and EmptyNode should be processed while processing their
+                    parent (InnerNode or RootNode)
+                     */
+                    throw IllegalStateException("Program is ill-formed")
+                }
+            }
         }
     }
 

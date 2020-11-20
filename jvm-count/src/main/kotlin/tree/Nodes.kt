@@ -265,7 +265,8 @@ data class LeafNode<T : Comparable<T>>(
  * Node, corresponding to the head of the empty subtree. We use it instead of null to make sure, that some stalled
  * thread won't perform inappropriate CAS(null, LeafNode(key = x)). We ensure, such CAS will not be successful
  * by storing creation timestamp in the node. By reading timestamp in EmptyNode stalled thread can understand, that
- * it's operation has been already completed and simply finish execution.
+ * it's operation has been already completed and simply finish execution. I.e. timestamp mechanism allows us
+ * to avoid the ABA problem.
  */
 data class EmptyNode<T : Comparable<T>>(
     val creationTimestamp: Long

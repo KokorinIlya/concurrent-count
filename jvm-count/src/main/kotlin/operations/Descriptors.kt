@@ -126,7 +126,31 @@ data class InsertDescriptor<T : Comparable<T>>(
                     return
                 }
                 is InnerNode -> {
-                    TODO()
+                    val curNodeParams = nextNode.nodeParams.get()
+
+                    if (curNodeParams.lastModificationTimestamp < timestamp) {
+                        // TODO: check, if modifications count is greater, than some threshold
+                        val newNodeParams = InnerNode.Companion.Params(
+                            lastModificationTimestamp = timestamp,
+                            maxKey = if (key > curNodeParams.minKey) {
+                                key
+                            } else {
+                                curNodeParams.minKey
+                            },
+                            minKey = if (key < curNodeParams.minKey) {
+                                key
+                            } else {
+                                curNodeParams.minKey
+                            },
+                            modificationsCount = curNodeParams.modificationsCount + 1,
+                            subtreeSize = curNodeParams.subtreeSize + 1
+                        )
+                        nextNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
+                    }
+                    /*
+                    Else, some other thread has performed the modification
+                     */
+                    return
                 }
                 /* TODO: uncomment it, when I am ready to write the code with rebuilding
                 is RebuildNode -> {

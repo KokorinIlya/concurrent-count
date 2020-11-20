@@ -138,10 +138,10 @@ data class RootNode<T : Comparable<T>>(
                      TODO: maybe, we don't have to participate in rebuilding procedure.
                      Nevertheless, participation won't break the algorithm.
                      */
-                    curNode.rebuild(curNodeRef = curNodeRef)
+                    curNode.rebuild(curNodeRef)
                     /*
                     curNodeRef should now store a reference to the root of the new subtree instead of rebuild
-                    operation descriptor
+                    operation descriptor.
                      */
                     assert(curNodeRef.get() != curNode)
                 }

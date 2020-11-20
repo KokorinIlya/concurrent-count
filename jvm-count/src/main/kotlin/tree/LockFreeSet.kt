@@ -59,7 +59,7 @@ class LockFreeSet<T : Comparable<T>> {
     }
 
     fun insert(x: T): TimestampLinearizedResult<Boolean> {
-        return executeSingleKeyOperation(InsertDescriptor.new(x))
+        return executeSingleKeyOperation(InsertDescriptor.new(x, nodeIdAllocator))
     }
 
     fun delete(x: T): TimestampLinearizedResult<Boolean> {
@@ -95,6 +95,7 @@ class LockFreeSet<T : Comparable<T>> {
                 curNodeParams.maxKey
             ) == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN
         ) {
+            // TODO: add left and right subtree rebuilding
             /*
             If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by
             descriptor.processRootNode(curNode) (or descriptor.processInnerRootNode(curNode))

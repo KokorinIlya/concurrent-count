@@ -1,9 +1,9 @@
 package operations
 
+import allocation.IdAllocator
 import common.TimestampedValue
-import tree.InnerNode
-import tree.RootNode
-import tree.TreeNode
+import queue.NonRootLockFreeQueue
+import tree.*
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -56,16 +56,89 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
 
 data class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: SingleKeyOperationResult<Boolean>
+    override val result: SingleKeyOperationResult<Boolean>,
+    /*
+    Should be the same allocator, which is used by the tree
+     */
+    private val nodeIdAllocator: IdAllocator
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
-        fun <T : Comparable<T>> new(key: T): InsertDescriptor<T> {
-            return InsertDescriptor(key, SingleKeyOperationResult())
+        fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): InsertDescriptor<T> {
+            return InsertDescriptor(key, SingleKeyOperationResult(), nodeIdAllocator)
         }
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
-        TODO("Not yet implemented")
+        while (true) {
+            when (val nextNode = nextNodeRef.get()) {
+                is EmptyNode -> {
+                    /*
+                    If insert operation, that is being executed, hasn't changed the tree yet, try to make the change.
+                    Otherwise, the insert has already been executed by some other thread, just finish the operation
+                     */
+                    if (nextNode.creationTimestamp < timestamp) {
+                        val newLeafNode = LeafNode(key = key, creationTimestamp = timestamp)
+                        nextNodeRef.compareAndSet(nextNode, newLeafNode)
+                    }
+                    /*
+                    Operation was successful, set result to true, to indicate the originator thread, that the
+                    insert has been completed and no further action is required
+                     */
+                    result.trySetResult(true)
+                    return
+                }
+                is LeafNode -> {
+                    /*
+                    Tree hasn't been changed yet
+                     */
+                    if (nextNode.creationTimestamp < timestamp) {
+                        /*
+                        Insert hasn't been executed yet, key must not exist in the tree physically
+                         */
+                        assert(nextNode.key != key)
+                        val newLeafNode = LeafNode(key = key, creationTimestamp = timestamp)
+                        val (leftChild, rightChild) = if (key < nextNode.key) {
+                            Pair(newLeafNode, nextNode)
+                        } else {
+                            Pair(nextNode, newLeafNode)
+                        }
+                        val nodeParams = InnerNode.Companion.Params(
+                            lastModificationTimestamp = timestamp,
+                            maxKey = rightChild.key,
+                            minKey = leftChild.key,
+                            modificationsCount = 0,
+                            subtreeSize = 2
+                        )
+                        val newInnerNode = InnerNode<T>(
+                            id = nodeIdAllocator.allocateId(),
+                            left = AtomicReference(leftChild),
+                            right = AtomicReference(rightChild),
+                            rightSubtreeMin = rightChild.key,
+                            nodeParams = AtomicReference(nodeParams),
+                            queue = NonRootLockFreeQueue(initValue = DummyDescriptor())
+                        )
+                        nextNodeRef.compareAndSet(nextNode, newInnerNode)
+                    }
+                    /*
+                    No further action from originator thread is required
+                     */
+                    result.trySetResult(true)
+                    return
+                }
+                is InnerNode -> {
+                    TODO()
+                }
+                is RebuildNode -> {
+                    /*
+                    Help other threads rebuild the subtree and restart the operation
+                    TODO: maybe, we don't have to participate in rebuild here, since we already participate in
+                    rebuilding procedure in the executeSingleKeyOperation
+                     */
+                    nextNode.rebuild(nextNodeRef)
+                    assert(nextNodeRef.get() != nextNode)
+                }
+            }
+        }
     }
 }
 

@@ -128,15 +128,18 @@ data class InsertDescriptor<T : Comparable<T>>(
                 is InnerNode -> {
                     TODO()
                 }
+                /* TODO: uncomment it, when I am ready to write the code with rebuilding
                 is RebuildNode -> {
                     /*
-                    Help other threads rebuild the subtree and restart the operation
+                    Help other threads rebuild the subtree and restart the operation. Note, that after the rebuilding
+                    is finished, nextNodeRef should point to the root of the rebuilt subtree.
                     TODO: maybe, we don't have to participate in rebuild here, since we already participate in
                     rebuilding procedure in the executeSingleKeyOperation
                      */
                     nextNode.rebuild(nextNodeRef)
                     assert(nextNodeRef.get() != nextNode)
                 }
+                */
             }
         }
     }

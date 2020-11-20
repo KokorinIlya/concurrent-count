@@ -39,6 +39,7 @@ class LockFreeSet<T : Comparable<T>> {
                     curNode.executeUntilTimestamp(timestamp)
                     curNodeRef = curNode.route(descriptor.key)
                 }
+                /* TODO: uncomment it later
                 is RebuildNode -> {
                     /*
                     Help other threads rebuild the subtree. Since after rebuilding curNodeRef won't reference
@@ -47,6 +48,7 @@ class LockFreeSet<T : Comparable<T>> {
                     curNode.rebuild(curNodeRef)
                     assert(curNodeRef.get() != curNode)
                 }
+                 */
                 else -> {
                     /*
                     Program is ill-formed, since LeafNode and EmptyNode should be processed while processing their

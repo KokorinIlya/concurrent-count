@@ -133,6 +133,7 @@ data class RootNode<T : Comparable<T>>(
                         }
                     }
                 }
+                /* TODO: uncomment it when I am ready to write a code with rebuilding
                 is RebuildNode -> {
                     /*
                      TODO: maybe, we don't have to participate in rebuilding procedure.
@@ -145,6 +146,7 @@ data class RootNode<T : Comparable<T>>(
                      */
                     assert(curNodeRef.get() != curNode)
                 }
+                 */
                 is LeafNode -> {
                     return curNode.key == descriptor.key
                 }

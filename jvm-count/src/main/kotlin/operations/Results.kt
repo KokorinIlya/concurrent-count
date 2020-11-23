@@ -78,10 +78,10 @@ class CountResult : OperationResult<Int>() {
         val totalNodesWithKnownAnswer = answerNodes.size
         val totalVisitedNodes = visitedNodes.size
         assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
-        return if (totalNodesWithKnownAnswer == totalVisitedNodes) { // There are no more active descriptors
+        return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*
             Traversing hash map is safe, since new descriptors cannot be added to the map
-            (since there are no active descriptors)
+            (since there are no more active descriptors)
              */
             answerNodes.values.sum()
         } else {

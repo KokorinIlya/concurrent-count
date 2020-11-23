@@ -42,7 +42,7 @@ data class RootNode<T : Comparable<T>>(
             KEY_EXISTS,
 
             /*
-            Specified key definitely doesn't exist in the tree. Either it has never been added to the queue
+            Specified key definitely doesn't exist in the tree. Either it has never been added to the set
             or added and then removed (at least logically)
              */
             KEY_NOT_EXISTS,
@@ -103,7 +103,7 @@ data class RootNode<T : Comparable<T>>(
     }
 
     /**
-     * Can be used in assertions, to check, whether descriptor from some specified timestamp has been already removed
+     * Can be used in assertions, to check, whether descriptor with some specified timestamp has been already removed
      * from the root queue.
      */
     private fun checkDescriptorMoved(timestamp: Long): Boolean {
@@ -195,10 +195,7 @@ data class RootNode<T : Comparable<T>>(
                         /*
                         Otherwise, the answer is not needed, since some other thread has moved the descriptor
                         (either dropped it from the root queue or propagated it downwards).
-                        Since the answer is set before removing the descriptor from the queue, we shouldn't
-                        set the answer manually (because it was set by some another ).
                          */
-                        assert(curDescriptor.result.getResult() != null)
                         assert(checkDescriptorMoved(curDescriptor.timestamp))
                     }
                 }
@@ -215,7 +212,6 @@ data class RootNode<T : Comparable<T>>(
                         curDescriptor.result.trySetResult(false)
                     }
                     null -> {
-                        assert(curDescriptor.result.getResult() != null)
                         assert(checkDescriptorMoved(curDescriptor.timestamp))
                     }
                 }

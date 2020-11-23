@@ -131,6 +131,7 @@ class LockFreeSet<T : Comparable<T>> {
         assert(descriptor.timestamp == timestamp)
 
         root.executeUntilTimestamp(timestamp)
+
         val realRoot = root.root.get()
         if (realRoot is InnerNode) {
             countInNode(realRoot, descriptor)

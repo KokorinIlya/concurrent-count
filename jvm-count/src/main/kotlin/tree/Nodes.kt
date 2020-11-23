@@ -315,9 +315,8 @@ data class InnerNode<T : Comparable<T>>(
             break correctness of the algorithm.
              */
             when (curDescriptor) {
-                is ExistsDescriptor -> curDescriptor.processNextNode(route(curDescriptor.key))
+                is SingleKeyOperationDescriptor<T, *> -> curDescriptor.processNextNode(route(curDescriptor.key))
                 is CountDescriptor -> curDescriptor.processInnerNode(this)
-                is SingleKeyWriteOperationDescriptor<T> -> curDescriptor.processNextNode(route(curDescriptor.key))
                 else -> throw IllegalStateException("Program is ill-formed")
             }
 

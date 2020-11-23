@@ -124,31 +124,37 @@ data class InsertDescriptor<T : Comparable<T>>(
     }
 
     private fun handleInnerNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: InnerNode<T>) {
-        val curNodeParams = nextNode.nodeParams.get()
+        val nextNodeParams = nextNode.nodeParams.get()
 
-        if (curNodeParams.lastModificationTimestamp < timestamp) {
-            // TODO: check, if modifications count is greater, than some threshold
+        if (nextNodeParams.lastModificationTimestamp < timestamp) {
+            // TODO: rebuild, if modifications count is greater, than some threshold
             val newNodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
-                maxKey = if (key > curNodeParams.minKey) {
+                maxKey = if (key > nextNodeParams.minKey) {
                     key
                 } else {
-                    curNodeParams.minKey
+                    nextNodeParams.minKey
                 },
-                minKey = if (key < curNodeParams.minKey) {
+                minKey = if (key < nextNodeParams.minKey) {
                     key
                 } else {
-                    curNodeParams.minKey
+                    nextNodeParams.minKey
                 },
-                modificationsCount = curNodeParams.modificationsCount + 1,
-                subtreeSize = curNodeParams.subtreeSize + 1
+                modificationsCount = nextNodeParams.modificationsCount + 1,
+                subtreeSize = nextNodeParams.subtreeSize + 1
             )
-            nextNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
+            nextNode.nodeParams.compareAndSet(nextNodeParams, newNodeParams)
         }
         /*
         Else, some other thread has performed the modification. Just exit without setting the result, because
-        traversing downwards
+        traversing downwards should possibly continue
          */
+
+        /*
+        Try to push the descriptor to the next node queue
+        TODO: do not perform insert, if next node needs rebuilding
+         */
+        nextNode.queue.push(this)
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
@@ -176,33 +182,73 @@ data class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
+    private fun handleEmptyNode(nextNode: EmptyNode<T>) {
+        /*
+        Delete operation is executed only when key exists in the tree. If key cannot be found on appropriate
+        path, it must have been deleted by some operation R, such that current operation happens-before R.
+         */
+        assert(nextNode.creationTimestamp >= timestamp)
+
+        /*
+        Indicate the originator thread, that it should perform no further actions
+         */
+        result.trySetResult(true)
+    }
+
+    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: LeafNode<T>) {
+        if (nextNode.key != key) {
+            /*
+            Some other thread has completed current operation and created new node (with new key)
+            afterwards.
+             */
+            assert(nextNode.creationTimestamp > timestamp)
+
+        } else if (nextNode.creationTimestamp < timestamp) {
+            val newNode = EmptyNode<T>(creationTimestamp = timestamp)
+            nextNodeRef.compareAndSet(nextNode, newNode)
+        }
+        result.trySetResult(true)
+    }
+
+    private fun handleInnerNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: InnerNode<T>) {
+        val nextNodeParams = nextNode.nodeParams.get()
+
+        if (nextNodeParams.lastModificationTimestamp < timestamp) {
+            // TODO: rebuild, if modifications count is greater, than some threshold
+            val newNodeParams = InnerNode.Companion.Params(
+                lastModificationTimestamp = timestamp,
+
+                /*
+                When not rebuilding subtree, we only expnd key range and never narrow it
+                 */
+                maxKey = nextNodeParams.maxKey,
+                minKey = nextNodeParams.minKey,
+
+                modificationsCount = nextNodeParams.modificationsCount + 1,
+                subtreeSize = nextNodeParams.subtreeSize - 11
+            )
+            nextNode.nodeParams.compareAndSet(nextNodeParams, newNodeParams)
+        }
+        /*
+        Else, some other thread has performed the modification. Just exit without setting the result, because
+        traversing downwards should possibly continue
+         */
+
+        /*
+        Try to push the descriptor to the next node queue
+        TODO: do not perform insert, if next node needs rebuilding
+         */
+        nextNode.queue.push(this)
+    }
+
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
-            is EmptyNode -> {
-                /*
-                Delete operation is executed only when key exists in the tree. If key cannot be found on appropriate
-                path, it must have been deleted by some operation R, such that current operation happens-before R.
-                 */
-                assert(nextNode.creationTimestamp >= timestamp)
-
-                /*
-                Indicate the originator thread, that it should perform no further actions
-                 */
-                result.trySetResult(true)
-            }
-            is LeafNode -> {
-                if (nextNode.key != key) {
-                    /*
-                    Some other thread has completed current operation and created new node (with new key)
-                    afterwards.
-                     */
-                    assert(nextNode.creationTimestamp > timestamp)
-
-                } else if (nextNode.creationTimestamp < timestamp) {
-                    TODO()
-                }
-                result.trySetResult(true)
-            }
+            is EmptyNode -> handleEmptyNode(nextNode)
+            is LeafNode -> handleLeafNode(nextNodeRef, nextNode)
+            is InnerNode -> handleInnerNode(nextNodeRef, nextNode)
+            /*
+            TODO: maybe, rebuild here
+             */
         }
     }
 }
@@ -217,8 +263,66 @@ data class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
+    private fun handleEmptyNode(nextNode: EmptyNode<T>) {
+        /*
+        Exist request doesn't create new nodes
+         */
+        assert(nextNode.creationTimestamp != timestamp)
+
+        if (nextNode.creationTimestamp < timestamp) {
+            /*
+            By the moment of current request, key doesn't exist
+             */
+            result.trySetResult(false)
+        } else {
+            /*
+            Some other thread has completed the request
+             */
+            assert(result.getResult() != null)
+        }
+    }
+
+    private fun handleLeafNode(nextNode: LeafNode<T>) {
+        /*
+        Exist request doesn't create new nodes
+         */
+        assert(nextNode.creationTimestamp != timestamp)
+
+        if (nextNode.creationTimestamp < timestamp) {
+            /*
+            By the moment of current request, such key either exists or not, depending on the information from
+            current leaf
+             */
+            result.trySetResult(nextNode.key == key)
+        } else {
+            /*
+            Some other thread has completed the request
+             */
+            assert(result.getResult() != null)
+        }
+    }
+
+    private fun handleInnerNode(nextNode: InnerNode<T>) {
+        /*
+        Exist request never modifies nodes
+         */
+        assert(nextNode.nodeParams.get().lastModificationTimestamp != timestamp)
+
+        /*
+        TODO: do not perform insert, if next node needs rebuilding
+         */
+        nextNode.queue.push(this)
+    }
+
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
-        TODO("Not yet implemented")
+        when (val nextNode = nextNodeRef.get()) {
+            is EmptyNode -> handleEmptyNode(nextNode)
+            is LeafNode -> handleLeafNode(nextNode)
+            is InnerNode -> handleInnerNode(nextNode)
+            /*
+            TODO: maybe, rebuild here
+             */
+        }
     }
 }
 

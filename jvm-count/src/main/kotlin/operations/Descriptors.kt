@@ -334,6 +334,14 @@ data class CountDescriptor<T : Comparable<T>>(
         assert(leftBorder <= rightBorder)
     }
 
+    private fun getAnswerForLeafNode(leafNode: LeafNode<T>): Int {
+        return if (leafNode.key in leftBorder..rightBorder) {
+            1
+        } else {
+            0
+        }
+    }
+
     /*
     The same contract, as in processNextNode.
     Note, that this function never tries to insert descriptor to the queues of LeafNode or EmptyNode
@@ -342,11 +350,64 @@ data class CountDescriptor<T : Comparable<T>>(
     answer for these children into account, in this function.
      */
     fun processRootNode(curNode: RootNode<T>) {
-        TODO("Not yet implemented")
+        when (val curChild = curNode.root.get()) {
+            is EmptyNode -> {
+                result.preRemoveFromNode(curNode.id, 0)
+            }
+            is LeafNode -> {
+                result.preRemoveFromNode(curNode.id, getAnswerForLeafNode(curChild))
+            }
+            is InnerNode -> {
+                result.preVisitNode(curChild.id)
+                curChild.queue.push(this)
+            }
+            /*
+            TODO: handle tree rebuilding
+             */
+        }
+
+    }
+
+    private fun processInnerNodeChild(curChild: TreeNode<T>): Int {
+        return when (curChild) {
+            is EmptyNode -> 0
+            is LeafNode -> getAnswerForLeafNode(curChild)
+            is InnerNode -> {
+                result.preVisitNode(curChild.id)
+                curChild.queue.push(this)
+                0
+            }
+            /*
+            TODO: handle rebuilding
+             */
+            else -> throw IllegalStateException("Program is ill-formed")
+        }
     }
 
     fun processInnerNode(curNode: InnerNode<T>) {
-        TODO("Not yet implemented")
+        val curParams = curNode.nodeParams.get()
+        assert(curParams.lastModificationTimestamp != timestamp)
+        if (curParams.lastModificationTimestamp > timestamp) {
+            /*
+            Current node has already been processed
+             */
+            return
+        }
+
+        when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
+            IntersectionResult.NO_INTERSECTION -> {
+                result.preRemoveFromNode(curNode.id, 0)
+            }
+            IntersectionResult.NODE_INSIDE_REQUEST -> {
+                result.preRemoveFromNode(curNode.id, curParams.subtreeSize)
+            }
+            IntersectionResult.GO_TO_CHILDREN -> {
+                val leftChild = curNode.left.get()
+                val rightChild = curNode.right.get()
+                val answer = processInnerNodeChild(leftChild) + processInnerNodeChild(rightChild)
+                result.preRemoveFromNode(curNode.id, answer)
+            }
+        }
     }
 
     companion object {

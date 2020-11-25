@@ -130,16 +130,8 @@ data class InsertDescriptor<T : Comparable<T>>(
             // TODO: rebuild, if modifications count is greater, than some threshold
             val newNodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
-                maxKey = if (key > nextNodeParams.minKey) {
-                    key
-                } else {
-                    nextNodeParams.minKey
-                },
-                minKey = if (key < nextNodeParams.minKey) {
-                    key
-                } else {
-                    nextNodeParams.minKey
-                },
+                maxKey = maxOf(nextNodeParams.maxKey, key),
+                minKey = minOf(nextNodeParams.minKey, key),
                 modificationsCount = nextNodeParams.modificationsCount + 1,
                 subtreeSize = nextNodeParams.subtreeSize + 1
             )
@@ -214,6 +206,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         val nextNodeParams = nextNode.nodeParams.get()
 
         if (nextNodeParams.lastModificationTimestamp < timestamp) {
+            assert(nextNodeParams.subtreeSize >= 1)
             // TODO: rebuild, if modifications count is greater, than some threshold
             val newNodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
@@ -432,7 +425,7 @@ data class CountDescriptor<T : Comparable<T>>(
      */
     fun intersectBorders(minKey: T, maxKey: T): IntersectionResult {
         assert(minKey <= maxKey)
-        return if (minKey >= rightBorder || maxKey <= leftBorder) {
+        return if (minKey > rightBorder || maxKey < leftBorder) {
             IntersectionResult.NO_INTERSECTION
         } else if (leftBorder <= minKey && maxKey <= rightBorder) {
             IntersectionResult.NODE_INSIDE_REQUEST

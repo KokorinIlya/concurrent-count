@@ -67,20 +67,22 @@ class SequentialSetTest {
         val random = Random(System.currentTimeMillis())
         val insertProb = 0.2
         val deleteProb = 0.15
-        val countProb = 0.65
+        val countProb = 0.45
 
-        for (i in 1..100000) {
+        for (i in 1..1000) {
             val lockFreeSet = LockFreeSet<Int>()
             val sequentialSet = SequentialSet<Int>()
-
-            for (j in 1..100) {
+            val ops = ArrayList<String>()
+            for (j in 1..10000) {
                 val curOp = random.nextDouble()
                 when {
                     curOp <= insertProb -> {
                         /*
                         Insert
                          */
-                        val x = random.nextInt(10_000)
+                        val x = random.nextInt(from = 0, until = 100)
+                        ops.add("insert $x")
+
                         val result = lockFreeSet.insert(x).result
                         val expectedResult = sequentialSet.insert(x)
                         assertEquals(result, expectedResult)
@@ -89,7 +91,9 @@ class SequentialSetTest {
                         /*
                         Delete
                          */
-                        val x = random.nextInt(10_000)
+                        val x = random.nextInt(from = 0, until = 100)
+                        ops.add("delete $x")
+
                         val result = lockFreeSet.delete(x).result
                         val expectedResult = sequentialSet.delete(x)
                         assertEquals(result, expectedResult)
@@ -98,19 +102,24 @@ class SequentialSetTest {
                         /*
                         Count
                          */
-                        val x = random.nextInt()
-                        val y = random.nextInt()
+                        val x = random.nextInt(from = 0, until = 100)
+                        val y = random.nextInt(from = 0, until = 100)
                         val l = minOf(x, y)
                         val r = maxOf(x, y)
+                        ops.add("count $l, $r")
+
                         val result = lockFreeSet.count(l, r).result
                         val expectedResult = sequentialSet.count(l, r)
-                        assertEquals(result, expectedResult)
+                        if (result != expectedResult) {
+                            println(ops.joinToString(separator = ";\n"))
+                            assertTrue(false)
+                        }
                     }
                     else -> {
                         /*
                         Exists
                          */
-                        val x = random.nextInt(10_000)
+                        val x = random.nextInt(from = 0, until = 100)
                         val result = lockFreeSet.exists(x).result
                         val expectedResult = sequentialSet.exists(x)
                         assertEquals(result, expectedResult)
@@ -118,5 +127,27 @@ class SequentialSetTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun failedTest() {
+        val lockFreeSet = LockFreeSet<Int>()
+        assertTrue(lockFreeSet.insert(71).result)
+        assertEquals(1, lockFreeSet.count(6, 81).result)
+        assertTrue(lockFreeSet.insert(22).result)
+        assertEquals(0, lockFreeSet.count(23, 53).result)
+        assertTrue(lockFreeSet.insert(15).result)
+        assertFalse(lockFreeSet.insert(15).result)
+        assertEquals(0, lockFreeSet.count(58, 63).result)
+        assertEquals(2, lockFreeSet.count(4, 43).result)
+    }
+
+    @Test
+    fun otherFailedTest() {
+        val lockFreeSet = LockFreeSet<Int>()
+        assertTrue(lockFreeSet.insert(96).result)
+        assertEquals(0, lockFreeSet.count(0, 66).result)
+        assertTrue(lockFreeSet.insert(34).result)
+        assertEquals(1, lockFreeSet.count(22, 34).result)
     }
 }

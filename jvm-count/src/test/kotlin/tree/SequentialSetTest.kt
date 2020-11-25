@@ -2,6 +2,7 @@ package tree
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import kotlin.random.Random
 
 class SequentialSetTest {
     @Test
@@ -13,14 +14,51 @@ class SequentialSetTest {
         assertFalse(set.insert(1).result)
         assertTrue(set.insert(7).result)
         assertTrue(set.insert(-1).result)
-        assertEquals(set.count(0, 8).result, 2)
+        // assertEquals(set.count(0, 8).result, 2)
     }
 
-    /*
     @Test
     fun stressTest() {
-        val lockFreeSet = LockFreeSet<Int>()
-        val sequentialSet = SequentialSet<Int>()
+        val random = Random(System.currentTimeMillis())
+        val insertProb = 0.1
+        val deleteProb = 0.05
+        for (i in 1..1000) {
+            val lockFreeSet = LockFreeSet<Int>()
+            val sequentialSet = SequentialSet<Int>()
+
+            for (j in 1..10000) {
+                val curOp = random.nextDouble()
+                when {
+                    curOp <= insertProb -> {
+                        /*
+                        Insert
+                         */
+                        val x = random.nextInt(10_000)
+                        val result = lockFreeSet.insert(x).result
+                        val expectedResult = sequentialSet.insert(x)
+                        assertEquals(result, expectedResult)
+                    }
+                    curOp <= insertProb + deleteProb -> {
+                        /*
+                        Delete
+                         */
+                        val x = random.nextInt(10_000)
+                        val result = lockFreeSet.delete(x).result
+                        val expectedResult = sequentialSet.delete(x)
+                        assertEquals(result, expectedResult)
+                    }
+                    else -> {
+                        /*
+                        Exists
+                         */
+                        val x = random.nextInt(10_000)
+                        val result = lockFreeSet.exists(x).result
+                        val expectedResult = sequentialSet.exists(x)
+                        assertEquals(result, expectedResult)
+                    }
+                }
+            }
+        }
     }
-    */
+
 }

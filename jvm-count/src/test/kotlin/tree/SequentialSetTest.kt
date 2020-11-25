@@ -72,7 +72,6 @@ class SequentialSetTest {
         for (i in 1..1000) {
             val lockFreeSet = LockFreeSet<Int>()
             val sequentialSet = SequentialSet<Int>()
-            val ops = ArrayList<String>()
             for (j in 1..10000) {
                 val curOp = random.nextDouble()
                 when {
@@ -81,7 +80,6 @@ class SequentialSetTest {
                         Insert
                          */
                         val x = random.nextInt(from = 0, until = 100)
-                        ops.add("insert $x")
 
                         val result = lockFreeSet.insert(x).result
                         val expectedResult = sequentialSet.insert(x)
@@ -92,7 +90,6 @@ class SequentialSetTest {
                         Delete
                          */
                         val x = random.nextInt(from = 0, until = 100)
-                        ops.add("delete $x")
 
                         val result = lockFreeSet.delete(x).result
                         val expectedResult = sequentialSet.delete(x)
@@ -106,14 +103,10 @@ class SequentialSetTest {
                         val y = random.nextInt(from = 0, until = 100)
                         val l = minOf(x, y)
                         val r = maxOf(x, y)
-                        ops.add("count $l, $r")
 
                         val result = lockFreeSet.count(l, r).result
                         val expectedResult = sequentialSet.count(l, r)
-                        if (result != expectedResult) {
-                            println(ops.joinToString(separator = ";\n"))
-                            assertTrue(false)
-                        }
+                        assertEquals(expectedResult, result)
                     }
                     else -> {
                         /*

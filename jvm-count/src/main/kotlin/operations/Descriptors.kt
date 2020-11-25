@@ -360,12 +360,12 @@ data class CountDescriptor<T : Comparable<T>>(
             is InnerNode -> {
                 result.preVisitNode(curChild.id)
                 curChild.queue.push(this)
+                result.preRemoveFromNode(curNode.id, 0)
             }
             /*
             TODO: handle tree rebuilding
              */
         }
-
     }
 
     private fun processInnerNodeChild(curChild: TreeNode<T>): Int {

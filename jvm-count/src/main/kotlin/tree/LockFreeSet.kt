@@ -85,18 +85,14 @@ class LockFreeSet<T : Comparable<T>> {
         val curLeft = curNode.left.get()
         val curRight = curNode.right.get()
         val curNodeParams = curNode.nodeParams.get()
+        val intersectionResult = descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)
         /*
         We should determine, if we should go deeper, to the children of the current node. Note, that current
         thread could have been stalled, and other operation (for example, insert) could have been executed in
         current node, thus changing key range borders. It means, that sometimes we can go deeper, even if we don't
         need to. However, it's not going to break neither linearizability not lock-freedom of the algorithm.
          */
-        if (
-            descriptor.intersectBorders(
-                curNodeParams.minKey,
-                curNodeParams.maxKey
-            ) == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN
-        ) {
+        if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
             // TODO: add left and right subtree rebuilding
             /*
             If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by

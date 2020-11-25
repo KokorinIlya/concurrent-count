@@ -14,7 +14,7 @@ class SequentialSetTest {
         assertFalse(set.insert(1).result)
         assertTrue(set.insert(7).result)
         assertTrue(set.insert(-1).result)
-        // assertEquals(set.count(0, 8).result, 2)
+        assertEquals(set.count(0, 8).result, 2)
     }
 
     @Test
@@ -60,5 +60,4 @@ class SequentialSetTest {
             }
         }
     }
-
 }

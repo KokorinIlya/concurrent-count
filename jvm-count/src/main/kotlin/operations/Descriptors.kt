@@ -225,7 +225,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
                 minKey = nextNodeParams.minKey,
 
                 modificationsCount = nextNodeParams.modificationsCount + 1,
-                subtreeSize = nextNodeParams.subtreeSize - 11
+                subtreeSize = nextNodeParams.subtreeSize - 1
             )
             nextNode.nodeParams.compareAndSet(nextNodeParams, newNodeParams)
         }
@@ -391,6 +391,7 @@ data class CountDescriptor<T : Comparable<T>>(
             /*
             Current node has already been processed
              */
+            result.checkNodeAnswerKnown(curNode.id)
             return
         }
 

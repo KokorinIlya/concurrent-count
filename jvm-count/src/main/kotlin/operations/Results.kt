@@ -59,6 +59,10 @@ class CountResult : OperationResult<Int>() {
         visitedNodes.add(nodeId)
     }
 
+    fun checkNodeAnswerKnown(nodeId: Long): Boolean {
+        return answerNodes.contains(nodeId)
+    }
+
     /**
      * Should be called before removing count node from node queue. All answers, with which the function is called,
      * should be the same. It means, that the function should be called only if creation/last modification

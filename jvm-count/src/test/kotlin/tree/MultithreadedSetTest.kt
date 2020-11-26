@@ -115,4 +115,95 @@ class MultithreadedSetTest {
             assertEquals(expectedResult, results)
         }
     }
+
+    @Test
+    fun stressWithCount() {
+        val testsCount = 1000
+        val threadsCount = 4
+        val operationsPerThreadCount = 10000
+
+        val insertProb = 0.2
+        val deleteProb = 0.15
+        val countProb = 0.45
+
+        val random = Random(System.currentTimeMillis())
+
+        for (i in 1..testsCount) {
+            println(i)
+            val set = LockFreeSet<Int>()
+            val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
+
+            (1..threadsCount).map { threadIndex ->
+                val curThread = Thread {
+                    val currentThreadOperations = (1..operationsPerThreadCount).map {
+                        val curOp = random.nextDouble()
+                        when {
+                            curOp <= insertProb -> {
+                                /*
+                                Insert
+                                 */
+                                val x = random.nextInt(from = 0, until = 10_000)
+                                val result = set.insert(x)
+                                TimestampedOperationWithResult(
+                                    timestamp = result.timestamp,
+                                    result = InsertResult(res = result.result),
+                                    operation = InsertOperation(x = x)
+                                )
+                            }
+                            curOp <= insertProb + deleteProb -> {
+                                /*
+                                Delete
+                                 */
+                                val x = random.nextInt(from = 0, until = 10_000)
+                                val result = set.delete(x)
+                                TimestampedOperationWithResult(
+                                    timestamp = result.timestamp,
+                                    result = DeleteResult(res = result.result),
+                                    operation = DeleteOperation(x = x)
+                                )
+                            }
+                            curOp <= insertProb + deleteProb + countProb -> {
+                                /*
+                                Count
+                                 */
+                                val x = random.nextInt(from = 0, until = 10_000)
+                                val y = random.nextInt(from = 0, until = 10_000)
+
+                                val l = minOf(x, y)
+                                val r = maxOf(x, y)
+
+                                val result = set.count(left = l, right = r)
+                                TimestampedOperationWithResult(
+                                    timestamp = result.timestamp,
+                                    result = CountResult(res = result.result),
+                                    operation = CountOperation(left = l, right = r)
+                                )
+                            }
+                            else -> {
+                                /*
+                                Exists
+                                 */
+                                val x = random.nextInt(from = 0, until = 10_000)
+                                val result = set.exists(x)
+                                TimestampedOperationWithResult(
+                                    timestamp = result.timestamp,
+                                    result = ExistsResult(res = result.result),
+                                    operation = ExistsOperation(x = x)
+                                )
+                            }
+                        }
+                    }
+                    val insertResult = operationsPerThread.putIfAbsent(threadIndex, currentThreadOperations)
+                    assert(insertResult == null)
+                }
+                curThread.run()
+                curThread
+            }.forEach { it.join() }
+
+            val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
+            val expectedResult = getSequentialResults(allOperations.map { it.operation })
+            val results = allOperations.map { it.result }
+            assertEquals(expectedResult, results)
+        }
+    }
 }

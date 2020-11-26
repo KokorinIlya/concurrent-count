@@ -79,7 +79,7 @@ class SequentialSetTest {
                         /*
                         Insert
                          */
-                        val x = random.nextInt(from = 0, until = 100)
+                        val x = random.nextInt(from = 0, until = 10_000)
 
                         val result = lockFreeSet.insert(x).result
                         val expectedResult = sequentialSet.insert(x)
@@ -89,7 +89,7 @@ class SequentialSetTest {
                         /*
                         Delete
                          */
-                        val x = random.nextInt(from = 0, until = 100)
+                        val x = random.nextInt(from = 0, until = 10_000)
 
                         val result = lockFreeSet.delete(x).result
                         val expectedResult = sequentialSet.delete(x)
@@ -99,8 +99,8 @@ class SequentialSetTest {
                         /*
                         Count
                          */
-                        val x = random.nextInt(from = 0, until = 100)
-                        val y = random.nextInt(from = 0, until = 100)
+                        val x = random.nextInt(from = 0, until = 10_000)
+                        val y = random.nextInt(from = 0, until = 10_000)
                         val l = minOf(x, y)
                         val r = maxOf(x, y)
 
@@ -112,7 +112,7 @@ class SequentialSetTest {
                         /*
                         Exists
                          */
-                        val x = random.nextInt(from = 0, until = 100)
+                        val x = random.nextInt(from = 0, until = 10_000)
                         val result = lockFreeSet.exists(x).result
                         val expectedResult = sequentialSet.exists(x)
                         assertEquals(result, expectedResult)

@@ -20,7 +20,7 @@ class SubtreeRebuilder<T : Comparable<T>>(
 ) {
     private fun collectKeysInChildSubtree(child: Node<T>, keys: MutableList<T>) {
         when (child) {
-            is LeafNode -> keys.add(child.key)
+            is KeyNode -> keys.add(child.key)
             is InnerNode -> collectKeysInSubtree(child, keys)
             else -> {
             }
@@ -40,7 +40,7 @@ class SubtreeRebuilder<T : Comparable<T>>(
             return EmptyNode(timestamp)
         }
         if (startIndex + 1 == endIndex) {
-            return LeafNode(keys[startIndex], timestamp)
+            return KeyNode(keys[startIndex], timestamp)
         }
         val midIndex = (startIndex + endIndex) / 2
         val rightSubtreeMin = keys[midIndex]

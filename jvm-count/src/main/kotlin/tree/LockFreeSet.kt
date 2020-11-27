@@ -8,12 +8,18 @@ import java.util.concurrent.atomic.AtomicReference
 
 class LockFreeSet<T : Comparable<T>> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
+    private val root: RootNode<T>
 
-    private val root = RootNode<T>(
-        queue = RootLockFreeQueue(initValue = DummyDescriptor()),
-        root = AtomicReference(EmptyNode(0L)),
-        id = nodeIdAllocator.allocateId()
-    )
+    init {
+        val initDescriptor = DummyDescriptor<T>()
+        root = RootNode<T>(
+            queue = RootLockFreeQueue(initDescriptor),
+            root = AtomicReference(EmptyNode(initDescriptor.timestamp)),
+            id = nodeIdAllocator.allocateId()
+        )
+    }
+
+
 
     /**
      * Executes single-key operation, traversing from root to the appropriate leaf.
@@ -21,20 +27,34 @@ class LockFreeSet<T : Comparable<T>> {
     private fun <R> executeSingleKeyOperation(
         descriptor: SingleKeyOperationDescriptor<T, R>
     ): TimestampLinearizedResult<R> {
+        /*
+        Push descriptor to the root queue, execute all preceding operations and either throw current operation away
+        or propagate it downwards. If current operation was thrown away, we will learn it at the very beginning of the
+         first iteration of the loop.
+         */
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         assert(descriptor.timestamp == timestamp)
         root.executeUntilTimestamp(timestamp)
+
         var curNodeRef = root.root
         while (true) {
+            /*
+            If answer is set, then no further actions is required
+             */
             val curResult = descriptor.result.getResult()
             if (curResult != null) {
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
+
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
                     /*
                     Process current operation in the inner node (possible, affecting it's child, if it's child is
-                    either LeafNode or EmptyNode), also, rebuilding the tree, if needed. After that, go to next node.
+                    either KeyNode or EmptyNode). After that, go to next node, traversing the appropriate path.
+                    If the request has been finished by some other thread, we will learn it in the very beginning
+                    of the next iteration of the loop.
+                    Also note, that if next node on the appropriate path is leaf node (either KeyNode or EmptyNode),
+                    request should be fully completed on the current iteration of the loop.
                      */
                     curNode.executeUntilTimestamp(timestamp)
                     curNodeRef = curNode.route(descriptor.key)
@@ -51,7 +71,7 @@ class LockFreeSet<T : Comparable<T>> {
                  */
                 else -> {
                     /*
-                    Program is ill-formed, since LeafNode and EmptyNode should be processed while processing their
+                    Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
                     parent (InnerNode or RootNode)
                      */
                     throw IllegalStateException("Program is ill-formed")
@@ -76,7 +96,13 @@ class LockFreeSet<T : Comparable<T>> {
         TODO()
     }
 
+    /**
+     * Performs count operation in some inner node of the tree.
+     */
     private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
+        /*
+        Execute all necessary operations in the current node. If the answer is known after that, return
+         */
         curNode.executeUntilTimestamp(descriptor.timestamp)
         if (descriptor.result.getResult() != null) {
             return
@@ -87,9 +113,9 @@ class LockFreeSet<T : Comparable<T>> {
         val curNodeParams = curNode.nodeParams.get()
         val intersectionResult = descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)
         /*
-        We should determine, if we should go deeper, to the children of the current node. Note, that current
-        thread could have been stalled, and other operation (for example, insert) could have been executed in
-        current node, thus changing key range borders. It means, that sometimes we can go deeper, even if we don't
+        We determine, if we should go deeper, to the children of the current node. Note, that current
+        thread could have been stalled, and other insert operation could have been executed in
+        current node, thus expanding key range borders. It means, that sometimes we can go deeper, even if we don't
         need to. However, it's not going to break neither linearizability not lock-freedom of the algorithm.
          */
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
@@ -115,7 +141,9 @@ class LockFreeSet<T : Comparable<T>> {
 
             2) Or current subtree hasn't been rebuilt. It means, that keys range could have only been expanded.
             If key range (even after the expansion) either lies inside request borders or doesn't intersect
-            with request borders, there is no need to go to the chilren.
+            with request borders, there is no need to go to the children.
+
+         Note, that in both cases we can simply exit.
          */
     }
 
@@ -132,6 +160,10 @@ class LockFreeSet<T : Comparable<T>> {
         if (realRoot is InnerNode) {
             countInNode(realRoot, descriptor)
         }
+        /*
+        Otherwise, the result should have been calculated by descriptor.processRootNode (since all leaf nodes should
+        be processed while processing their parent)
+         */
 
         val result = descriptor.result.getResult()
         if (result == null) {

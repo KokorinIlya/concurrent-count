@@ -147,7 +147,7 @@ data class RootNode<T : Comparable<T>>(
                     assert(curNodeRef.get() != curNode)
                 }
                  */
-                is LeafNode -> {
+                is KeyNode -> {
                     return curNode.key == descriptor.key
                 }
                 is EmptyNode -> {
@@ -251,13 +251,22 @@ data class RootNode<T : Comparable<T>>(
  */
 abstract class TreeNode<T : Comparable<T>> : Node<T>()
 
+/*
+Base class for key nodes and empty nodes. Such nodes should be immutable (i.e. they are created and never modified:
+only references to such nodes can be modified). Such nodes contain creation timestamp in order to prevent the ABA
+problem.
+ */
+abstract class LeafNode<T : Comparable<T>> : TreeNode<T>() {
+    abstract val creationTimestamp: Long
+}
+
 /**
  * Node, containing some key, presented in the tree
  */
-data class LeafNode<T : Comparable<T>>(
+data class KeyNode<T : Comparable<T>>(
     val key: T,
-    val creationTimestamp: Long
-) : TreeNode<T>()
+    override val creationTimestamp: Long
+) : LeafNode<T>()
 
 /**
  * Node, corresponding to the head of the empty subtree. We use it instead of null to make sure, that some stalled
@@ -267,8 +276,8 @@ data class LeafNode<T : Comparable<T>>(
  * to avoid the ABA problem.
  */
 data class EmptyNode<T : Comparable<T>>(
-    val creationTimestamp: Long
-) : TreeNode<T>()
+    override val creationTimestamp: Long
+) : LeafNode<T>()
 
 /**
  * Inner node of the tree. Note, that rightSubtreeMin can be changed only on rebuild,

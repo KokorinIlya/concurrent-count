@@ -74,7 +74,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         Otherwise, the insert has already been executed by some other thread, just finish the operation
          */
         if (nextNode.creationTimestamp < timestamp) {
-            val newLeafNode = LeafNode(key = key, creationTimestamp = timestamp)
+            val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
             nextNodeRef.compareAndSet(nextNode, newLeafNode)
         }
         /*
@@ -84,7 +84,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: LeafNode<T>) {
+    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
         if (nextNode.key == key) {
             /*
             Some other thread has completed the operation and inserted the key to the set
@@ -94,7 +94,7 @@ data class InsertDescriptor<T : Comparable<T>>(
             /*
             Insert hasn't been executed yet
              */
-            val newLeafNode = LeafNode(key = key, creationTimestamp = timestamp)
+            val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
             val (leftChild, rightChild) = if (key < nextNode.key) {
                 Pair(newLeafNode, nextNode)
             } else {
@@ -152,7 +152,7 @@ data class InsertDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNodeRef, nextNode)
-            is LeafNode -> handleLeafNode(nextNodeRef, nextNode)
+            is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
             is InnerNode -> handleInnerNode(nextNodeRef, nextNode)
             /*
             TODO: add RebuildNode handler.
@@ -187,7 +187,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: LeafNode<T>) {
+    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
         if (nextNode.key != key) {
             /*
             Some other thread has completed current operation and created new node (with new key)
@@ -237,7 +237,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNode)
-            is LeafNode -> handleLeafNode(nextNodeRef, nextNode)
+            is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
             is InnerNode -> handleInnerNode(nextNodeRef, nextNode)
             /*
             TODO: maybe, rebuild here
@@ -275,7 +275,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun handleLeafNode(nextNode: LeafNode<T>) {
+    private fun handleLeafNode(nextNode: KeyNode<T>) {
         /*
         Exist request doesn't create new nodes
          */
@@ -310,7 +310,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNode)
-            is LeafNode -> handleLeafNode(nextNode)
+            is KeyNode -> handleLeafNode(nextNode)
             is InnerNode -> handleInnerNode(nextNode)
             /*
             TODO: maybe, rebuild here
@@ -327,8 +327,8 @@ data class CountDescriptor<T : Comparable<T>>(
         assert(leftBorder <= rightBorder)
     }
 
-    private fun getAnswerForLeafNode(leafNode: LeafNode<T>): Int {
-        return if (leafNode.key in leftBorder..rightBorder) {
+    private fun getAnswerForLeafNode(keyNode: KeyNode<T>): Int {
+        return if (keyNode.key in leftBorder..rightBorder) {
             1
         } else {
             0
@@ -347,7 +347,7 @@ data class CountDescriptor<T : Comparable<T>>(
             is EmptyNode -> {
                 result.preRemoveFromNode(curNode.id, 0)
             }
-            is LeafNode -> {
+            is KeyNode -> {
                 result.preRemoveFromNode(curNode.id, getAnswerForLeafNode(curChild))
             }
             is InnerNode -> {
@@ -361,10 +361,22 @@ data class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processInnerNodeChild(curChild: TreeNode<T>): Int {
+    private fun processInnerNodeChild(curChild: TreeNode<T>): Int? {
         return when (curChild) {
-            is EmptyNode -> 0
-            is LeafNode -> getAnswerForLeafNode(curChild)
+            is EmptyNode -> {
+                if (curChild.creationTimestamp < timestamp) {
+                    0
+                } else {
+                    null
+                }
+            }
+            is KeyNode -> {
+                if (curChild.creationTimestamp < timestamp) {
+                    getAnswerForLeafNode(curChild)
+                } else {
+                    null
+                }
+            }
             is InnerNode -> {
                 result.preVisitNode(curChild.id)
                 curChild.queue.push(this)
@@ -384,7 +396,7 @@ data class CountDescriptor<T : Comparable<T>>(
             /*
             Current node has already been processed
              */
-            result.checkNodeAnswerKnown(curNode.id)
+            assert(result.checkNodeAnswerKnown(curNode.id))
             return
         }
 
@@ -398,8 +410,21 @@ data class CountDescriptor<T : Comparable<T>>(
             IntersectionResult.GO_TO_CHILDREN -> {
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
-                val answer = processInnerNodeChild(leftChild) + processInnerNodeChild(rightChild)
-                result.preRemoveFromNode(curNode.id, answer)
+
+                val leftChildAnswer = processInnerNodeChild(leftChild)
+                if (leftChildAnswer == null) {
+                    assert(result.checkNodeAnswerKnown(curNode.id))
+                    return
+                }
+
+                val rightChildAnswer = processInnerNodeChild(rightChild)
+                if (rightChildAnswer == null) {
+                    assert(result.checkNodeAnswerKnown(curNode.id))
+                    return
+                }
+
+
+                result.preRemoveFromNode(curNode.id, leftChildAnswer + rightChildAnswer)
             }
         }
     }

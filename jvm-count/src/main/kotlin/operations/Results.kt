@@ -7,11 +7,15 @@ import java.util.concurrent.atomic.AtomicReference
  * Result of some operation (operation is either finished or not).
  * Each descriptor of some particular operation should contain reference to operation result.
  * Even if multiple independent copies of descriptor exist, they should all share a single operation result
- * (by referring shared result it instead of storing multiple independent copies of the result).
+ * (by referring single shared result instead of storing multiple independent copies of the result).
  */
 sealed class OperationResult<R> {
     /**
-     * Returns null, if operation execution hasn't finished yet. Otherwise, returns non-null operation result
+     * Returns null, if operation execution hasn't finished yet. Otherwise, returns non-null operation result.
+     * Note, that if result is set (i.e. this function returns non-null value), it indicates, that no further actions
+     * is required from any thread (including originator thread). It means, that originator thread can immediately
+     * return result of the operation to the caller. It means, that setting the result must be done only when the
+     * request is fully completed (i.e. all child reference and parameters are changed).
      */
     abstract fun getResult(): R?
 }
@@ -22,7 +26,7 @@ sealed class OperationResult<R> {
  */
 class SingleKeyOperationResult<R> : OperationResult<R>() {
     /*
-    Result can be set multiple times, but all set values should be the same
+    Result can be set multiple times, but all set values should be the same.
      */
     private val result: AtomicReference<R?> = AtomicReference(null)
 
@@ -59,6 +63,10 @@ class CountResult : OperationResult<Int>() {
         visitedNodes.add(nodeId)
     }
 
+    /*
+    Checks, if answer for some particular node is known. Should be used in assert statements, to check, that
+    some particular node has been processed.
+     */
     fun checkNodeAnswerKnown(nodeId: Long): Boolean {
         return answerNodes.contains(nodeId)
     }
@@ -68,7 +76,7 @@ class CountResult : OperationResult<Int>() {
      * should be the same. It means, that the function should be called only if creation/last modification
      * timestamps of all nodes, answers for which is included in the nodeAnswer, is less or equal, than timestamp
      * of the count operation (since greater timestamp can indicate, that other node parameters have changed, thus
-     * indicating, that the nodeAnswer may have changed too).
+     * indicating, that the nodeAnswer may have been changed too).
      */
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
         val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)

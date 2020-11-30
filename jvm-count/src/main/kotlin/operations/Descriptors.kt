@@ -146,7 +146,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         Try to push the descriptor to the next node queue
         TODO: do not perform insert, if next node needs rebuilding
          */
-        nextNode.queue.push(this)
+        nextNode.queue.pushIf(this)
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
@@ -231,7 +231,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         Try to push the descriptor to the next node queue
         TODO: do not perform insert, if next node needs rebuilding
          */
-        nextNode.queue.push(this)
+        nextNode.queue.pushIf(this)
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
@@ -304,7 +304,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
         /*
         TODO: do not perform insert, if next node needs rebuilding
          */
-        nextNode.queue.push(this)
+        nextNode.queue.pushIf(this)
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
@@ -352,7 +352,7 @@ data class CountDescriptor<T : Comparable<T>>(
             }
             is InnerNode -> {
                 result.preVisitNode(curChild.id)
-                curChild.queue.push(this)
+                curChild.queue.pushIf(this)
                 result.preRemoveFromNode(curNode.id, 0)
             }
             /*
@@ -379,7 +379,7 @@ data class CountDescriptor<T : Comparable<T>>(
             }
             is InnerNode -> {
                 result.preVisitNode(curChild.id)
-                curChild.queue.push(this)
+                curChild.queue.pushIf(this)
                 0
             }
             /*

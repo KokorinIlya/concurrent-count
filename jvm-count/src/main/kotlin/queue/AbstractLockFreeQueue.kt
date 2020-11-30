@@ -52,7 +52,8 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
                 } else {
                     /*
                     Help other thread finish it's push request. Note, that node.next can be set exactly once, and
-                    the assertion must hold
+                    the assertion must hold. After helping other thread finish push operation, start from the
+                    beginning.
                      */
                     assert(nextHead === curTail.next.get())
                     tail.compareAndSet(curTail, nextHead)

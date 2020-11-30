@@ -1,6 +1,5 @@
 package queue
 
-import common.TimestampedValue
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
@@ -49,7 +48,7 @@ class NonRootLockFreeQueueTest : VerifierState() { // TODO: fix it
         @Param(gen = IntGen::class, conf = "-100:100") x: Int,
         @Param(gen = LongGen::class, conf = "1:20") ts: Long
     ): Boolean {
-        return queue.push(Dummy(x, ts))
+        return queue.pushIf(Dummy(x, ts))
     }
 
     @Operation

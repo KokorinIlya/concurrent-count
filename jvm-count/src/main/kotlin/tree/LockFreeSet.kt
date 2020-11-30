@@ -59,16 +59,6 @@ class LockFreeSet<T : Comparable<T>> {
                     curNode.executeUntilTimestamp(timestamp)
                     curNodeRef = curNode.route(descriptor.key)
                 }
-                /* TODO: uncomment it later
-                is RebuildNode -> {
-                    /*
-                    Help other threads rebuild the subtree. Since after rebuilding curNodeRef won't reference
-                    the same node, continue without rooting.
-                     */
-                    curNode.rebuild(curNodeRef)
-                    assert(curNodeRef.get() != curNode)
-                }
-                 */
                 else -> {
                     /*
                     Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
@@ -119,7 +109,6 @@ class LockFreeSet<T : Comparable<T>> {
         need to. However, it's not going to break neither linearizability not lock-freedom of the algorithm.
          */
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
-            // TODO: add left and right subtree rebuilding
             /*
             If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by
             descriptor.processRootNode(curNode) (or descriptor.processInnerRootNode(curNode))
@@ -151,6 +140,9 @@ class LockFreeSet<T : Comparable<T>> {
 
         root.executeUntilTimestamp(timestamp)
 
+        /*
+        If the only child of the rot is InnerNode, continue executing the operation.
+         */
         val realRoot = root.root.get()
         if (realRoot is InnerNode) {
             countInNode(realRoot, descriptor)

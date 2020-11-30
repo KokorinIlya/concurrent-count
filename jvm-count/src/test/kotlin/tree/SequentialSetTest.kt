@@ -70,6 +70,7 @@ class SequentialSetTest {
         val countProb = 0.45
 
         for (i in 1..1000) {
+            println(i)
             val lockFreeSet = LockFreeSet<Int>()
             val sequentialSet = SequentialSet<Int>()
             for (j in 1..10000) {

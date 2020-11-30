@@ -27,4 +27,12 @@ class RootLockFreeQueue<T: TimestampedValue>(initValue: T) : AbstractLockFreeQue
             }
         }
     }
+
+    /**
+     * Should be used in wait-free exists requests. It is safe to assume, that timestamp at
+     * tail is the maximal timestamp in the queue (even if head.next != null), because we can say, that
+     * getMaxTimestamp request linearized before in-progress push operation.
+     * TODO: is it true?
+     */
+    fun getMaxTimestamp(): Long = tail.get().data.timestamp
 }

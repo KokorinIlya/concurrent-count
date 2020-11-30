@@ -148,10 +148,19 @@ data class RootNode<T : Comparable<T>>(
                 }
                  */
                 is KeyNode -> {
-                    return curNode.key == descriptor.key
+                    return if (curNode.creationTimestamp >= descriptor.timestamp) {
+                        null
+                    } else {
+                        curNode.key == descriptor.key
+                    }
+
                 }
                 is EmptyNode -> {
-                    return false
+                    return if (curNode.creationTimestamp >= descriptor.timestamp) {
+                        null
+                    } else {
+                        false
+                    }
                 }
             }
         }

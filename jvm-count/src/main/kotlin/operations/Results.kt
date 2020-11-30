@@ -13,7 +13,7 @@ sealed class OperationResult<R> {
     /**
      * Returns null, if operation execution hasn't finished yet. Otherwise, returns non-null operation result.
      * Note, that if result is set (i.e. this function returns non-null value), it indicates, that no further actions
-     * is required from any thread (including originator thread). It means, that originator thread can immediately
+     * are required from any thread (including originator thread). It means, that originator thread can immediately
      * return result of the operation to the caller. It means, that setting the result must be done only when the
      * request is fully completed (i.e. all child reference and parameters are changed).
      */
@@ -36,6 +36,9 @@ class SingleKeyOperationResult<R> : OperationResult<R>() {
         val setResult = result.compareAndSet(null, res)
         /*
         All operations are deterministic, cannot have different results for the same operation
+
+        TODO: maybe, remove such assertions to allow stalled threads try to set incorrect answer
+        (answer, that was set first, will be correct)
          */
         assert(setResult || result.get() == res)
     }

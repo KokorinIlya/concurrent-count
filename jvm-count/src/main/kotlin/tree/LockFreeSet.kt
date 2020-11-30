@@ -135,15 +135,10 @@ class LockFreeSet<T : Comparable<T>> {
             }
         }
         /*
-        Else, there are only two possible opportunities:
-            1) Either current subtree has been rebuilt (it means, that the request in current
-            subtree has been executed).
-
-            2) Or current subtree hasn't been rebuilt. It means, that keys range could have only been expanded.
-            If key range (even after the expansion) either lies inside request borders or doesn't intersect
-            with request borders, there is no need to go to the children.
-
-         Note, that in both cases we can simply exit.
+        Note, that key range could have only been expanded.
+        If key range (even after the expansion) either lies inside request borders or doesn't intersect
+        with request borders, there is no need to go to the children (because before the expansion the same
+        condition held).
          */
     }
 

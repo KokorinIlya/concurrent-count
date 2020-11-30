@@ -423,7 +423,6 @@ data class CountDescriptor<T : Comparable<T>>(
                     return
                 }
 
-
                 result.preRemoveFromNode(curNode.id, leftChildAnswer + rightChildAnswer)
             }
         }

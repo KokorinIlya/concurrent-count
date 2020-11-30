@@ -47,8 +47,8 @@ class MultithreadedSetTest {
     @Test
     fun stress() {
         val testsCount = 1000
-        val threadsCount = 4
-        val operationsPerThreadCount = 10000
+        val threadsCount = 32
+        val operationsPerThreadCount = 500
 
         val insertProb = 0.2
         val deleteProb = 0.15
@@ -119,8 +119,8 @@ class MultithreadedSetTest {
     @Test
     fun stressWithCount() {
         val testsCount = 1000
-        val threadsCount = 4
-        val operationsPerThreadCount = 10000
+        val threadsCount = 32
+        val operationsPerThreadCount = 500
 
         val insertProb = 0.2
         val deleteProb = 0.15

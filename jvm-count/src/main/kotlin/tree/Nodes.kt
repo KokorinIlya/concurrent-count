@@ -133,20 +133,6 @@ data class RootNode<T : Comparable<T>>(
                         }
                     }
                 }
-                /* TODO: uncomment it when I am ready to write a code with rebuilding
-                is RebuildNode -> {
-                    /*
-                     TODO: maybe, we don't have to participate in rebuilding procedure.
-                     Nevertheless, participation won't break the algorithm.
-                     */
-                    curNode.rebuild(curNodeRef)
-                    /*
-                    curNodeRef should now store a reference to the root of the new subtree instead of rebuild
-                    operation descriptor.
-                     */
-                    assert(curNodeRef.get() != curNode)
-                }
-                 */
                 is KeyNode -> {
                     return if (curNode.creationTimestamp >= descriptor.timestamp) {
                         null
@@ -327,11 +313,6 @@ data class InnerNode<T : Comparable<T>>(
     fun executeUntilTimestamp(timestamp: Long?) {
         do {
             val curDescriptor = queue.peek() ?: return
-            /*
-            TODO: for optimization purposes, it may be necessary to return (at least, try to return)
-            next direction for descriptor with specified timestamp. However, not doing this isn't going to
-            break correctness of the algorithm.
-             */
             when (curDescriptor) {
                 is SingleKeyOperationDescriptor<T, *> -> curDescriptor.processNextNode(route(curDescriptor.key))
                 is CountDescriptor -> curDescriptor.processInnerNode(this)

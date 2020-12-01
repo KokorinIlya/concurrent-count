@@ -35,22 +35,16 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQu
             val newTimestamp = maxTimestamp + 1
             value.timestamp = newTimestamp
 
-            /*
-            Try to insert the new value at the tail of the queue
-             */
-            val nextTail = curTail.next.compareAndExchange(null, newTail)
-            if (nextTail == null) {
-                /*
-                Push was successful, finish the operation and exit
-                 */
+            if (curTail.next.compareAndSet(null, newTail)) {
                 tail.compareAndSet(curTail, newTail)
                 return newTimestamp
             } else {
-                /*
-                Help other thread finish it's operation and start from the beginning (i.e. from acquiring new
-                timestamp)
-                 */
-                tail.compareAndSet(curTail, newTail)
+                val otherThreadTail = curTail.next.get()
+                if (otherThreadTail === null) {
+                    throw IllegalStateException("Program is ill-formed")
+                } else {
+                    tail.compareAndSet(curTail, otherThreadTail)
+                }
             }
         }
     }

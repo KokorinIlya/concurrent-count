@@ -102,15 +102,6 @@ data class RootNode<T : Comparable<T>>(
     }
 
     /**
-     * Can be used in assertions, to check, whether descriptor with some specified timestamp has been already removed
-     * from the root queue.
-     */
-    private fun checkDescriptorMoved(timestamp: Long): Boolean {
-        val curDescriptor = queue.peek()
-        return curDescriptor == null || curDescriptor.timestamp > timestamp
-    }
-
-    /**
      * Traverses the tree from the rot downwards (following only the appropriate path), determining,
      * if specified key exists in the tree.
      * @return true, is such key exists in the tree, false if such key doesn't exist in the tree, null if some
@@ -205,16 +196,10 @@ data class RootNode<T : Comparable<T>>(
                          */
                         curDescriptor.result.trySetResult(false)
                     }
-                    null -> {
-                        /*
-                        Otherwise, the answer is not needed, since some other thread has moved the descriptor
-                        (either dropped it from the root queue or propagated it downwards). Asserts, that current
-                        descriptor has been removed from the queue by some other thread. Note, that the answer
-                        could be unknown yet (since descriptor could have been propagated downwards and not finished
-                        completely yet)
-                         */
-                        assert(checkDescriptorMoved(curDescriptor.timestamp))
-                    }
+                    /*
+                    Otherwise, the answer is not needed, since some other thread has moved the descriptor
+                    (either dropped it from the root queue or propagated it downwards).
+                     */
                 }
             }
             /*
@@ -227,9 +212,6 @@ data class RootNode<T : Comparable<T>>(
                     }
                     false -> {
                         curDescriptor.result.trySetResult(false)
-                    }
-                    null -> {
-                        assert(checkDescriptorMoved(curDescriptor.timestamp))
                     }
                 }
             }
@@ -301,7 +283,7 @@ data class EmptyNode<T : Comparable<T>>(
  * Inner node of the tree. Note, that rightSubtreeMin can be changed only on rebuild,
  * but minKey, maxKey and subtreeSize can be changed by any remove or insert operation.
  */
-data class InnerNode<T : Comparable<T>>( // TODO: add initial size (immutable)
+data class InnerNode<T : Comparable<T>>(
     override val queue: NonRootLockFreeQueue<Descriptor<T>>,
     val left: AtomicReference<TreeNode<T>>,
     val right: AtomicReference<TreeNode<T>>,

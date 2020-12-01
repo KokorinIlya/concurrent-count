@@ -18,14 +18,11 @@ sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
     publication.
      */
     private var timestampValue: Long? = null
+
     override var timestamp: Long
         get() = timestampValue ?: throw IllegalStateException("Timestamp not initialized")
         set(value) {
-            if (timestampValue == null) {
-                timestampValue = value
-            } else {
-                throw IllegalStateException("Timestamp already initialized")
-            }
+            timestampValue = value
         }
 }
 
@@ -100,12 +97,13 @@ data class InsertDescriptor<T : Comparable<T>>(
             } else {
                 Pair(nextNode, newLeafNode)
             }
+            val initialSize = 2
             val nodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
                 maxKey = rightChild.key,
                 minKey = leftChild.key,
                 modificationsCount = 0,
-                subtreeSize = 2
+                subtreeSize = initialSize
             )
             val newInnerNode = InnerNode<T>(
                 id = nodeIdAllocator.allocateId(),
@@ -113,7 +111,8 @@ data class InsertDescriptor<T : Comparable<T>>(
                 right = AtomicReference(rightChild),
                 rightSubtreeMin = rightChild.key,
                 nodeParams = AtomicReference(nodeParams),
-                queue = NonRootLockFreeQueue(initValue = DummyDescriptor())
+                queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
+                initialSize = initialSize
             )
             nextNodeRef.compareAndSet(nextNode, newInnerNode)
         }

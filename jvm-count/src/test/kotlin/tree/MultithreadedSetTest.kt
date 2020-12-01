@@ -3,6 +3,7 @@ package tree
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.thread
 import kotlin.random.Random
 
 sealed class Operation
@@ -46,9 +47,9 @@ class MultithreadedSetTest {
 
     @Test
     fun stress() {
-        val testsCount = 1000
-        val threadsCount = 32
-        val operationsPerThreadCount = 500
+        val testsCount = 10
+        val threadsCount = 4
+        val operationsPerThreadCount = 10
 
         val insertProb = 0.2
         val deleteProb = 0.15
@@ -60,7 +61,7 @@ class MultithreadedSetTest {
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
             (1..threadsCount).map { threadIndex ->
-                val curThread = Thread {
+                thread {
                     val currentThreadOperations = (1..operationsPerThreadCount).map {
                         val curOp = random.nextDouble()
                         when {
@@ -105,8 +106,6 @@ class MultithreadedSetTest {
                     val insertResult = operationsPerThread.putIfAbsent(threadIndex, currentThreadOperations)
                     assert(insertResult == null)
                 }
-                curThread.run()
-                curThread
             }.forEach { it.join() }
 
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
@@ -119,8 +118,8 @@ class MultithreadedSetTest {
     @Test
     fun stressWithCount() {
         val testsCount = 1000
-        val threadsCount = 32
-        val operationsPerThreadCount = 500
+        val threadsCount = 4
+        val operationsPerThreadCount = 1000
 
         val insertProb = 0.2
         val deleteProb = 0.15
@@ -134,7 +133,7 @@ class MultithreadedSetTest {
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
             (1..threadsCount).map { threadIndex ->
-                val curThread = Thread {
+                thread {
                     val currentThreadOperations = (1..operationsPerThreadCount).map {
                         val curOp = random.nextDouble()
                         when {
@@ -196,8 +195,6 @@ class MultithreadedSetTest {
                     val insertResult = operationsPerThread.putIfAbsent(threadIndex, currentThreadOperations)
                     assert(insertResult == null)
                 }
-                curThread.run()
-                curThread
             }.forEach { it.join() }
 
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }

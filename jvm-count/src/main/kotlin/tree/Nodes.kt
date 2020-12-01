@@ -1,6 +1,5 @@
 package tree
 
-import allocation.IdAllocator
 import operations.*
 import queue.AbstractLockFreeQueue
 import queue.NonRootLockFreeQueue
@@ -8,7 +7,7 @@ import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Basic class for all nodes in the tree (including the utility ones, that don't store data, nut are used
+ * Basic class for all nodes in the tree (including the utility ones, that don't store data, but are used
  * for the implementation purposes).
  * @param T - type of elements, that are stored in the tree, to which this node belongs to
  */
@@ -49,7 +48,7 @@ data class RootNode<T : Comparable<T>>(
 
             /*
             Thread was unable to determine, whether specified key exists in the tree (for example, because
-            neither delete not insert descriptors for the specified key were encountered in the queue)
+            neither delete nor insert descriptors for the specified key were encountered in the queue)
              */
             UNABLE_TO_DETERMINE,
 
@@ -99,7 +98,7 @@ data class RootNode<T : Comparable<T>>(
             }
             curQueueNode = curQueueNode.next.get()
         }
-        return QueueTraverseResult.UNABLE_TO_DETERMINE // Search should be continued
+        return QueueTraverseResult.UNABLE_TO_DETERMINE // Search should be continued in child nodes
     }
 
     /**
@@ -115,8 +114,9 @@ data class RootNode<T : Comparable<T>>(
      * Traverses the tree from the rot downwards (following only the appropriate path), determining,
      * if specified key exists in the tree.
      * @return true, is such key exists in the tree, false if such key doesn't exist in the tree, null if some
-     * descriptor with greater or equal timestamp has been encountered in some of the queues, thus showing us, that
-     * some other thread has already made the decision about key presence and moved the descriptor from the root queue.
+     * descriptor with greater or equal timestamp (or node with greater or equal modification/creation timestamp)
+     * has been encountered in some of the queues, thus showing us, that some other thread has already made the
+     * decision about key presence and moved the descriptor from the root queue.
      */
     private fun checkExistence(descriptor: SingleKeyWriteOperationDescriptor<T>): Boolean? {
         var curNodeRef = root
@@ -124,15 +124,34 @@ data class RootNode<T : Comparable<T>>(
         while (true) {
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
+                    /*
+                    Some other thread has already made a decision, since current nde has been modified by some
+                    operation with greater or equal timestamp. Thus, the answer is not needed and we can simply return.
+                     */
+                    if (curNode.nodeParams.get().lastModificationTimestamp >= descriptor.timestamp) {
+                        return null
+                    }
                     when (traverseQueue(curNode.queue, descriptor)) {
                         QueueTraverseResult.KEY_EXISTS -> return true
                         QueueTraverseResult.KEY_NOT_EXISTS -> return false
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> return null
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
+                            /*
+                            Continue traversing the appropriate path. Note, that curNode.route(key) depends only
+                            on rightSubtreeMin, and rightSubtreeMin is never modified by any other thread. That is why
+                            we can simply continue traversing without wondering, if some operation has modified current
+                            node or not.
+                             */
                             curNodeRef = curNode.route(descriptor.key)
                         }
                     }
                 }
+                /*
+                If we encounter leaf node (either KeyNode or EmptyNode), we cannot continue traversing and should
+                make the decision immediately. The decision is not needed, if current node has been created by some
+                operation with greater timestamp (it means, that th decision about our operation has been made by some
+                other thread).
+                 */
                 is KeyNode -> {
                     return if (curNode.creationTimestamp >= descriptor.timestamp) {
                         null
@@ -189,7 +208,10 @@ data class RootNode<T : Comparable<T>>(
                     null -> {
                         /*
                         Otherwise, the answer is not needed, since some other thread has moved the descriptor
-                        (either dropped it from the root queue or propagated it downwards).
+                        (either dropped it from the root queue or propagated it downwards). Asserts, that current
+                        descriptor has been removed from the queue by some other thread. Note, that the answer
+                        could be unknown yet (since descriptor could have been propagated downwards and not finished
+                        completely yet)
                          */
                         assert(checkDescriptorMoved(curDescriptor.timestamp))
                     }
@@ -234,7 +256,8 @@ data class RootNode<T : Comparable<T>>(
             val curDescriptor = queue.peek() ?: return
             executeSingleDescriptor(curDescriptor)
             /*
-            Safe operation: removes only the descriptor, that has been just processed
+            Safe operation: tries to remove the descriptor, that has been just processed. If the same descriptor
+            has been processed and removed from the queue concurrently by some other thread, does nothing.
              */
             queue.popIf(curDescriptor.timestamp)
         } while (curDescriptor.timestamp < timestamp)
@@ -278,18 +301,44 @@ data class EmptyNode<T : Comparable<T>>(
  * Inner node of the tree. Note, that rightSubtreeMin can be changed only on rebuild,
  * but minKey, maxKey and subtreeSize can be changed by any remove or insert operation.
  */
-data class InnerNode<T : Comparable<T>>(
+data class InnerNode<T : Comparable<T>>( // TODO: add initial size (immutable)
     override val queue: NonRootLockFreeQueue<Descriptor<T>>,
     val left: AtomicReference<TreeNode<T>>,
     val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<Params<T>>,
-    val rightSubtreeMin: T, override val id: Long
+    val rightSubtreeMin: T,
+    override val id: Long,
+    val initialSize: Int
 ) : TreeNode<T>(), NodeWithId<T> {
     companion object {
+        /*
+        All params, that can be changed during operations, are stored in a single immutable structure, and only an
+        atomic reference to such structure is stored in the node. This allows us to change all the parameters
+        atomically, without using CASN as a primitive
+         */
         data class Params<T>(
-            val minKey: T, val maxKey: T,
+            /*
+            Minimal and maximal keys, that have ever been stored in subtree. Key range can only be expanded
+            (by insert operation) and never narrowed (by delete operation). Note, that it means, that [minKey; maxKey]
+            can be a bit wider, than the actual key range, stored in the node subtree. It means, that sometimes count
+            request will go deeper, even if there is no need to to so. Tree rebuilding allows us to set the minKey and
+            maxKey equal to the actual borders of the key range.
+             */
+            val minKey: T,
+            val maxKey: T,
+            /*
+            Insert operations increment this field, delete operations decrement it.
+             */
             val subtreeSize: Int,
+            /*
+            If some operation modifies node params, it allows other threads to learn the timestamp of the last
+            parameters update to prevent multiple threads, executing the same operation, from updating node parameters
+            multiple times (for example, from incrementing subtreeSize more than once).
+             */
             val lastModificationTimestamp: Long,
+            /*
+            Both insert and delete operations increment this field
+             */
             val modificationsCount: Int
         )
     }
@@ -312,71 +361,26 @@ data class InnerNode<T : Comparable<T>>(
      */
     fun executeUntilTimestamp(timestamp: Long?) {
         do {
+            /*
+            Exit, if queue is empty
+             */
             val curDescriptor = queue.peek() ?: return
             when (curDescriptor) {
+                /*
+                All operations are executed unconditionally
+                 */
                 is SingleKeyOperationDescriptor<T, *> -> curDescriptor.processNextNode(route(curDescriptor.key))
                 is CountDescriptor -> curDescriptor.processInnerNode(this)
+                /*
+                Dummy descriptor can never be returned from queue.peek()
+                 */
                 else -> throw IllegalStateException("Program is ill-formed")
             }
 
+            /*
+            Safe removal
+             */
             queue.popIf(curDescriptor.timestamp)
         } while (timestamp == null || curDescriptor.timestamp < timestamp)
-    }
-}
-
-/**
- * Descriptor for subtree rebuild operation. Any thread, that encounter such node in the process of traversing the
- * tree, mush help rebuilding the subtree.
- */
-data class RebuildNode<T : Comparable<T>>(
-    /*
-    Root of subtree, that should be rebuilt
-     */
-    val node: InnerNode<T>,
-    /*
-    Timestamp of the procedure, which triggered rebuild operation. This timestamp should be stored in order to
-    set creation timestamp of each nodes in the rebuilt subtree.
-     */
-    val timestamp: Long,
-    /*
-    Node id allocator, which is used to allocate all node ids in the tree, to which this node belongs to
-     */
-    private val nodeIdAllocator: IdAllocator
-) : TreeNode<T>() {
-    private fun finishOperationsInSubtree(root: InnerNode<T>) {
-        root.executeUntilTimestamp(null)
-
-        val curLeft = root.left.get()
-        val curRight = root.right.get()
-
-        if (curLeft is InnerNode) {
-            finishOperationsInSubtree(curLeft)
-        }
-        if (curRight is InnerNode) {
-            finishOperationsInSubtree(curRight)
-        }
-    }
-
-    /**
-     * Help rebuilding the subtree.
-     * @param curNodeRef - reference to the RebuildNode. After rebuilding is completed, the reference should
-     * point to the root of the rebuilt subtree. TODO: consider moving it to the constructor params list
-     */
-    fun rebuild(curNodeRef: AtomicReference<TreeNode<T>>) {
-        if (curNodeRef.get() != this) {
-            /*
-            Needed for optimization, to reduce amount of time, spent on unnecessary operations
-             */
-            return
-        }
-        finishOperationsInSubtree(root = node)
-        if (curNodeRef.get() != this) {
-            /*
-            The same reason, as above
-             */
-            return
-        }
-        val newNode = SubtreeRebuilder(node, timestamp, nodeIdAllocator).buildNewSubtree()
-        curNodeRef.compareAndSet(this, newNode)
     }
 }

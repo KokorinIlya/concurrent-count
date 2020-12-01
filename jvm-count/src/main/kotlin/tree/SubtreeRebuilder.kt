@@ -48,6 +48,7 @@ class SubtreeRebuilder<T : Comparable<T>>(
         val maxKey = keys[endIndex - 1]
         val left = buildSubtreeFromKeys(keys, startIndex, midIndex)
         val right = buildSubtreeFromKeys(keys, midIndex, endIndex)
+        val initialSize = endIndex - startIndex
         return InnerNode<T>(
             id = nodeIdAllocator.allocateId(),
             left = AtomicReference(left),
@@ -58,11 +59,12 @@ class SubtreeRebuilder<T : Comparable<T>>(
                     maxKey = maxKey,
                     minKey = minKey,
                     modificationsCount = 0,
-                    subtreeSize = endIndex - startIndex
+                    subtreeSize = initialSize
                 )
             ),
             queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
-            rightSubtreeMin = rightSubtreeMin
+            rightSubtreeMin = rightSubtreeMin,
+            initialSize = initialSize
         )
     }
 

@@ -82,10 +82,6 @@ class LockFreeSet<T : Comparable<T>> {
         return executeSingleKeyOperation(ExistsDescriptor.new(x))
     }
 
-    fun waitFreeExists(x: T): Boolean {
-        TODO()
-    }
-
     /**
      * Performs count operation in some inner node of the tree.
      */

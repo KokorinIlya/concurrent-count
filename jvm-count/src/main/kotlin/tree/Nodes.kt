@@ -173,7 +173,10 @@ data class RootNode<T : Comparable<T>>(
             /*
             Exist queries are executed unconditionally
              */
-            is ExistsDescriptor -> curDescriptor.processNextNode(root)
+            is ExistsDescriptor -> {
+                QueueLogger.add("Descriptor=$curDescriptor, root node")
+                curDescriptor.processNextNode(root)
+            }
             /*
             The same for count queries
              */
@@ -184,6 +187,7 @@ data class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Proceed")
                         /*
                         Descriptor will itself perform all necessary actions (except for removing node
                         from the queue)
@@ -191,11 +195,15 @@ data class RootNode<T : Comparable<T>>(
                         curDescriptor.processNextNode(root)
                     }
                     true -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Decline")
                         /*
                         Result should be set to false and descriptor removed from the queue,
                         without being propagated downwards
                          */
                         curDescriptor.result.trySetResult(false)
+                    }
+                    null -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=NotNeeded")
                     }
                     /*
                     Otherwise, the answer is not needed, since some other thread has moved the descriptor
@@ -209,10 +217,15 @@ data class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Proceed")
                         curDescriptor.processNextNode(root)
                     }
                     false -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Decline")
                         curDescriptor.result.trySetResult(false)
+                    }
+                    null -> {
+                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=NotNeeded")
                     }
                 }
             }
@@ -237,8 +250,6 @@ data class RootNode<T : Comparable<T>>(
             Some other thread has moved our descriptor, since there are no active descriptors in the queue
              */
             val curDescriptor = queue.peek() ?: return
-
-            QueueLogger.add("Thread ${Thread.currentThread().id} is executing $curDescriptor at root node")
 
             executeSingleDescriptor(curDescriptor)
             /*
@@ -296,6 +307,10 @@ data class InnerNode<T : Comparable<T>>(
     override val id: Long,
     val initialSize: Int
 ) : TreeNode<T>(), NodeWithId<T> {
+    override fun toString(): String {
+        return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id}"
+    }
+
     companion object {
         /*
         All params, that can be changed during operations, are stored in a single immutable structure, and only an
@@ -352,7 +367,7 @@ data class InnerNode<T : Comparable<T>>(
              */
             val curDescriptor = queue.peek() ?: return
 
-            QueueLogger.add("Thread ${Thread.currentThread().id} is executing $curDescriptor at inner node $id")
+            QueueLogger.add("Descriptor=$curDescriptor, InnerNode=$this")
 
             when (curDescriptor) {
                 /*

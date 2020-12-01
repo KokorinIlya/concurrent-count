@@ -44,6 +44,10 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
     for example).
      */
     abstract fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>)
+
+    override fun toString(): String {
+        return "{${javaClass.simpleName}: key=$key, timestamp=$timestamp}"
+    }
 }
 
 /**
@@ -51,7 +55,7 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
  */
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>()
 
-data class InsertDescriptor<T : Comparable<T>>(
+class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>,
     /*
@@ -155,7 +159,7 @@ data class InsertDescriptor<T : Comparable<T>>(
     }
 }
 
-data class DeleteDescriptor<T : Comparable<T>>(
+class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
 ) : SingleKeyWriteOperationDescriptor<T>() {
@@ -232,10 +236,11 @@ data class DeleteDescriptor<T : Comparable<T>>(
     }
 }
 
-data class ExistsDescriptor<T : Comparable<T>>(
+class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyOperationResult<Boolean>
 ) : SingleKeyOperationDescriptor<T, Boolean>() {
+
     companion object {
         fun <T : Comparable<T>> new(key: T): ExistsDescriptor<T> {
             return ExistsDescriptor(key, SingleKeyOperationResult())
@@ -300,7 +305,8 @@ data class ExistsDescriptor<T : Comparable<T>>(
 }
 
 data class CountDescriptor<T : Comparable<T>>(
-    val leftBorder: T, val rightBorder: T,
+    val leftBorder: T,
+    val rightBorder: T,
     val result: CountResult
 ) : Descriptor<T>() {
     init {

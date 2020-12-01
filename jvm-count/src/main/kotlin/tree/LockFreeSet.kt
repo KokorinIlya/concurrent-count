@@ -4,6 +4,7 @@ import allocation.IdAllocator
 import allocation.SequentialIdAllocator
 import operations.*
 import queue.RootLockFreeQueue
+import java.lang.StringBuilder
 import java.util.concurrent.atomic.AtomicReference
 
 class LockFreeSet<T : Comparable<T>> {
@@ -19,7 +20,33 @@ class LockFreeSet<T : Comparable<T>> {
         )
     }
 
+    private fun treeToString(curBuilder: StringBuilder, curNode: Node<T>, level: Int) {
+        curBuilder.append("-".repeat(level))
+        when (curNode) {
+            is RootNode -> {
+                assert(level == 0)
+                curBuilder.append("root:\n")
+                treeToString(curBuilder, curNode.root.get(), level + 1)
+            }
+            is InnerNode -> {
+                curBuilder.append("inner: ${curNode.rightSubtreeMin}; ${curNode.id}\n")
+                treeToString(curBuilder, curNode.left.get(), level + 1)
+                treeToString(curBuilder, curNode.right.get(), level + 1)
+            }
+            is KeyNode -> {
+                curBuilder.append("key: ${curNode.key}\n")
+            }
+            is EmptyNode -> {
+                curBuilder.append("empty")
+            }
+        }
+    }
 
+    private fun treeToString(): String {
+        val builder = StringBuilder()
+        treeToString(builder, root, 0)
+        return builder.toString()
+    }
 
     /**
      * Executes single-key operation, traversing from root to the appropriate leaf.
@@ -60,7 +87,8 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.route(descriptor.key)
                 }
                 else -> {
-                    println("${curNode.javaClass}, ${descriptor}")
+                    println("$curNode, $descriptor, ${descriptor.timestamp}")
+                    println(treeToString())
                     /*
                     Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
                     parent (InnerNode or RootNode)

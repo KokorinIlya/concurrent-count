@@ -81,7 +81,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
+    private fun handleKeyNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
         if (nextNode.key == key) {
             /*
             Some other thread has completed the operation and inserted the key to the set
@@ -149,7 +149,7 @@ data class InsertDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNodeRef, nextNode)
-            is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
+            is KeyNode -> handleKeyNode(nextNodeRef, nextNode)
             is InnerNode -> handleInnerNode(nextNode)
         }
     }
@@ -178,7 +178,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleLeafNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
+    private fun handleKeyNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
         if (nextNode.key != key) {
             /*
             Some other thread has completed current operation and created new node (with new key)
@@ -226,7 +226,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNode)
-            is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
+            is KeyNode -> handleKeyNode(nextNodeRef, nextNode)
             is InnerNode -> handleInnerNode(nextNode)
         }
     }
@@ -261,7 +261,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun handleLeafNode(nextNode: KeyNode<T>) {
+    private fun handleKeyNode(nextNode: KeyNode<T>) {
         /*
         Exist request doesn't create new nodes
          */
@@ -293,7 +293,7 @@ data class ExistsDescriptor<T : Comparable<T>>(
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNode)
-            is KeyNode -> handleLeafNode(nextNode)
+            is KeyNode -> handleKeyNode(nextNode)
             is InnerNode -> handleInnerNode(nextNode)
         }
     }

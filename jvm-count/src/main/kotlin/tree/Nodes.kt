@@ -1,5 +1,6 @@
 package tree
 
+import logging.QueueLogger
 import operations.*
 import queue.AbstractLockFreeQueue
 import queue.NonRootLockFreeQueue
@@ -236,6 +237,9 @@ data class RootNode<T : Comparable<T>>(
             Some other thread has moved our descriptor, since there are no active descriptors in the queue
              */
             val curDescriptor = queue.peek() ?: return
+
+            QueueLogger.add("Thread ${Thread.currentThread().id} is executing $curDescriptor at root node")
+
             executeSingleDescriptor(curDescriptor)
             /*
             Safe operation: tries to remove the descriptor, that has been just processed. If the same descriptor
@@ -347,6 +351,9 @@ data class InnerNode<T : Comparable<T>>(
             Exit, if queue is empty
              */
             val curDescriptor = queue.peek() ?: return
+
+            QueueLogger.add("Thread ${Thread.currentThread().id} is executing $curDescriptor at inner node $id")
+
             when (curDescriptor) {
                 /*
                 All operations are executed unconditionally

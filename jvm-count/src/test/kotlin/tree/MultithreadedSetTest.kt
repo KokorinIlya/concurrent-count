@@ -1,5 +1,6 @@
 package tree
 
+import logging.QueueLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.util.concurrent.ConcurrentHashMap
@@ -47,16 +48,19 @@ class MultithreadedSetTest {
 
     @Test
     fun stress() {
-        val testsCount = 100
-        val threadsCount = 4
-        val operationsPerThreadCount = 100
+        val testsCount = 10000
+        val threadsCount = 2
+        val operationsPerThreadCount = 10
 
         val insertProb = 0.2
         val deleteProb = 0.15
 
-        val random = Random(System.currentTimeMillis())
+        val time = System.currentTimeMillis()
+        val random = Random(time)
 
         for (i in 1..testsCount) {
+            QueueLogger.clear()
+
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
@@ -107,6 +111,12 @@ class MultithreadedSetTest {
                     assert(insertResult == null)
                 }
             }.forEach { it.join() }
+
+            if (operationsPerThread.size != threadsCount) {
+                println("LOGS")
+                println(QueueLogger.getLogs().joinToString(separator = "\n"))
+                assertTrue(false)
+            }
 
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
             val expectedResult = getSequentialResults(allOperations.map { it.operation })

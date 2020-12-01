@@ -83,6 +83,10 @@ data class RootNode<T : Comparable<T>>(
             }
 
             when (curDescriptor) {
+                /*
+                 TODO: get operation with the highest timestamp in the current queue
+                 (in case, when both insert and delete are presented in the same queue)
+                 */
                 is InsertDescriptor -> {
                     if (curDescriptor.key == descriptor.key) {
                         return QueueTraverseResult.KEY_EXISTS

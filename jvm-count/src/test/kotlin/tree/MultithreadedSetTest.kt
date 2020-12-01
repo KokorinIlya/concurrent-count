@@ -115,6 +115,7 @@ class MultithreadedSetTest {
         }
     }
 
+    /*
     @Test
     fun stressWithCount() {
         val testsCount = 1000
@@ -203,4 +204,5 @@ class MultithreadedSetTest {
             assertEquals(expectedResult, results)
         }
     }
+     */
 }

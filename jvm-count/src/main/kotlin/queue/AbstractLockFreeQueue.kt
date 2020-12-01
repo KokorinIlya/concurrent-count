@@ -64,6 +64,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
                     Queue is definitely non-empty, head.next is the first non-dummy element in the queue and it should
                     exist (since queue is not empty)
                      */
+                    println("HEAD, TAIL: ${curHead.data.timestamp}, ${curTail.data.timestamp}")
                     throw IllegalStateException("Program is ill-formed")
                 } else {
                     /*
@@ -108,10 +109,6 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
          */
         return processTail(false) { curHead, nextHead ->
             if (nextHead.data.timestamp != timestamp) {
-                /*
-                Asserts, that descriptor with specified timestamp has already been removed from the queue
-                 */
-                assert(nextHead.data.timestamp > timestamp)
                 false
             } else {
                 head.compareAndSet(curHead, nextHead)

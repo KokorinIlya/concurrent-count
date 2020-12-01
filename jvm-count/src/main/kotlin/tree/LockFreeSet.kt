@@ -60,7 +60,7 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.route(descriptor.key)
                 }
                 else -> {
-                    println(curNode.javaClass)
+                    println("${curNode.javaClass}, ${descriptor}")
                     /*
                     Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
                     parent (InnerNode or RootNode)

@@ -122,11 +122,10 @@ data class InsertDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleInnerNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: InnerNode<T>) {
+    private fun handleInnerNode(nextNode: InnerNode<T>) {
         val nextNodeParams = nextNode.nodeParams.get()
 
         if (nextNodeParams.lastModificationTimestamp < timestamp) {
-            // TODO: rebuild, if modifications count is greater, than some threshold
             val newNodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
                 maxKey = maxOf(nextNodeParams.maxKey, key),
@@ -143,7 +142,6 @@ data class InsertDescriptor<T : Comparable<T>>(
 
         /*
         Try to push the descriptor to the next node queue
-        TODO: do not perform insert, if next node needs rebuilding
          */
         nextNode.queue.pushIf(this)
     }
@@ -152,13 +150,7 @@ data class InsertDescriptor<T : Comparable<T>>(
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNodeRef, nextNode)
             is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
-            is InnerNode -> handleInnerNode(nextNodeRef, nextNode)
-            /*
-            TODO: add RebuildNode handler.
-            Maybe, we should just skip the RebuildNode and exit, and handle it in the executeSingleKeyOperation
-            function. From other point of view, we should help rebuild the subtree and rerun the whole function
-            from the beginning (while (true) loop can be used for this purpose).
-             */
+            is InnerNode -> handleInnerNode(nextNode)
         }
     }
 }
@@ -201,12 +193,11 @@ data class DeleteDescriptor<T : Comparable<T>>(
         result.trySetResult(true)
     }
 
-    private fun handleInnerNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: InnerNode<T>) {
+    private fun handleInnerNode(nextNode: InnerNode<T>) {
         val nextNodeParams = nextNode.nodeParams.get()
 
         if (nextNodeParams.lastModificationTimestamp < timestamp) {
             assert(nextNodeParams.subtreeSize >= 1)
-            // TODO: rebuild, if modifications count is greater, than some threshold
             val newNodeParams = InnerNode.Companion.Params(
                 lastModificationTimestamp = timestamp,
 
@@ -228,7 +219,6 @@ data class DeleteDescriptor<T : Comparable<T>>(
 
         /*
         Try to push the descriptor to the next node queue
-        TODO: do not perform insert, if next node needs rebuilding
          */
         nextNode.queue.pushIf(this)
     }
@@ -237,10 +227,7 @@ data class DeleteDescriptor<T : Comparable<T>>(
         when (val nextNode = nextNodeRef.get()) {
             is EmptyNode -> handleEmptyNode(nextNode)
             is KeyNode -> handleLeafNode(nextNodeRef, nextNode)
-            is InnerNode -> handleInnerNode(nextNodeRef, nextNode)
-            /*
-            TODO: maybe, rebuild here
-             */
+            is InnerNode -> handleInnerNode(nextNode)
         }
     }
 }
@@ -300,9 +287,6 @@ data class ExistsDescriptor<T : Comparable<T>>(
          */
         assert(nextNode.nodeParams.get().lastModificationTimestamp != timestamp)
 
-        /*
-        TODO: do not perform insert, if next node needs rebuilding
-         */
         nextNode.queue.pushIf(this)
     }
 
@@ -311,9 +295,6 @@ data class ExistsDescriptor<T : Comparable<T>>(
             is EmptyNode -> handleEmptyNode(nextNode)
             is KeyNode -> handleLeafNode(nextNode)
             is InnerNode -> handleInnerNode(nextNode)
-            /*
-            TODO: maybe, rebuild here
-             */
         }
     }
 }
@@ -354,9 +335,6 @@ data class CountDescriptor<T : Comparable<T>>(
                 curChild.queue.pushIf(this)
                 result.preRemoveFromNode(curNode.id, 0)
             }
-            /*
-            TODO: handle tree rebuilding
-             */
         }
     }
 
@@ -381,9 +359,6 @@ data class CountDescriptor<T : Comparable<T>>(
                 curChild.queue.pushIf(this)
                 0
             }
-            /*
-            TODO: handle rebuilding
-             */
             else -> throw IllegalStateException("Program is ill-formed")
         }
     }

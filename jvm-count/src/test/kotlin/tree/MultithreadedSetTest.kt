@@ -48,9 +48,9 @@ class MultithreadedSetTest {
 
     @Test
     fun stress() {
-        val testsCount = 10000
-        val threadsCount = 2
-        val operationsPerThreadCount = 20
+        val testsCount = 1000
+        val threadsCount = 32
+        val operationsPerThreadCount = 1000
 
         val insertProb = 0.2
         val deleteProb = 0.15
@@ -59,8 +59,6 @@ class MultithreadedSetTest {
         val random = Random(time)
 
         for (i in 1..testsCount) {
-            QueueLogger.clear()
-
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
@@ -112,12 +110,7 @@ class MultithreadedSetTest {
                 }
             }.forEach { it.join() }
 
-            if (operationsPerThread.size != threadsCount) {
-                println("LOGS")
-                println(QueueLogger.getLogs().joinToString(separator = "\n"))
-                assertTrue(false)
-            }
-
+            assertEquals(operationsPerThread.size, threadsCount)
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
             val expectedResult = getSequentialResults(allOperations.map { it.operation })
             val results = allOperations.map { it.result }

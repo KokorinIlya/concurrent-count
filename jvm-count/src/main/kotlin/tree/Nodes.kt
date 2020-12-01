@@ -1,6 +1,5 @@
 package tree
 
-import logging.QueueLogger
 import operations.*
 import queue.AbstractLockFreeQueue
 import queue.NonRootLockFreeQueue
@@ -116,13 +115,6 @@ data class RootNode<T : Comparable<T>>(
         while (true) {
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
-                    /*
-                    Some other thread has already made a decision, since current nde has been modified by some
-                    operation with greater or equal timestamp. Thus, the answer is not needed and we can simply return.
-                     */
-                    if (curNode.nodeParams.get().lastModificationTimestamp >= descriptor.timestamp) {
-                        return null
-                    }
                     when (traverseQueue(curNode.queue, descriptor)) {
                         QueueTraverseResult.KEY_EXISTS -> return true
                         QueueTraverseResult.KEY_NOT_EXISTS -> return false
@@ -174,7 +166,6 @@ data class RootNode<T : Comparable<T>>(
             Exist queries are executed unconditionally
              */
             is ExistsDescriptor -> {
-                QueueLogger.add("Descriptor=$curDescriptor, root node")
                 curDescriptor.processNextNode(root)
             }
             /*
@@ -187,7 +178,6 @@ data class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Proceed")
                         /*
                         Descriptor will itself perform all necessary actions (except for removing node
                         from the queue)
@@ -195,15 +185,11 @@ data class RootNode<T : Comparable<T>>(
                         curDescriptor.processNextNode(root)
                     }
                     true -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Decline")
                         /*
                         Result should be set to false and descriptor removed from the queue,
                         without being propagated downwards
                          */
                         curDescriptor.result.trySetResult(false)
-                    }
-                    null -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=NotNeeded")
                     }
                     /*
                     Otherwise, the answer is not needed, since some other thread has moved the descriptor
@@ -217,15 +203,10 @@ data class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Proceed")
                         curDescriptor.processNextNode(root)
                     }
                     false -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=Decline")
                         curDescriptor.result.trySetResult(false)
-                    }
-                    null -> {
-                        QueueLogger.add("Descriptor=$curDescriptor, root node, Status=NotNeeded")
                     }
                 }
             }
@@ -366,8 +347,6 @@ data class InnerNode<T : Comparable<T>>(
             Exit, if queue is empty
              */
             val curDescriptor = queue.peek() ?: return
-
-            QueueLogger.add("Descriptor=$curDescriptor, InnerNode=$this")
 
             when (curDescriptor) {
                 /*

@@ -147,7 +147,7 @@ class InsertDescriptor<T : Comparable<T>>(
         /*
         Try to push the descriptor to the next node queue
          */
-        nextNode.queue.pushIf(this)
+        val pushResult = nextNode.queue.pushIf(this)
     }
 
     override fun processNextNode(nextNodeRef: AtomicReference<TreeNode<T>>) {

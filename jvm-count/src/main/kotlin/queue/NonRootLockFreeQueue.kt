@@ -28,9 +28,9 @@ class NonRootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFre
             /*
             There is other in-progress push request
              */
-            if (nextTail != null) {
+            if (nextTail !== null) {
                 /*
-                Help other thread finish it's requesy and start from the beginning
+                Help other thread finish it's request and start from the beginning
                  */
                 tail.compareAndSet(curTail, nextTail)
                 continue

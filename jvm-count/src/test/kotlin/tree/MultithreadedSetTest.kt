@@ -186,7 +186,7 @@ class MultithreadedSetTest {
     fun stressFewThreadsSmallKeyRangeNoCount() {
         doTest(
             testsCount = 1000,
-            threadsCount = 2,
+            threadsCount = 4,
             operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
@@ -200,7 +200,7 @@ class MultithreadedSetTest {
     fun stressFewThreadsWideKeyRangeNoCount() {
         doTest(
             testsCount = 1000,
-            threadsCount = 2,
+            threadsCount = 4,
             operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
@@ -213,9 +213,9 @@ class MultithreadedSetTest {
     @Test
     fun stressCount() {
         doTest(
-            testsCount = 10000,
-            threadsCount = 2,
-            operationsPerThreadCount = 10,
+            testsCount = 100000,
+            threadsCount = 4,
+            operationsPerThreadCount = 20,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,

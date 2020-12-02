@@ -134,20 +134,18 @@ data class RootNode<T : Comparable<T>>(
     }
 }
 
-abstract class TreeNode<T : Comparable<T>> : Node<T>()
-
-abstract class LeafNode<T : Comparable<T>> : TreeNode<T>() {
+abstract class TreeNode<T : Comparable<T>> : Node<T>() {
     abstract val creationTimestamp: Long
 }
 
 data class KeyNode<T : Comparable<T>>(
     val key: T,
     override val creationTimestamp: Long
-) : LeafNode<T>()
+) : TreeNode<T>()
 
 data class EmptyNode<T : Comparable<T>>(
     override val creationTimestamp: Long
-) : LeafNode<T>()
+) : TreeNode<T>()
 
 data class InnerNode<T : Comparable<T>>(
     override val queue: NonRootLockFreeQueue<Descriptor<T>>,
@@ -156,7 +154,8 @@ data class InnerNode<T : Comparable<T>>(
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T,
     override val id: Long,
-    val initialSize: Int
+    val initialSize: Int,
+    override val creationTimestamp: Long
 ) : TreeNode<T>(), NodeWithId<T> {
     override fun toString(): String {
         return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id}"

@@ -87,7 +87,8 @@ class InsertDescriptor<T : Comparable<T>>(
                         rightSubtreeMin = rightChild.key,
                         nodeParams = AtomicReference(nodeParams),
                         queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
-                        initialSize = initialSize
+                        initialSize = initialSize,
+                        creationTimestamp = timestamp
                     )
                     childRef.compareAndSet(curChild, newInnerNode)
                 }
@@ -237,9 +238,11 @@ class CountDescriptor<T : Comparable<T>>(
             is EmptyNode -> 0
             is KeyNode -> getAnswerForKeyNode(curChild)
             is InnerNode -> {
-                QueueLogger.add("Count=$this, InsertingTo=$curChild")
-                result.preVisitNode(curChild.id)
-                curChild.queue.pushIf(this)
+                if (curChild.creationTimestamp < timestamp) {
+                    QueueLogger.add("Count=$this, InsertingTo=$curChild")
+                    result.preVisitNode(curChild.id)
+                    curChild.queue.pushIf(this)
+                }
                 0
             }
             else -> throw IllegalStateException("Program is ill-formed")
@@ -263,10 +266,14 @@ class CountDescriptor<T : Comparable<T>>(
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
 
-                val leftChildAnswer = processChild(leftChild)
-                val rightChildAnswer = processChild(rightChild)
+                if (curNode.nodeParams.get().lastModificationTimestamp >= timestamp) {
+                    0
+                } else {
+                    val leftChildAnswer = processChild(leftChild)
+                    val rightChildAnswer = processChild(rightChild)
 
-                leftChildAnswer + rightChildAnswer
+                    leftChildAnswer + rightChildAnswer
+                }
             }
         }
         QueueLogger.add("Count=$this, RemovingFrom=$curNode")

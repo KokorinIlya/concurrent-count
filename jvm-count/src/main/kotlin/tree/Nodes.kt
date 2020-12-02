@@ -152,7 +152,6 @@ data class RootNode<T : Comparable<T>>(
                     } else {
                         curNode.key == descriptor.key
                     }
-
                 }
                 is EmptyNode -> {
                     return if (curNode.creationTimestamp >= descriptor.timestamp) {
@@ -172,50 +171,24 @@ data class RootNode<T : Comparable<T>>(
      */
     private fun executeSingleDescriptor(curDescriptor: Descriptor<T>) {
         when (curDescriptor) {
-            /*
-            Exist queries are executed unconditionally
-             */
-            is ExistsDescriptor -> {
-                curDescriptor.processNextNode(root)
-            }
-            /*
-            The same for count queries
-             */
+            is ExistsDescriptor -> curDescriptor.processRootNode(this)
             is CountDescriptor -> curDescriptor.processRootNode(this)
-            /*
-            Insert should be executed only if such key doesn't exist in the set
-             */
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
                         curDescriptor.result.trySetDecision(true)
-                        /*
-                        Descriptor will itself perform all necessary actions (except for removing node
-                        from the queue)
-                         */
-                        curDescriptor.processNextNode(root)
+                        curDescriptor.processRootNode(this)
                     }
                     true -> {
-                        /*
-                        Result should be set to false and descriptor removed from the queue,
-                        without being propagated downwards
-                         */
                         curDescriptor.result.trySetDecision(false)
                     }
-                    /*
-                    Otherwise, the answer is not needed, since some other thread has moved the descriptor
-                    (either dropped it from the root queue or propagated it downwards).
-                     */
                 }
             }
-            /*
-            The opposite for the delete descriptor
-             */
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
                         curDescriptor.result.trySetDecision(true)
-                        curDescriptor.processNextNode(root)
+                        curDescriptor.processRootNode(this)
                     }
                     false -> {
                         curDescriptor.result.trySetDecision(false)
@@ -359,18 +332,7 @@ data class InnerNode<T : Comparable<T>>(
             Exit, if queue is empty
              */
             val curDescriptor = queue.peek() ?: return
-
-            when (curDescriptor) {
-                /*
-                All operations are executed unconditionally
-                 */
-                is SingleKeyOperationDescriptor<T> -> curDescriptor.processNextNode(route(curDescriptor.key))
-                is CountDescriptor -> curDescriptor.processInnerNode(this)
-                /*
-                Dummy descriptor can never be returned from queue.peek()
-                 */
-                else -> throw IllegalStateException("Program is ill-formed")
-            }
+            curDescriptor.processInnerNode(this)
 
             /*
             Safe removal

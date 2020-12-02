@@ -3,6 +3,7 @@ package tree
 import logging.QueueLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.opentest4j.AssertionFailedError
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.random.Random
@@ -58,6 +59,8 @@ class MultithreadedSetTest {
             println(i)
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
+
+            QueueLogger.clear()
 
             (1..threadsCount).map { threadIndex ->
                 thread {
@@ -124,11 +127,30 @@ class MultithreadedSetTest {
                 }
             }.forEach { it.join() }
 
-            assertEquals(operationsPerThread.size, threadsCount)
-            val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
-            val expectedResult = getSequentialResults(allOperations.map { it.operation })
-            val results = allOperations.map { it.result }
-            assertEquals(expectedResult, results)
+            try {
+                assertEquals(operationsPerThread.size, threadsCount)
+
+                val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
+                val expectedResult = getSequentialResults(allOperations.map { it.operation })
+                val results = allOperations.map { it.result }
+
+                val totalOperations = operationsPerThreadCount * threadsCount
+                assertEquals(expectedResult.size, totalOperations)
+                assertEquals(results.size, totalOperations)
+                assertEquals(allOperations.size, totalOperations)
+
+                for (j in 0 until totalOperations) {
+                    if (expectedResult[j] != results[j]) {
+                        println("Operation=${allOperations[j].operation}")
+                        println("Expected = ${expectedResult[j]}, Actual=${results[j]}")
+                        assertTrue(false)
+                    }
+                }
+            } catch (e: AssertionFailedError) {
+                println("LOGS:")
+                println(QueueLogger.getLogs().joinToString(separator = "\n"))
+                throw e
+            }
         }
     }
 
@@ -193,7 +215,7 @@ class MultithreadedSetTest {
         doTest(
             testsCount = 1000,
             threadsCount = 2,
-            operationsPerThreadCount = 20,
+            operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,

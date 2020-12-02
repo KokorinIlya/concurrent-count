@@ -51,7 +51,8 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
 
     fun tryFinish() {
         when (status.get()) {
-            Status.EXECUTED -> {}
+            Status.EXECUTED -> {
+            }
             Status.SHOULD_BE_EXECUTED -> {
                 status.compareAndSet(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
             }
@@ -92,14 +93,6 @@ class CountResult : OperationResult<Int>() {
      */
     fun preVisitNode(nodeId: Long) {
         visitedNodes.add(nodeId)
-    }
-
-    /*
-    Checks, if answer for some particular node is known. Should be used in assert statements, to check, that
-    some particular node has been processed.
-     */
-    fun checkNodeAnswerKnown(nodeId: Long): Boolean {
-        return answerNodes.contains(nodeId)
     }
 
     /**

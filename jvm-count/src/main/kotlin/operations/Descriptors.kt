@@ -304,9 +304,9 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 }
 
-data class CountDescriptor<T : Comparable<T>>(
-    val leftBorder: T,
-    val rightBorder: T,
+class CountDescriptor<T : Comparable<T>>(
+    private val leftBorder: T,
+    private val rightBorder: T,
     val result: CountResult
 ) : Descriptor<T>() {
     init {
@@ -344,22 +344,10 @@ data class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processInnerNodeChild(curChild: TreeNode<T>): Int? {
+    private fun processInnerNodeChild(curChild: TreeNode<T>): Int {
         return when (curChild) {
-            is EmptyNode -> {
-                if (curChild.creationTimestamp < timestamp) {
-                    0
-                } else {
-                    null
-                }
-            }
-            is KeyNode -> {
-                if (curChild.creationTimestamp < timestamp) {
-                    getAnswerForLeafNode(curChild)
-                } else {
-                    null
-                }
-            }
+            is EmptyNode -> 0
+            is KeyNode -> getAnswerForLeafNode(curChild)
             is InnerNode -> {
                 result.preVisitNode(curChild.id)
                 curChild.queue.pushIf(this)
@@ -372,40 +360,21 @@ data class CountDescriptor<T : Comparable<T>>(
     fun processInnerNode(curNode: InnerNode<T>) {
         val curParams = curNode.nodeParams.get()
         assert(curParams.lastModificationTimestamp != timestamp)
-        if (curParams.lastModificationTimestamp > timestamp) {
-            /*
-            Current node has already been processed
-             */
-            assert(result.checkNodeAnswerKnown(curNode.id))
-            return
-        }
 
-        when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
-            IntersectionResult.NO_INTERSECTION -> {
-                result.preRemoveFromNode(curNode.id, 0)
-            }
-            IntersectionResult.NODE_INSIDE_REQUEST -> {
-                result.preRemoveFromNode(curNode.id, curParams.subtreeSize)
-            }
+        val curNodeResult = when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
+            IntersectionResult.NO_INTERSECTION -> 0
+            IntersectionResult.NODE_INSIDE_REQUEST -> curParams.subtreeSize
             IntersectionResult.GO_TO_CHILDREN -> {
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
 
                 val leftChildAnswer = processInnerNodeChild(leftChild)
-                if (leftChildAnswer == null) {
-                    assert(result.checkNodeAnswerKnown(curNode.id))
-                    return
-                }
-
                 val rightChildAnswer = processInnerNodeChild(rightChild)
-                if (rightChildAnswer == null) {
-                    assert(result.checkNodeAnswerKnown(curNode.id))
-                    return
-                }
 
-                result.preRemoveFromNode(curNode.id, leftChildAnswer + rightChildAnswer)
+                leftChildAnswer + rightChildAnswer
             }
         }
+        result.preRemoveFromNode(curNode.id, curNodeResult)
     }
 
     companion object {

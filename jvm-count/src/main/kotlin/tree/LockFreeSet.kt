@@ -51,9 +51,6 @@ class LockFreeSet<T : Comparable<T>> {
         return builder.toString()
     }
 
-    /**
-     * Executes single-key operation, traversing from root to the appropriate leaf.
-     */
     private fun executeSingleKeyOperation(
         descriptor: SingleKeyOperationDescriptor<T>
     ): TimestampLinearizedResult<Boolean> {
@@ -114,13 +111,7 @@ class LockFreeSet<T : Comparable<T>> {
         return executeSingleKeyOperation(ExistsDescriptor.new(x))
     }
 
-    /**
-     * Performs count operation in some inner node of the tree.
-     */
     private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
-        /*
-        Execute all necessary operations in the current node. If the answer is known after that, return
-         */
         curNode.executeUntilTimestamp(descriptor.timestamp)
         if (descriptor.result.getResult() != null) {
             return
@@ -130,33 +121,15 @@ class LockFreeSet<T : Comparable<T>> {
         val curRight = curNode.right.get()
         val curNodeParams = curNode.nodeParams.get()
         val intersectionResult = descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)
-        /*
-        We determine, if we should go deeper, to the children of the current node. Note, that current
-        thread could have been stalled, and other insert operation could have been executed in
-        current node, thus expanding key range borders. It means, that sometimes we can go deeper, even if we don't
-        need to. However, it's not going to break neither linearizability not lock-freedom of the algorithm.
-         */
+
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
-            /*
-            If curLeft is EmptyNode or LeafNode, answer for such node should have been counted by
-            descriptor.processRootNode(curNode) (or descriptor.processInnerRootNode(curNode))
-             */
             if (curLeft is InnerNode) {
                 countInNode(curLeft, descriptor)
             }
-            /*
-            The same for right node
-             */
             if (curRight is InnerNode) {
                 countInNode(curRight, descriptor)
             }
         }
-        /*
-        Note, that key range could have only been expanded.
-        If key range (even after the expansion) either lies inside request borders or doesn't intersect
-        with request borders, there is no need to go to the children (because before the expansion the same
-        condition held).
-         */
     }
 
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
@@ -168,17 +141,10 @@ class LockFreeSet<T : Comparable<T>> {
 
         root.executeUntilTimestamp(timestamp)
 
-        /*
-        If the only child of the rot is InnerNode, continue executing the operation.
-         */
         val realRoot = root.root.get()
         if (realRoot is InnerNode) {
             countInNode(realRoot, descriptor)
         }
-        /*
-        Otherwise, the result should have been calculated by descriptor.processRootNode (since all leaf nodes should
-        be processed while processing their parent)
-         */
 
         val result = descriptor.result.getResult()
         if (result == null) {

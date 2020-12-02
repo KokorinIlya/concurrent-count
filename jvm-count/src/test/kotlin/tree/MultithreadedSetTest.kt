@@ -213,9 +213,9 @@ class MultithreadedSetTest {
     @Test
     fun stressCount() {
         doTest(
-            testsCount = 1000,
+            testsCount = 10000,
             threadsCount = 2,
-            operationsPerThreadCount = 1000,
+            operationsPerThreadCount = 10,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,

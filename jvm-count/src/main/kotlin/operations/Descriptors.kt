@@ -40,17 +40,11 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>> : Descriptor<T>()
     }
 }
 
-/**
- * Base class for insert and delete operation descriptors
- */
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>()
 
 class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyWriteOperationResult,
-    /*
-    Should be the same allocator, which is used by the tree
-     */
     private val nodeIdAllocator: IdAllocator
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
@@ -223,7 +217,7 @@ class CountDescriptor<T : Comparable<T>>(
     val result: CountResult
 ) : Descriptor<T>() {
     override fun toString(): String {
-        return "{ContDescriptor: Left=$leftBorder, Right=$rightBorder}"
+        return "{ContDescriptor: Left=$leftBorder, Right=$rightBorder, Timestamp=$timestamp}"
     }
 
     init {
@@ -238,27 +232,12 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processRootNode(curNode: RootNode<T>) {
-        val curNodeResult = when (val curChild = curNode.root.get()) {
-            is EmptyNode -> 0
-            is KeyNode -> getAnswerForKeyNode(curChild)
-            is InnerNode -> {
-                result.preVisitNode(curChild.id)
-                curChild.queue.pushIf(this)
-                0
-            }
-            else -> {
-                throw IllegalStateException("Program is ill-formed")
-            }
-        }
-        result.preRemoveFromNode(curNode.id, curNodeResult)
-    }
-
-    private fun processInnerNodeChild(curChild: TreeNode<T>): Int {
+    private fun processChild(curChild: TreeNode<T>): Int {
         return when (curChild) {
             is EmptyNode -> 0
             is KeyNode -> getAnswerForKeyNode(curChild)
             is InnerNode -> {
+                QueueLogger.add("Count=$this, InsertingTo=$curChild")
                 result.preVisitNode(curChild.id)
                 curChild.queue.pushIf(this)
                 0
@@ -267,24 +246,30 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
+    override fun processRootNode(curNode: RootNode<T>) {
+        val curNodeResult = processChild(curNode.root.get())
+        QueueLogger.add("Count=$this, RemovingFrom=root")
+        result.preRemoveFromNode(curNode.id, curNodeResult)
+    }
+
     override fun processInnerNode(curNode: InnerNode<T>) {
         val curParams = curNode.nodeParams.get()
         assert(curParams.lastModificationTimestamp != timestamp)
 
-        val intersectionResult = intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)
-        val curNodeResult = when (intersectionResult) {
+        val curNodeResult = when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
             IntersectionResult.NO_INTERSECTION -> 0
             IntersectionResult.NODE_INSIDE_REQUEST -> curParams.subtreeSize
             IntersectionResult.GO_TO_CHILDREN -> {
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
 
-                val leftChildAnswer = processInnerNodeChild(leftChild)
-                val rightChildAnswer = processInnerNodeChild(rightChild)
+                val leftChildAnswer = processChild(leftChild)
+                val rightChildAnswer = processChild(rightChild)
 
                 leftChildAnswer + rightChildAnswer
             }
         }
+        QueueLogger.add("Count=$this, RemovingFrom=$curNode")
         result.preRemoveFromNode(curNode.id, curNodeResult)
     }
 
@@ -312,10 +297,6 @@ class CountDescriptor<T : Comparable<T>>(
     }
 }
 
-/**
- * Descriptor, not corresponding to any operation. We use it as an initial dummy value in Michael-Scott queue.
- * It has a constant timestamp, which is less, than any valid timestamp (logic of root queue will guarantee that).
- */
 class DummyDescriptor<T : Comparable<T>> : Descriptor<T>() { // TODO: consider making it an object
     override var timestamp: Long
         get() = 0L

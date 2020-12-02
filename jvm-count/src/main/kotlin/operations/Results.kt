@@ -73,10 +73,6 @@ class ExistResult : OperationResult<Boolean>() {
     }
 }
 
-/**
- * Result of count operation. Answer for the count operation is the sum of sizes of some subtrees, thus making
- * setting the count result non-atomic.
- */
 class CountResult : OperationResult<Int>() {
     /*
     Let's pretend these data structures are lock-free.
@@ -88,16 +84,10 @@ class CountResult : OperationResult<Int>() {
     private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
     private val answerNodes = ConcurrentHashMap<Long, Int>()
 
-    /**
-     * Should be called before adding count descriptor to some node.
-     */
     fun preVisitNode(nodeId: Long) {
         visitedNodes.add(nodeId)
     }
 
-    /**
-     * Should be called before removing count node from node queue.
-     */
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
         answerNodes.putIfAbsent(nodeId, nodeAnswer)
     }

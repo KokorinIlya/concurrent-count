@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 sealed class OperationResult<R> {
     /**
      * Returns null, if operation execution hasn't finished yet. Otherwise, returns non-null operation result.
-     * Note, that if result is set (i.e. this function returns non-null value), it indicates, that no further actions
+     * Note, that if result is known (i.e. this function returns non-null value), it indicates, that no further actions
      * are required from any thread (including originator thread). It means, that originator thread can immediately
      * return result of the operation to the caller. It means, that setting the result must be done only when the
      * request is fully completed (i.e. all child reference and parameters are changed).
@@ -59,7 +59,6 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
                 throw IllegalStateException("Program is ill-formed")
             }
         }
-
     }
 }
 

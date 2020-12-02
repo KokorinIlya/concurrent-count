@@ -46,15 +46,11 @@ class MultithreadedSetTest {
         }
     }
 
-    @Test
-    fun stress() {
-        val testsCount = 1000
-        val threadsCount = 32
-        val operationsPerThreadCount = 1000
-
-        val insertProb = 0.2
-        val deleteProb = 0.15
-
+    private fun doTest(
+        testsCount: Int, threadsCount: Int, operationsPerThreadCount: Int,
+        insertProb: Double, deleteProb: Double,
+        keysFrom: Int, keysTo: Int
+    ) {
         val time = System.currentTimeMillis()
         val random = Random(time)
 
@@ -72,7 +68,7 @@ class MultithreadedSetTest {
                                 /*
                                 Insert
                                  */
-                                val x = random.nextInt(from = 0, until = 10)
+                                val x = random.nextInt(from = keysFrom, until = keysTo)
                                 val result = set.insert(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -84,7 +80,7 @@ class MultithreadedSetTest {
                                 /*
                                 Delete
                                  */
-                                val x = random.nextInt(from = 0, until = 10)
+                                val x = random.nextInt(from = keysFrom, until = keysTo)
                                 val result = set.delete(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -96,7 +92,7 @@ class MultithreadedSetTest {
                                 /*
                                 Exists
                                  */
-                                val x = random.nextInt(from = 0, until = 10)
+                                val x = random.nextInt(from = keysFrom, until = keysTo)
                                 val result = set.exists(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -117,6 +113,58 @@ class MultithreadedSetTest {
             val results = allOperations.map { it.result }
             assertEquals(expectedResult, results)
         }
+    }
+
+    @Test
+    fun stressManyThreadsSmallKeyRangeNoCount() {
+        doTest(
+            testsCount = 1000,
+            threadsCount = 32,
+            operationsPerThreadCount = 1000,
+            insertProb = 0.2,
+            deleteProb = 0.15,
+            keysFrom = 0,
+            keysTo = 10
+        )
+    }
+
+    @Test
+    fun stressManyThreadsWideKeyRangeNoCount() {
+        doTest(
+            testsCount = 1000,
+            threadsCount = 32,
+            operationsPerThreadCount = 1000,
+            insertProb = 0.2,
+            deleteProb = 0.15,
+            keysFrom = 0,
+            keysTo = 10_000
+        )
+    }
+
+    @Test
+    fun stressFewThreadsSmallKeyRangeNoCount() {
+        doTest(
+            testsCount = 1000,
+            threadsCount = 2,
+            operationsPerThreadCount = 1000,
+            insertProb = 0.2,
+            deleteProb = 0.15,
+            keysFrom = 0,
+            keysTo = 10
+        )
+    }
+
+    @Test
+    fun stressFewThreadsWideKeyRangeNoCount() {
+        doTest(
+            testsCount = 1000,
+            threadsCount = 2,
+            operationsPerThreadCount = 1000,
+            insertProb = 0.2,
+            deleteProb = 0.15,
+            keysFrom = 0,
+            keysTo = 10_000
+        )
     }
 
     /*

@@ -30,9 +30,9 @@ sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
  * Base class for descriptors of operations, that operate on single key. Note, that for such operations answer is
  * atomic (it is either known completely or not known at all, it cannot be known partially).
  */
-abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T>() {
+abstract class SingleKeyOperationDescriptor<T : Comparable<T>> : Descriptor<T>() {
     abstract val key: T
-    abstract val result: SingleKeyOperationResult<R>
+    abstract val result: OperationResult<Boolean>
 
     /*
     Tries to propagate descriptor downwards, tries to replace EmptyNode with LeafNode
@@ -53,11 +53,11 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
 /**
  * Base class for insert and delete operation descriptors
  */
-abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>()
+abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>()
 
 class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: SingleKeyOperationResult<Boolean>,
+    override val result: SingleKeyWriteOperationResult,
     /*
     Should be the same allocator, which is used by the tree
      */
@@ -65,7 +65,7 @@ class InsertDescriptor<T : Comparable<T>>(
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): InsertDescriptor<T> {
-            return InsertDescriptor(key, SingleKeyOperationResult(), nodeIdAllocator)
+            return InsertDescriptor(key, SingleKeyWriteOperationResult(), nodeIdAllocator)
         }
     }
 
@@ -82,7 +82,7 @@ class InsertDescriptor<T : Comparable<T>>(
         Operation was successful, set result to true, to indicate the originator thread, that the
         insert has been completed and no further action is required
          */
-        result.trySetResult(true)
+        result.tryFinish()
     }
 
     private fun handleKeyNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
@@ -123,7 +123,7 @@ class InsertDescriptor<T : Comparable<T>>(
         /*
         Else, no further action from originator thread is required.
          */
-        result.trySetResult(true)
+        result.tryFinish()
     }
 
     private fun handleInnerNode(nextNode: InnerNode<T>) {
@@ -161,11 +161,11 @@ class InsertDescriptor<T : Comparable<T>>(
 
 class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: SingleKeyOperationResult<Boolean>
+    override val result: SingleKeyWriteOperationResult
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T): DeleteDescriptor<T> {
-            return DeleteDescriptor(key, SingleKeyOperationResult())
+            return DeleteDescriptor(key, SingleKeyWriteOperationResult())
         }
     }
 
@@ -179,7 +179,7 @@ class DeleteDescriptor<T : Comparable<T>>(
         /*
         Indicate the originator thread, that it should perform no further actions
          */
-        result.trySetResult(true)
+        result.tryFinish()
     }
 
     private fun handleKeyNode(nextNodeRef: AtomicReference<TreeNode<T>>, nextNode: KeyNode<T>) {
@@ -194,7 +194,7 @@ class DeleteDescriptor<T : Comparable<T>>(
             val newNode = EmptyNode<T>(creationTimestamp = timestamp)
             nextNodeRef.compareAndSet(nextNode, newNode)
         }
-        result.trySetResult(true)
+        result.tryFinish()
     }
 
     private fun handleInnerNode(nextNode: InnerNode<T>) {
@@ -238,12 +238,12 @@ class DeleteDescriptor<T : Comparable<T>>(
 
 class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: SingleKeyOperationResult<Boolean>
-) : SingleKeyOperationDescriptor<T, Boolean>() {
+    override val result: ExistResult
+) : SingleKeyOperationDescriptor<T>() {
 
     companion object {
         fun <T : Comparable<T>> new(key: T): ExistsDescriptor<T> {
-            return ExistsDescriptor(key, SingleKeyOperationResult())
+            return ExistsDescriptor(key, ExistResult())
         }
     }
 

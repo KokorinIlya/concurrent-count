@@ -59,6 +59,7 @@ class MultithreadedSetTest {
         val random = Random(time)
 
         for (i in 1..testsCount) {
+            println(i)
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
@@ -71,7 +72,7 @@ class MultithreadedSetTest {
                                 /*
                                 Insert
                                  */
-                                val x = random.nextInt(from = 0, until = 10_000)
+                                val x = random.nextInt(from = 0, until = 10)
                                 val result = set.insert(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -83,7 +84,7 @@ class MultithreadedSetTest {
                                 /*
                                 Delete
                                  */
-                                val x = random.nextInt(from = 0, until = 10_000)
+                                val x = random.nextInt(from = 0, until = 10)
                                 val result = set.delete(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -95,7 +96,7 @@ class MultithreadedSetTest {
                                 /*
                                 Exists
                                  */
-                                val x = random.nextInt(from = 0, until = 10_000)
+                                val x = random.nextInt(from = 0, until = 10)
                                 val result = set.exists(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,

@@ -20,27 +20,56 @@ sealed class OperationResult<R> {
     abstract fun getResult(): R?
 }
 
-/**
- * Result of exist, remove or insert operation. For such operation, answer is either known completely or
- * not known at all. It makes setting answer for such operations atomic.
- */
-class SingleKeyOperationResult<R> : OperationResult<R>() {
-    /*
-    Result can be set multiple times, but all set values should be the same.
-     */
-    private val result: AtomicReference<R?> = AtomicReference(null)
+class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
+    companion object {
+        enum class Status {
+            UNDECIDED,
+            SHOULD_BE_EXECUTED,
+            DECLINED,
+            EXECUTED
+        }
+    }
 
-    override fun getResult(): R? = result.get()
+    private val status: AtomicReference<Status> = AtomicReference(Status.UNDECIDED)
 
-    fun trySetResult(res: R) {
-        val setResult = result.compareAndSet(null, res)
-        /*
-        All operations are deterministic, cannot have different results for the same operation
+    override fun getResult(): Boolean? {
+        return when (status.get()) {
+            Status.DECLINED -> false
+            Status.EXECUTED -> true
+            else -> null
+        }
+    }
 
-        TODO: maybe, remove such assertions to allow stalled threads try to set incorrect answer
-        (answer, that was set first, will be correct)
-         */
-        assert(setResult || result.get() == res)
+    fun trySetDecision(shouldBeExecuted: Boolean) {
+        val newStatus = if (shouldBeExecuted) {
+            Status.SHOULD_BE_EXECUTED
+        } else {
+            Status.DECLINED
+        }
+        status.compareAndSet(Status.UNDECIDED, newStatus)
+    }
+
+    fun tryFinish() {
+        when (status.get()) {
+            Status.EXECUTED -> {}
+            Status.SHOULD_BE_EXECUTED -> {
+                status.compareAndSet(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
+            }
+            else -> {
+                throw IllegalStateException("Program is ill-formed")
+            }
+        }
+
+    }
+}
+
+class ExistResult : OperationResult<Boolean>() {
+    private val result: AtomicReference<Boolean?> = AtomicReference(null)
+
+    override fun getResult(): Boolean? = result.get()
+
+    fun trySetResult(res: Boolean) {
+        result.compareAndSet(null, res)
     }
 }
 
@@ -75,18 +104,10 @@ class CountResult : OperationResult<Int>() {
     }
 
     /**
-     * Should be called before removing count node from node queue. All answers, with which the function is called,
-     * should be the same. It means, that the function should be called only if creation/last modification
-     * timestamps of all nodes, answers for which is included in the nodeAnswer, is less or equal, than timestamp
-     * of the count operation (since greater timestamp can indicate, that other node parameters have changed, thus
-     * indicating, that the nodeAnswer may have been changed too).
+     * Should be called before removing count node from node queue.
      */
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
-        val result = answerNodes.putIfAbsent(nodeId, nodeAnswer)
-        /*
-        All operations are deterministic, different answers cannot be calculated for the same node
-         */
-        assert(result == null || result == nodeAnswer)
+        answerNodes.putIfAbsent(nodeId, nodeAnswer)
     }
 
     override fun getResult(): Int? {

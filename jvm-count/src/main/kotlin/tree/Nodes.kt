@@ -69,6 +69,8 @@ data class RootNode<T : Comparable<T>>(
         descriptor: SingleKeyWriteOperationDescriptor<T>
     ): QueueTraverseResult {
         var curQueueNode = queue.getHead()
+        var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
+
         while (curQueueNode != null) {
             val curDescriptor = curQueueNode.data
 
@@ -83,18 +85,22 @@ data class RootNode<T : Comparable<T>>(
             }
 
             when (curDescriptor) {
-                /*
-                 TODO: get operation with the highest timestamp in the current queue
-                 (in case, when both insert and delete are presented in the same queue)
-                 */
                 is InsertDescriptor -> {
                     if (curDescriptor.key == descriptor.key) {
-                        return QueueTraverseResult.KEY_EXISTS
+                        assert(
+                            traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                                    traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
+                        )
+                        traversalResult = QueueTraverseResult.KEY_EXISTS
                     }
                 }
                 is DeleteDescriptor -> {
                     if (curDescriptor.key == descriptor.key) {
-                        return QueueTraverseResult.KEY_NOT_EXISTS
+                        assert(
+                            traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                                    traversalResult == QueueTraverseResult.KEY_EXISTS
+                        )
+                        traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
                     }
                 }
                 else -> {
@@ -102,7 +108,7 @@ data class RootNode<T : Comparable<T>>(
             }
             curQueueNode = curQueueNode.next.get()
         }
-        return QueueTraverseResult.UNABLE_TO_DETERMINE // Search should be continued in child nodes
+        return traversalResult
     }
 
     /**
@@ -182,6 +188,7 @@ data class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
+                        curDescriptor.result.trySetDecision(true)
                         /*
                         Descriptor will itself perform all necessary actions (except for removing node
                         from the queue)
@@ -193,7 +200,7 @@ data class RootNode<T : Comparable<T>>(
                         Result should be set to false and descriptor removed from the queue,
                         without being propagated downwards
                          */
-                        curDescriptor.result.trySetResult(false)
+                        curDescriptor.result.trySetDecision(false)
                     }
                     /*
                     Otherwise, the answer is not needed, since some other thread has moved the descriptor
@@ -207,10 +214,11 @@ data class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
+                        curDescriptor.result.trySetDecision(true)
                         curDescriptor.processNextNode(root)
                     }
                     false -> {
-                        curDescriptor.result.trySetResult(false)
+                        curDescriptor.result.trySetDecision(false)
                     }
                 }
             }
@@ -356,7 +364,7 @@ data class InnerNode<T : Comparable<T>>(
                 /*
                 All operations are executed unconditionally
                  */
-                is SingleKeyOperationDescriptor<T, *> -> curDescriptor.processNextNode(route(curDescriptor.key))
+                is SingleKeyOperationDescriptor<T> -> curDescriptor.processNextNode(route(curDescriptor.key))
                 is CountDescriptor -> curDescriptor.processInnerNode(this)
                 /*
                 Dummy descriptor can never be returned from queue.peek()

@@ -39,6 +39,9 @@ class LockFreeSet<T : Comparable<T>> {
             is EmptyNode -> {
                 curBuilder.append("empty")
             }
+            else -> {
+                throw IllegalStateException("Shouldn't reach here")
+            }
         }
     }
 
@@ -51,9 +54,9 @@ class LockFreeSet<T : Comparable<T>> {
     /**
      * Executes single-key operation, traversing from root to the appropriate leaf.
      */
-    private fun <R> executeSingleKeyOperation(
-        descriptor: SingleKeyOperationDescriptor<T, R>
-    ): TimestampLinearizedResult<R> {
+    private fun executeSingleKeyOperation(
+        descriptor: SingleKeyOperationDescriptor<T>
+    ): TimestampLinearizedResult<Boolean> {
         /*
         Push descriptor to the root queue, execute all preceding operations and either throw current operation away
         or propagate it downwards. If current operation was thrown away, we will learn it at the very beginning of the

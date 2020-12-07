@@ -1,7 +1,6 @@
 package tree
 
 import operations.*
-import queue.AbstractLockFreeQueue
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -33,28 +32,20 @@ class RootNode<T : Comparable<T>>(
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }
 
-            when (curDescriptor) {
-                is InsertDescriptor -> {
-                    if (curDescriptor.key == descriptor.key) {
-                        assert(
-                            traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
-                                    traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
-                        )
-                        traversalResult = QueueTraverseResult.KEY_EXISTS
-                    }
-                }
-                is DeleteDescriptor -> {
-                    if (curDescriptor.key == descriptor.key) {
-                        assert(
-                            traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
-                                    traversalResult == QueueTraverseResult.KEY_EXISTS
-                        )
-                        traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
-                    }
-                }
-                else -> {
-                }
+            if (curDescriptor is InsertDescriptor && curDescriptor.key == descriptor.key) {
+                assert(
+                    traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                            traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
+                )
+                traversalResult = QueueTraverseResult.KEY_EXISTS
+            } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == descriptor.key) {
+                assert(
+                    traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                            traversalResult == QueueTraverseResult.KEY_EXISTS
+                )
+                traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
             }
+
             curQueueNode = curQueueNode.next.get()
         }
         return traversalResult
@@ -98,6 +89,7 @@ class RootNode<T : Comparable<T>>(
                     true -> {
                         curDescriptor.result.trySetDecision(false)
                     }
+
                 }
             }
             is DeleteDescriptor<T> -> {

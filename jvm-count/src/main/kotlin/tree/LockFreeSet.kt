@@ -109,12 +109,13 @@ class LockFreeSet<T : Comparable<T>> {
             return
         }
 
-        val curLeft = curNode.left.get()
-        val curRight = curNode.right.get()
         val curNodeParams = curNode.nodeParams.get()
         val intersectionResult = descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)
 
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
+            val curLeft = curNode.left.get()
+            val curRight = curNode.right.get()
+
             if (curLeft is InnerNode) {
                 countInNode(curLeft, descriptor)
             }

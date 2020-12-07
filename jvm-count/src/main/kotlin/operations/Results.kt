@@ -34,6 +34,9 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
 
     override fun getResult(): Boolean? {
         return when (status.get()) {
+            /*
+            May return true, when status is SHOULD_BE_EXECUTED
+             */
             Status.DECLINED -> false
             Status.EXECUTED -> true
             else -> null
@@ -50,16 +53,8 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
     }
 
     fun tryFinish() {
-        when (status.get()) {
-            Status.EXECUTED -> {
-            }
-            Status.SHOULD_BE_EXECUTED -> {
-                status.compareAndSet(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
-            }
-            else -> {
-                throw IllegalStateException("Program is ill-formed")
-            }
-        }
+        val oldStatus = status.compareAndExchange(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
+        assert(oldStatus == Status.SHOULD_BE_EXECUTED || oldStatus == Status.EXECUTED)
     }
 }
 

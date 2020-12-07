@@ -56,7 +56,9 @@ class MultithreadedSetTest {
         val random = Random(time)
 
         for (i in 1..testsCount) {
-            println(i)
+            if (i % 10 == 0) {
+                println(i)
+            }
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 

@@ -40,7 +40,26 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>> : Descriptor<T>()
     }
 }
 
-abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>()
+abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>() {
+    protected abstract fun processChild(childRef: AtomicReference<TreeNode<T>>)
+
+    protected abstract fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T>
+
+    override fun processRootNode(curNode: RootNode<T>) {
+        processChild(curNode.root)
+    }
+
+    override fun processInnerNode(curNode: InnerNode<T>) {
+        val curNodeParams = curNode.nodeParams.get()
+
+        if (curNodeParams.lastModificationTimestamp < timestamp) {
+            val newNodeParams = getNewParams(curNodeParams)
+            curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
+        }
+
+        processChild(curNode.route(key))
+    }
+}
 
 class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -53,7 +72,7 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processChild(childRef: AtomicReference<TreeNode<T>>) {
+    override fun processChild(childRef: AtomicReference<TreeNode<T>>) {
         when (val curChild = childRef.get()) {
             is EmptyNode -> {
                 if (curChild.creationTimestamp < timestamp) {
@@ -100,25 +119,14 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processRootNode(curNode: RootNode<T>) {
-        processChild(curNode.root)
-    }
-
-    override fun processInnerNode(curNode: InnerNode<T>) {
-        val curNodeParams = curNode.nodeParams.get()
-
-        if (curNodeParams.lastModificationTimestamp < timestamp) {
-            val newNodeParams = InnerNode.Companion.Params(
-                lastModificationTimestamp = timestamp,
-                maxKey = maxOf(curNodeParams.maxKey, key),
-                minKey = minOf(curNodeParams.minKey, key),
-                modificationsCount = curNodeParams.modificationsCount + 1,
-                subtreeSize = curNodeParams.subtreeSize + 1
-            )
-            curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
-        }
-
-        processChild(curNode.route(key))
+    override fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T> {
+        return InnerNode.Companion.Params(
+            lastModificationTimestamp = timestamp,
+            maxKey = maxOf(curNodeParams.maxKey, key),
+            minKey = minOf(curNodeParams.minKey, key),
+            modificationsCount = curNodeParams.modificationsCount + 1,
+            subtreeSize = curNodeParams.subtreeSize + 1
+        )
     }
 }
 
@@ -132,7 +140,7 @@ class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processChild(childRef: AtomicReference<TreeNode<T>>) {
+    override fun processChild(childRef: AtomicReference<TreeNode<T>>) {
         when (val curChild = childRef.get()) {
             is EmptyNode -> {
                 assert(curChild.creationTimestamp >= timestamp)
@@ -153,25 +161,14 @@ class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processRootNode(curNode: RootNode<T>) {
-        processChild(curNode.root)
-    }
-
-    override fun processInnerNode(curNode: InnerNode<T>) {
-        val curNodeParams = curNode.nodeParams.get()
-
-        if (curNodeParams.lastModificationTimestamp < timestamp) {
-            val newNodeParams = InnerNode.Companion.Params(
-                lastModificationTimestamp = timestamp,
-                maxKey = curNodeParams.maxKey,
-                minKey = curNodeParams.minKey,
-                modificationsCount = curNodeParams.modificationsCount + 1,
-                subtreeSize = curNodeParams.subtreeSize - 1
-            )
-            curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
-        }
-
-        processChild(curNode.route(key))
+    override fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T> {
+        return InnerNode.Companion.Params(
+            lastModificationTimestamp = timestamp,
+            maxKey = curNodeParams.maxKey,
+            minKey = curNodeParams.minKey,
+            modificationsCount = curNodeParams.modificationsCount + 1,
+            subtreeSize = curNodeParams.subtreeSize - 1
+        )
     }
 }
 
@@ -187,13 +184,13 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     private fun processChild(childRef: AtomicReference<TreeNode<T>>) {
-        when (val curChild = childRef.get()) {
+        val curChild = childRef.get()
+        assert(curChild.creationTimestamp != timestamp)
+        when (curChild) {
             is EmptyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
                 result.trySetResult(false)
             }
             is KeyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
                 result.trySetResult(curChild.key == key)
             }
             is InnerNode -> {
@@ -208,6 +205,8 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     override fun processInnerNode(curNode: InnerNode<T>) {
+        assert(curNode.creationTimestamp != timestamp)
+        assert(curNode.nodeParams.get().lastModificationTimestamp != timestamp)
         processChild(curNode.route(key))
     }
 }
@@ -234,10 +233,12 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     private fun processChild(curChild: TreeNode<T>): Int {
+        assert(curChild.creationTimestamp != timestamp)
         return when (curChild) {
             is EmptyNode -> 0
             is KeyNode -> getAnswerForKeyNode(curChild)
             is InnerNode -> {
+                assert(curChild.nodeParams.get().lastModificationTimestamp != timestamp)
                 if (curChild.creationTimestamp < timestamp) {
                     QueueLogger.add("Count=$this, InsertingTo=$curChild")
                     result.preVisitNode(curChild.id)
@@ -257,6 +258,7 @@ class CountDescriptor<T : Comparable<T>>(
     override fun processInnerNode(curNode: InnerNode<T>) {
         val curParams = curNode.nodeParams.get()
         assert(curParams.lastModificationTimestamp != timestamp)
+        assert(curNode.creationTimestamp != timestamp)
 
         val curNodeResult = when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
             IntersectionResult.NO_INTERSECTION -> 0
@@ -264,15 +266,9 @@ class CountDescriptor<T : Comparable<T>>(
             IntersectionResult.GO_TO_CHILDREN -> {
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
-
-                if (curNode.nodeParams.get().lastModificationTimestamp >= timestamp) {
-                    0
-                } else {
-                    val leftChildAnswer = processChild(leftChild)
-                    val rightChildAnswer = processChild(rightChild)
-
-                    leftChildAnswer + rightChildAnswer
-                }
+                val leftChildAnswer = processChild(leftChild)
+                val rightChildAnswer = processChild(rightChild)
+                leftChildAnswer + rightChildAnswer
             }
         }
         QueueLogger.add("Count=$this, RemovingFrom=$curNode")

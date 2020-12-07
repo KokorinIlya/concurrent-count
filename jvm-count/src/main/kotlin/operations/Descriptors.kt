@@ -245,7 +245,6 @@ class CountDescriptor<T : Comparable<T>>(
                 }
                 0
             }
-            else -> throw IllegalStateException("Program is ill-formed")
         }
     }
 

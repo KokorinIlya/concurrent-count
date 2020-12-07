@@ -6,18 +6,11 @@ import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
 
-sealed class Node<T : Comparable<T>>
-
-interface NodeWithId<T : Comparable<T>> {
-    val id: Long
-    val queue: AbstractLockFreeQueue<Descriptor<T>>
-}
-
-data class RootNode<T : Comparable<T>>(
-    override val queue: RootLockFreeQueue<Descriptor<T>>,
+class RootNode<T : Comparable<T>>(
+    val queue: RootLockFreeQueue<Descriptor<T>>,
     val root: AtomicReference<TreeNode<T>>,
-    override val id: Long
-) : Node<T>(), NodeWithId<T> {
+    val id: Long
+) {
     companion object {
         private enum class QueueTraverseResult {
             KEY_EXISTS,
@@ -134,29 +127,29 @@ data class RootNode<T : Comparable<T>>(
     }
 }
 
-abstract class TreeNode<T : Comparable<T>> : Node<T>() {
+sealed class TreeNode<T : Comparable<T>> {
     abstract val creationTimestamp: Long
 }
 
-data class KeyNode<T : Comparable<T>>(
+class KeyNode<T : Comparable<T>>(
     val key: T,
     override val creationTimestamp: Long
 ) : TreeNode<T>()
 
-data class EmptyNode<T : Comparable<T>>(
+class EmptyNode<T : Comparable<T>>(
     override val creationTimestamp: Long
 ) : TreeNode<T>()
 
-data class InnerNode<T : Comparable<T>>(
-    override val queue: NonRootLockFreeQueue<Descriptor<T>>,
+class InnerNode<T : Comparable<T>>(
+    val queue: NonRootLockFreeQueue<Descriptor<T>>,
     val left: AtomicReference<TreeNode<T>>,
     val right: AtomicReference<TreeNode<T>>,
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T,
-    override val id: Long,
+    val id: Long,
     val initialSize: Int,
     override val creationTimestamp: Long
-) : TreeNode<T>(), NodeWithId<T> {
+) : TreeNode<T>() {
     override fun toString(): String {
         return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id}"
     }

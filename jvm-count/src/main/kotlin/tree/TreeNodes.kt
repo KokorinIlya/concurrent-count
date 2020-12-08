@@ -11,11 +11,19 @@ sealed class TreeNode<T : Comparable<T>> {
 class KeyNode<T : Comparable<T>>(
     val key: T,
     override val creationTimestamp: Long
-) : TreeNode<T>()
+) : TreeNode<T>() {
+    override fun toString(): String {
+        return "{KeyNode: key=$key, creationTimestamp=$creationTimestamp}"
+    }
+}
 
 class EmptyNode<T : Comparable<T>>(
     override val creationTimestamp: Long
-) : TreeNode<T>()
+) : TreeNode<T>() {
+    override fun toString(): String {
+        return "{EmptyNode: creationTimestamp=$creationTimestamp}"
+    }
+}
 
 class InnerNode<T : Comparable<T>>(
     val queue: NonRootLockFreeQueue<Descriptor<T>>,
@@ -49,11 +57,14 @@ class InnerNode<T : Comparable<T>>(
         }
     }
 
-    fun executeUntilTimestamp(timestamp: Long?) {
-        do {
+    fun executeUntilTimestamp(timestamp: Long) {
+        while (true) {
             val curDescriptor = queue.peek() ?: return
+            if (curDescriptor.timestamp > timestamp) {
+                return
+            }
             curDescriptor.processInnerNode(this)
             queue.popIf(curDescriptor.timestamp)
-        } while (timestamp == null || curDescriptor.timestamp < timestamp)
+        }
     }
 }

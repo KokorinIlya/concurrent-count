@@ -1,5 +1,6 @@
 package tree
 
+import logging.QueueLogger
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
@@ -90,10 +91,12 @@ class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
+                        QueueLogger.add("Insert=$curDescriptor, Status=EXECUTE")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     true -> {
+                        QueueLogger.add("Insert=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
                     }
                     null -> {
@@ -104,10 +107,12 @@ class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
+                        QueueLogger.add("Delete=$curDescriptor, Status=EXECUTE")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     false -> {
+                        QueueLogger.add("Delete=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
                     }
                     null -> {
@@ -123,10 +128,13 @@ class RootNode<T : Comparable<T>>(
     }
 
     fun executeUntilTimestamp(timestamp: Long) {
-        do {
+        while (true) {
             val curDescriptor = queue.peek() ?: return
+            if (curDescriptor.timestamp > timestamp) {
+                return
+            }
             executeSingleDescriptor(curDescriptor)
             queue.popIf(curDescriptor.timestamp)
-        } while (curDescriptor.timestamp < timestamp)
+        }
     }
 }

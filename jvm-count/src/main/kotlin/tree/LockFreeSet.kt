@@ -2,6 +2,7 @@ package tree
 
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
+import logging.QueueLogger
 import operations.*
 import queue.RootLockFreeQueue
 import java.lang.StringBuilder
@@ -102,6 +103,7 @@ class LockFreeSet<T : Comparable<T>> {
     }
 
     private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
+        QueueLogger.add("Count=$descriptor, curNode=$curNode, ENTERING")
         curNode.executeUntilTimestamp(descriptor.timestamp)
         if (descriptor.result.getResult() != null) {
             return
@@ -114,6 +116,7 @@ class LockFreeSet<T : Comparable<T>> {
         )
 
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
+            QueueLogger.add("Count=$descriptor, curNode=$curNode, GoToChildren")
             val curLeft = curNode.left.get()
             val curRight = curNode.right.get()
 
@@ -124,6 +127,7 @@ class LockFreeSet<T : Comparable<T>> {
                 countInNode(curRight, descriptor)
             }
         }
+        QueueLogger.add("Count=$descriptor, curNode=$curNode, EXITING")
     }
 
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
@@ -131,6 +135,7 @@ class LockFreeSet<T : Comparable<T>> {
         val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+        QueueLogger.add("Count=$descriptor, Starting")
         assert(descriptor.timestamp == timestamp)
 
         root.executeUntilTimestamp(timestamp)
@@ -143,7 +148,6 @@ class LockFreeSet<T : Comparable<T>> {
         val result = descriptor.result.getResult()
         if (result == null) {
             println("Left=$left, Right=$right, Timestamp=${descriptor.timestamp}")
-            descriptor.result.getStats()
             println(descriptor.result.getResult())
             throw IllegalStateException("Program is ill-formed")
         } else {

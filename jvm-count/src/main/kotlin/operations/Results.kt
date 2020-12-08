@@ -1,7 +1,10 @@
 package operations
 
+import logging.QueueLogger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Result of some operation (operation is either finished or not).
@@ -75,23 +78,32 @@ class CountResult : OperationResult<Int>() {
     set and map atomically.
     Here we use blocking data structures for performance reasons.
      */
-    private val visitedNodes = ConcurrentHashMap.newKeySet<Long>()
-    private val answerNodes = ConcurrentHashMap<Long, Int>()
+    private val visitedNodes = HashSet<Long>()
+    private val answerNodes = HashMap<Long, Int>()
+
+    private val visitedLock = ReentrantLock()
+    private val answerLock = ReentrantLock()
 
     fun preVisitNode(nodeId: Long) {
-        visitedNodes.add(nodeId)
+        visitedLock.withLock {
+            visitedNodes.add(nodeId)
+        }
     }
 
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
-        answerNodes.putIfAbsent(nodeId, nodeAnswer)
+        answerLock.withLock {
+            answerNodes.putIfAbsent(nodeId, nodeAnswer)
+        }
     }
 
     override fun getResult(): Int? {
-        val totalNodesWithKnownAnswer = answerNodes.size
-        val totalVisitedNodes = visitedNodes.size
-        assert(totalNodesWithKnownAnswer <= totalVisitedNodes) {
-            "ASSERT: ${answerNodes.toList()}, ${visitedNodes.toList()}"
+        val totalNodesWithKnownAnswer = answerLock.withLock {
+            answerNodes.size
         }
+        val totalVisitedNodes = visitedLock.withLock {
+            visitedNodes.size
+        }
+        assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
         return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*
             Traversing hash map is safe, since new descriptors cannot be added to the map
@@ -101,10 +113,5 @@ class CountResult : OperationResult<Int>() {
         } else {
             null
         }
-    }
-
-    fun getStats() {
-        println("VISITED: ${visitedNodes.toList()}")
-        println("ANS: ${answerNodes.toList()}")
     }
 }

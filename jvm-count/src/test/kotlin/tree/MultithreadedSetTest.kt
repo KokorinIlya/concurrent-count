@@ -52,12 +52,11 @@ class MultithreadedSetTest {
         insertProb: Double, deleteProb: Double, countProb: Double,
         keysFrom: Int, keysTo: Int
     ) {
-        val time = System.currentTimeMillis()
-        val random = Random(time)
+        val random = Random(System.currentTimeMillis())
 
-        for (i in 1..testsCount) {
-            if (i % 10 == 0) {
-                println(i)
+        repeat(testsCount) { testNum ->
+            if (testNum % 10 == 0) {
+                println(testNum)
             }
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()

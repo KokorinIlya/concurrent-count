@@ -43,9 +43,9 @@ class LockFreeSet<T : Comparable<T>> {
         return builder.toString()
     }
 
-    private fun executeSingleKeyOperation(
-        descriptor: SingleKeyOperationDescriptor<T>
-    ): TimestampLinearizedResult<Boolean> {
+    private fun <R> executeSingleKeyOperation(
+        descriptor: SingleKeyOperationDescriptor<T, R>
+    ): TimestampLinearizedResult<R> {
         /*
         Push descriptor to the root queue, execute all preceding operations and either throw current operation away
         or propagate it downwards. If current operation was thrown away, we will learn it at the very beginning of the

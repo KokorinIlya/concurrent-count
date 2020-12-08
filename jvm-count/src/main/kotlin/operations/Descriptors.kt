@@ -31,16 +31,16 @@ sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
     abstract fun processInnerNode(curNode: InnerNode<T>)
 }
 
-abstract class SingleKeyOperationDescriptor<T : Comparable<T>> : Descriptor<T>() {
+abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T>() {
     abstract val key: T
-    abstract val result: OperationResult<Boolean>
+    abstract val result: OperationResult<R>
 
     override fun toString(): String {
         return "{${javaClass.simpleName}: key=$key, timestamp=$timestamp}"
     }
 }
 
-abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>() {
+abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>() {
     abstract override val result: SingleKeyWriteOperationResult
 
     protected abstract fun processChild(childRef: AtomicReference<TreeNode<T>>)
@@ -177,7 +177,7 @@ class DeleteDescriptor<T : Comparable<T>>(
 class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: ExistResult
-) : SingleKeyOperationDescriptor<T>() {
+) : SingleKeyOperationDescriptor<T, Boolean>() {
 
     companion object {
         fun <T : Comparable<T>> new(key: T): ExistsDescriptor<T> {

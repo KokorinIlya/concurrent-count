@@ -41,6 +41,8 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>> : Descriptor<T>()
 }
 
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T>() {
+    abstract override val result: SingleKeyWriteOperationResult
+
     protected abstract fun processChild(childRef: AtomicReference<TreeNode<T>>)
 
     protected abstract fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T>
@@ -240,7 +242,8 @@ class CountDescriptor<T : Comparable<T>>(
             is InnerNode -> {
                 assert(curChild.nodeParams.get().lastModificationTimestamp != timestamp)
                 if (curChild.creationTimestamp < timestamp) {
-                    QueueLogger.add("Count=$this, InsertingTo=$curChild")
+                    QueueLogger.add("Count=$this, InsertingTo=$curChild, " +
+                            "CreationTimestamp=${curChild.creationTimestamp}")
                     result.preVisitNode(curChild.id)
                     curChild.queue.pushIf(this)
                 }

@@ -58,9 +58,16 @@ class RootNode<T : Comparable<T>>(
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
                     when (traverseQueue(curNode.queue, descriptor)) {
-                        QueueTraverseResult.KEY_EXISTS -> return true
-                        QueueTraverseResult.KEY_NOT_EXISTS -> return false
-                        QueueTraverseResult.ANSWER_NOT_NEEDED -> return null
+                        QueueTraverseResult.KEY_EXISTS -> {
+                            return true
+                        }
+                        QueueTraverseResult.KEY_NOT_EXISTS -> {
+                            return false
+                        }
+                        QueueTraverseResult.ANSWER_NOT_NEEDED -> {
+                            assert(descriptor.result.decisionMade())
+                            return null
+                        }
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
                             curNodeRef = curNode.route(descriptor.key)
                         }
@@ -89,7 +96,9 @@ class RootNode<T : Comparable<T>>(
                     true -> {
                         curDescriptor.result.trySetDecision(false)
                     }
-
+                    null -> {
+                        assert(curDescriptor.result.decisionMade())
+                    }
                 }
             }
             is DeleteDescriptor<T> -> {
@@ -100,6 +109,9 @@ class RootNode<T : Comparable<T>>(
                     }
                     false -> {
                         curDescriptor.result.trySetDecision(false)
+                    }
+                    null -> {
+                        assert(curDescriptor.result.decisionMade())
                     }
                 }
             }
@@ -116,59 +128,5 @@ class RootNode<T : Comparable<T>>(
             executeSingleDescriptor(curDescriptor)
             queue.popIf(curDescriptor.timestamp)
         } while (curDescriptor.timestamp < timestamp)
-    }
-}
-
-sealed class TreeNode<T : Comparable<T>> {
-    abstract val creationTimestamp: Long
-}
-
-class KeyNode<T : Comparable<T>>(
-    val key: T,
-    override val creationTimestamp: Long
-) : TreeNode<T>()
-
-class EmptyNode<T : Comparable<T>>(
-    override val creationTimestamp: Long
-) : TreeNode<T>()
-
-class InnerNode<T : Comparable<T>>(
-    val queue: NonRootLockFreeQueue<Descriptor<T>>,
-    val left: AtomicReference<TreeNode<T>>,
-    val right: AtomicReference<TreeNode<T>>,
-    val nodeParams: AtomicReference<Params<T>>,
-    val rightSubtreeMin: T,
-    val id: Long,
-    val initialSize: Int,
-    override val creationTimestamp: Long
-) : TreeNode<T>() {
-    override fun toString(): String {
-        return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id}"
-    }
-
-    companion object {
-        data class Params<T>(
-            val minKey: T,
-            val maxKey: T,
-            val subtreeSize: Int,
-            val lastModificationTimestamp: Long,
-            val modificationsCount: Int
-        )
-    }
-
-    fun route(x: T): AtomicReference<TreeNode<T>> {
-        return if (x < rightSubtreeMin) {
-            left
-        } else {
-            right
-        }
-    }
-
-    fun executeUntilTimestamp(timestamp: Long?) {
-        do {
-            val curDescriptor = queue.peek() ?: return
-            curDescriptor.processInnerNode(this)
-            queue.popIf(curDescriptor.timestamp)
-        } while (timestamp == null || curDescriptor.timestamp < timestamp)
     }
 }

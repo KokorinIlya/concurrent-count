@@ -64,7 +64,6 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
                     Queue is definitely non-empty, head.next is the first non-dummy element in the queue and it should
                     exist (since queue is not empty)
                      */
-                    println("HEAD, TAIL: ${curHead.data.timestamp}, ${curTail.data.timestamp}")
                     throw IllegalStateException("Program is ill-formed")
                 } else {
                     /*

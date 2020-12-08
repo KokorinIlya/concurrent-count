@@ -79,8 +79,6 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.route(descriptor.key)
                 }
                 else -> {
-                    println("$curNode, $descriptor, ${descriptor.timestamp}")
-                    println(treeToString())
                     /*
                     Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
                     parent (InnerNode or RootNode)
@@ -110,7 +108,10 @@ class LockFreeSet<T : Comparable<T>> {
         }
 
         val curNodeParams = curNode.nodeParams.get()
-        val intersectionResult = descriptor.intersectBorders(curNodeParams.minKey, curNodeParams.maxKey)
+        val intersectionResult = descriptor.intersectBorders(
+            minKey = curNodeParams.minKey,
+            maxKey = curNodeParams.maxKey
+        )
 
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
             val curLeft = curNode.left.get()
@@ -141,7 +142,9 @@ class LockFreeSet<T : Comparable<T>> {
 
         val result = descriptor.result.getResult()
         if (result == null) {
-            println("Left=$left, Right=$right")
+            println("Left=$left, Right=$right, Timestamp=${descriptor.timestamp}")
+            descriptor.result.getStats()
+            println(descriptor.result.getResult())
             throw IllegalStateException("Program is ill-formed")
         } else {
             return TimestampLinearizedResult(result = result, timestamp = timestamp)

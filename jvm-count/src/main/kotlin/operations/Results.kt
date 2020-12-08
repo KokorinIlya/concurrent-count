@@ -34,14 +34,13 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
 
     override fun getResult(): Boolean? {
         return when (status.get()) {
-            /*
-            May return true, when status is SHOULD_BE_EXECUTED
-             */
             Status.DECLINED -> false
             Status.EXECUTED -> true
             else -> null
         }
     }
+
+    fun decisionMade(): Boolean = status.get() != Status.UNDECIDED
 
     fun trySetDecision(shouldBeExecuted: Boolean) {
         val newStatus = if (shouldBeExecuted) {
@@ -90,7 +89,9 @@ class CountResult : OperationResult<Int>() {
     override fun getResult(): Int? {
         val totalNodesWithKnownAnswer = answerNodes.size
         val totalVisitedNodes = visitedNodes.size
-        assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
+        assert(totalNodesWithKnownAnswer <= totalVisitedNodes) {
+            "ASSERT: ${answerNodes.toList()}, ${visitedNodes.toList()}"
+        }
         return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*
             Traversing hash map is safe, since new descriptors cannot be added to the map
@@ -100,5 +101,10 @@ class CountResult : OperationResult<Int>() {
         } else {
             null
         }
+    }
+
+    fun getStats() {
+        println("VISITED: ${visitedNodes.toList()}")
+        println("ANS: ${answerNodes.toList()}")
     }
 }

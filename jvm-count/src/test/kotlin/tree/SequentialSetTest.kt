@@ -108,7 +108,7 @@ class SequentialSetTest {
     }
 
     @Test
-    fun stressTest() {
+    fun stressTestWideKeyRange() {
         doTest(
             testsCount = 1000, operationsPerTest = 1000,
             insertProb = 0.2, deleteProb = 0.15, countProb = 0.0,
@@ -117,11 +117,29 @@ class SequentialSetTest {
     }
 
     @Test
-    fun stressTestWithCount() {
+    fun stressTestSmallKeyRange() {
+        doTest(
+            testsCount = 1000, operationsPerTest = 1000,
+            insertProb = 0.2, deleteProb = 0.15, countProb = 0.0,
+            minKey = -10, maxKey = 10
+        )
+    }
+
+    @Test
+    fun stressTestCountWideKeyRange() {
         doTest(
             testsCount = 1000, operationsPerTest = 1000,
             insertProb = 0.2, deleteProb = 0.15, countProb = 0.45,
             minKey = -10_000, maxKey = 10_000
+        )
+    }
+
+    @Test
+    fun stressTestCountSmallKeyRange() {
+        doTest(
+            testsCount = 1000, operationsPerTest = 1000,
+            insertProb = 0.2, deleteProb = 0.15, countProb = 0.45,
+            minKey = -10, maxKey = 10
         )
     }
 }

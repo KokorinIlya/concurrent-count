@@ -10,7 +10,7 @@ object QueueLogger {
     }
 
     fun add(log: String) {
-        queue.add("Thread ${Thread.currentThread().id}:: $log")
+        //queue.add("Thread ${Thread.currentThread().id}:: $log")
     }
 
     fun getLogs(): List<String> {

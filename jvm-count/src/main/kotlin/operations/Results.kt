@@ -80,19 +80,20 @@ class CountResult : OperationResult<Int>() {
     private val visitedNodes = HashSet<Long>()
     private val answerNodes = HashMap<Long, Int>()
 
-    private val lock = ReentrantLock()
+    private val answerLock = ReentrantLock()
+    private val visitedLock = ReentrantLock()
 
-    fun preVisitNode(nodeId: Long) = lock.withLock {
+    fun preVisitNode(nodeId: Long) = visitedLock.withLock {
         visitedNodes.add(nodeId)
     }
 
-    fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) = lock.withLock  {
+    fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) = answerLock.withLock {
         answerNodes.putIfAbsent(nodeId, nodeAnswer)
     }
 
-    override fun getResult(): Int? = lock.withLock {
-        val totalNodesWithKnownAnswer = answerNodes.size
-        val totalVisitedNodes = visitedNodes.size
+    override fun getResult(): Int? {
+        val totalNodesWithKnownAnswer = answerLock.withLock { answerNodes.size }
+        val totalVisitedNodes = visitedLock.withLock { visitedNodes.size }
         assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
         return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*

@@ -103,7 +103,7 @@ class LockFreeSet<T : Comparable<T>> {
     }
 
     private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
-        QueueLogger.add("Count=$descriptor, curNode=$curNode, ENTERING")
+        QueueLogger.add("Initiator: Count=$descriptor, curNode=$curNode, ENTERING")
         curNode.executeUntilTimestamp(descriptor.timestamp)
         if (descriptor.result.getResult() != null) {
             return
@@ -116,7 +116,7 @@ class LockFreeSet<T : Comparable<T>> {
         )
 
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
-            QueueLogger.add("Count=$descriptor, curNode=$curNode, GoToChildren")
+            QueueLogger.add("Initiator: Count=$descriptor, curNode=$curNode, GoToChildren")
             val curLeft = curNode.left.get()
             val curRight = curNode.right.get()
 
@@ -127,7 +127,7 @@ class LockFreeSet<T : Comparable<T>> {
                 countInNode(curRight, descriptor)
             }
         }
-        QueueLogger.add("Count=$descriptor, curNode=$curNode, EXITING")
+        QueueLogger.add("Initiator: Count=$descriptor, curNode=$curNode, EXITING")
     }
 
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
@@ -135,7 +135,7 @@ class LockFreeSet<T : Comparable<T>> {
         val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        QueueLogger.add("Count=$descriptor, Starting")
+        QueueLogger.add("Initiator: Count=$descriptor, Starting")
         assert(descriptor.timestamp == timestamp)
 
         root.executeUntilTimestamp(timestamp)

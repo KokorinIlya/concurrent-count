@@ -55,8 +55,7 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
     }
 
     fun tryFinish() {
-        val oldStatus = status.compareAndExchange(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
-        assert(oldStatus == Status.SHOULD_BE_EXECUTED || oldStatus == Status.EXECUTED)
+        status.compareAndSet(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
     }
 }
 

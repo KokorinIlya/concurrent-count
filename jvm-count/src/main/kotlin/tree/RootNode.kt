@@ -24,14 +24,24 @@ class RootNode<T : Comparable<T>>(
         queue: NonRootLockFreeQueue<Descriptor<T>>,
         descriptor: SingleKeyWriteOperationDescriptor<T>
     ): QueueTraverseResult {
-        var curQueueNode = queue.getHead()
+        val firstQueueNode = queue.getHead()
+        var curQueueNode = firstQueueNode
         var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
+        var prevTimestamp: Long? = null
 
         while (curQueueNode != null) {
             val curDescriptor = curQueueNode.data
-            if (curDescriptor.timestamp >= descriptor.timestamp) {
+            val curTimestamp = curDescriptor.timestamp
+
+            if (curTimestamp >= descriptor.timestamp) {
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }
+
+            assert(
+                prevTimestamp == null && curQueueNode === firstQueueNode ||
+                        prevTimestamp != null && curQueueNode !== firstQueueNode && curTimestamp > prevTimestamp
+            )
+            prevTimestamp = curTimestamp
 
             if (curDescriptor is InsertDescriptor && curDescriptor.key == descriptor.key) {
                 assert(
@@ -99,9 +109,6 @@ class RootNode<T : Comparable<T>>(
                         QueueLogger.add("Insert=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
                     }
-                    null -> {
-                        assert(curDescriptor.result.decisionMade())
-                    }
                 }
             }
             is DeleteDescriptor<T> -> {
@@ -114,9 +121,6 @@ class RootNode<T : Comparable<T>>(
                     false -> {
                         QueueLogger.add("Delete=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
-                    }
-                    null -> {
-                        assert(curDescriptor.result.decisionMade())
                     }
                 }
             }

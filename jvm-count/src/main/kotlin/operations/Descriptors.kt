@@ -238,19 +238,21 @@ class CountDescriptor<T : Comparable<T>>(
         assert(curChild.creationTimestamp != timestamp)
         return when (curChild) {
             is EmptyNode -> {
-                QueueLogger.add("Count=$this, EmptyNode=$curChild, answer=0")
+                QueueLogger.add("Helper: Count=$this, EmptyNode=$curChild, answer=0")
                 0
             }
             is KeyNode -> {
                 val answer = getAnswerForKeyNode(curChild)
-                QueueLogger.add("Count=$this, KeyNode=$curChild, answer=$answer")
+                QueueLogger.add("Helper: Count=$this, KeyNode=$curChild, answer=$answer")
                 answer
             }
             is InnerNode -> {
                 assert(curChild.nodeParams.get().lastModificationTimestamp != timestamp)
                 if (curChild.creationTimestamp < timestamp) {
-                    QueueLogger.add("Count=$this, InsertingTo=$curChild, " +
-                            "CreationTimestamp=${curChild.creationTimestamp}")
+                    QueueLogger.add(
+                        "Helper: Count=$this, InsertingTo=$curChild, " +
+                                "CreationTimestamp=${curChild.creationTimestamp}"
+                    )
                     result.preVisitNode(curChild.id)
                     curChild.queue.pushIf(this)
                 }
@@ -261,7 +263,7 @@ class CountDescriptor<T : Comparable<T>>(
 
     override fun processRootNode(curNode: RootNode<T>) {
         val curNodeResult = processChild(curNode.root.get())
-        QueueLogger.add("Count=$this, RemovingFrom=root, Result=$curNodeResult")
+        QueueLogger.add("Helper: Count=$this, RemovingFrom=root, Result=$curNodeResult")
         result.preRemoveFromNode(curNode.id, curNodeResult)
     }
 
@@ -272,23 +274,30 @@ class CountDescriptor<T : Comparable<T>>(
 
         val curNodeResult = when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
             IntersectionResult.NO_INTERSECTION -> {
-                QueueLogger.add("Count=$this, Node=$curNode, NoIntersection")
+                QueueLogger.add("Helper: Count=$this, Node=$curNode, NoIntersection")
                 0
             }
             IntersectionResult.NODE_INSIDE_REQUEST -> {
-                QueueLogger.add("Count=$this, Node=$curNode, InsideRequest")
+                QueueLogger.add("Helper: Count=$this, Node=$curNode, InsideRequest")
                 curParams.subtreeSize
             }
             IntersectionResult.GO_TO_CHILDREN -> {
-                QueueLogger.add("Count=$this, Node=$curNode, GotToChildren")
+                QueueLogger.add("Helper: Count=$this, Node=$curNode, GotToChildren")
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
-                val leftChildAnswer = processChild(leftChild)
-                val rightChildAnswer = processChild(rightChild)
-                leftChildAnswer + rightChildAnswer
+
+                val maybeNewParams = curNode.nodeParams.get()
+                assert(maybeNewParams.lastModificationTimestamp != timestamp)
+                if (maybeNewParams.lastModificationTimestamp < timestamp) {
+                    val leftChildAnswer = processChild(leftChild)
+                    val rightChildAnswer = processChild(rightChild)
+                    leftChildAnswer + rightChildAnswer
+                } else {
+                    0
+                }
             }
         }
-        QueueLogger.add("Count=$this, RemovingFrom=$curNode, Result=$curNodeResult")
+        QueueLogger.add("Helper: Count=$this, RemovingFrom=$curNode, Result=$curNodeResult")
         result.preRemoveFromNode(curNode.id, curNodeResult)
     }
 

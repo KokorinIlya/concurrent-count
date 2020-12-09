@@ -47,6 +47,7 @@ class MultithreadedSetTest {
         }
     }
 
+    @Suppress("SameParameterValue")
     private fun doTest(
         testsCount: Int, threadsCount: Int, operationsPerThreadCount: Int,
         insertProb: Double, deleteProb: Double, countProb: Double,
@@ -141,11 +142,7 @@ class MultithreadedSetTest {
                 assertEquals(allOperations.size, totalOperations)
 
                 for (j in 0 until totalOperations) {
-                    if (expectedResult[j] != results[j]) {
-                        println("Operation=${allOperations[j].operation}")
-                        println("Expected = ${expectedResult[j]}, Actual=${results[j]}")
-                        assertTrue(false)
-                    }
+                    assertEquals(expectedResult[j], results[j])
                 }
             } catch (e: AssertionFailedError) {
                 println("LOGS:")
@@ -212,7 +209,7 @@ class MultithreadedSetTest {
     }
 
     @Test
-    fun stressManyThreadsSmallKeyRangeWithCount() {
+    fun stressManyThreadsSmallKeyRangeCount() {
         doTest(
             testsCount = 1000,
             threadsCount = 32,
@@ -226,7 +223,7 @@ class MultithreadedSetTest {
     }
 
     @Test
-    fun stressManyThreadsWideKeyRangeWithCount() {
+    fun stressManyThreadsWideKeyRangeCount() {
         doTest(
             testsCount = 1000,
             threadsCount = 32,
@@ -240,11 +237,11 @@ class MultithreadedSetTest {
     }
 
     @Test
-    fun stressFewThreadsSmallKeyRangeWithCount() {
+    fun stressFewThreadsSmallKeyRangeCount() {
         doTest(
             testsCount = 1000,
             threadsCount = 4,
-            operationsPerThreadCount = 100,
+            operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,
@@ -254,11 +251,11 @@ class MultithreadedSetTest {
     }
 
     @Test
-    fun stressFewThreadsWideKeyRangeWithCount() {
+    fun stressFewThreadsWideKeyRangeCount() {
         doTest(
             testsCount = 1000,
             threadsCount = 4,
-            operationsPerThreadCount = 100,
+            operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,

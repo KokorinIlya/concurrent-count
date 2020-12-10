@@ -101,12 +101,10 @@ class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
-                        QueueLogger.add("Insert=$curDescriptor, Status=EXECUTE")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     true -> {
-                        QueueLogger.add("Insert=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
                     }
                 }
@@ -114,12 +112,10 @@ class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
-                        QueueLogger.add("Delete=$curDescriptor, Status=EXECUTE")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     false -> {
-                        QueueLogger.add("Delete=$curDescriptor, Status=NOT_EXECUTE")
                         curDescriptor.result.trySetDecision(false)
                     }
                 }

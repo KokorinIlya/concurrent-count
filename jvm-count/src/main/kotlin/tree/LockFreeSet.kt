@@ -147,8 +147,6 @@ class LockFreeSet<T : Comparable<T>> {
 
         val result = descriptor.result.getResult()
         if (result == null) {
-            println("Left=$left, Right=$right, Timestamp=${descriptor.timestamp}")
-            println(descriptor.result.getResult())
             throw IllegalStateException("Program is ill-formed")
         } else {
             return TimestampLinearizedResult(result = result, timestamp = timestamp)

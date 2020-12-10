@@ -286,6 +286,7 @@ class CountDescriptor<T : Comparable<T>>(
                 val leftChild = curNode.left.get()
                 val rightChild = curNode.right.get()
 
+                // TODO: refactor
                 val maybeNewParams = curNode.nodeParams.get()
                 assert(maybeNewParams.lastModificationTimestamp != timestamp)
                 if (maybeNewParams.lastModificationTimestamp < timestamp) {

@@ -213,7 +213,7 @@ class MultithreadedSetTest {
         doTest(
             testsCount = 1000,
             threadsCount = 32,
-            operationsPerThreadCount = 100,
+            operationsPerThreadCount = 1000,
             insertProb = 0.2,
             deleteProb = 0.15,
             countProb = 0.45,

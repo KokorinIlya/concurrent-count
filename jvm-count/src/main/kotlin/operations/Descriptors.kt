@@ -2,7 +2,6 @@ package operations
 
 import allocation.IdAllocator
 import common.TimestampedValue
-import logging.QueueLogger
 import queue.NonRootLockFreeQueue
 import tree.*
 import java.util.concurrent.atomic.AtomicReference

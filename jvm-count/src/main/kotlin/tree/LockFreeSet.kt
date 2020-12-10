@@ -2,7 +2,6 @@ package tree
 
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
-import logging.QueueLogger
 import operations.*
 import queue.RootLockFreeQueue
 import java.lang.StringBuilder

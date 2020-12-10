@@ -1,6 +1,5 @@
 package tree
 
-import logging.QueueLogger
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue

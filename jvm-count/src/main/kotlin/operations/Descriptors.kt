@@ -255,27 +255,24 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     override fun processInnerNode(curNode: InnerNode<T>) {
+        val leftChild = curNode.left.get()
+        val rightChild = curNode.right.get()
+
         val curParams = curNode.nodeParams.get()
         assert(curParams.lastModificationTimestamp != timestamp)
         assert(curNode.creationTimestamp != timestamp)
+
+        if (curParams.lastModificationTimestamp > timestamp) {
+            return
+        }
 
         val curNodeResult = when (intersectBorders(minKey = curParams.minKey, maxKey = curParams.maxKey)) {
             IntersectionResult.NO_INTERSECTION -> 0
             IntersectionResult.NODE_INSIDE_REQUEST -> curParams.subtreeSize
             IntersectionResult.GO_TO_CHILDREN -> {
-                val leftChild = curNode.left.get()
-                val rightChild = curNode.right.get()
-
-                // TODO: refactor
-                val maybeNewParams = curNode.nodeParams.get()
-                assert(maybeNewParams.lastModificationTimestamp != timestamp)
-                if (maybeNewParams.lastModificationTimestamp < timestamp) {
-                    val leftChildAnswer = processChild(leftChild)
-                    val rightChildAnswer = processChild(rightChild)
-                    leftChildAnswer + rightChildAnswer
-                } else {
-                    0
-                }
+                val leftChildAnswer = processChild(leftChild)
+                val rightChildAnswer = processChild(rightChild)
+                leftChildAnswer + rightChildAnswer
             }
         }
         result.preRemoveFromNode(curNode.id, curNodeResult)

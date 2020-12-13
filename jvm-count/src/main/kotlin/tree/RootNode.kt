@@ -68,12 +68,8 @@ class RootNode<T : Comparable<T>>(
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
                     when (traverseQueue(curNode.queue, descriptor)) {
-                        QueueTraverseResult.KEY_EXISTS -> {
-                            return true
-                        }
-                        QueueTraverseResult.KEY_NOT_EXISTS -> {
-                            return false
-                        }
+                        QueueTraverseResult.KEY_EXISTS -> return true
+                        QueueTraverseResult.KEY_NOT_EXISTS -> return false
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> {
                             assert(descriptor.result.decisionMade())
                             return null
@@ -83,12 +79,8 @@ class RootNode<T : Comparable<T>>(
                         }
                     }
                 }
-                is KeyNode -> {
-                    return curNode.key == descriptor.key
-                }
-                is EmptyNode -> {
-                    return false
-                }
+                is KeyNode ->  return curNode.key == descriptor.key
+                is EmptyNode -> return false
             }
         }
     }

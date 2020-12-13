@@ -177,7 +177,6 @@ class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: ExistResult
 ) : SingleKeyOperationDescriptor<T, Boolean>() {
-
     companion object {
         fun <T : Comparable<T>> new(key: T): ExistsDescriptor<T> {
             return ExistsDescriptor(key, ExistResult())

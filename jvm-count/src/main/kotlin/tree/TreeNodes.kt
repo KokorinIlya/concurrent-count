@@ -57,10 +57,10 @@ class InnerNode<T : Comparable<T>>(
         }
     }
 
-    fun executeUntilTimestamp(timestamp: Long) {
+    fun executeUntilTimestamp(timestamp: Long?) {
         while (true) {
             val curDescriptor = queue.peek() ?: return
-            if (curDescriptor.timestamp > timestamp) {
+            if (timestamp != null && curDescriptor.timestamp > timestamp) {
                 return
             }
             curDescriptor.processInnerNode(this)

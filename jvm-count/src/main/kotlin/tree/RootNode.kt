@@ -1,14 +1,15 @@
 package tree
 
+import allocation.IdAllocator
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
-import java.util.concurrent.atomic.AtomicReference
 
 class RootNode<T : Comparable<T>>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
-    val root: AtomicReference<TreeNode<T>>,
-    val id: Long
+    val root: TreeNodeReference<T>,
+    val id: Long,
+    private val nodeIdAllocator: IdAllocator
 ) {
     companion object {
         private enum class QueueTraverseResult {
@@ -65,7 +66,7 @@ class RootNode<T : Comparable<T>>(
         var curNodeRef = root
 
         while (true) {
-            when (val curNode = curNodeRef.get()) {
+            when (val curNode = curNodeRef.get(descriptor.timestamp, nodeIdAllocator)) {
                 is InnerNode -> {
                     when (traverseQueue(curNode.queue, descriptor)) {
                         QueueTraverseResult.KEY_EXISTS -> return true

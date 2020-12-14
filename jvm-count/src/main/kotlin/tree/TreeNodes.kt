@@ -27,8 +27,8 @@ class EmptyNode<T : Comparable<T>>(
 
 class InnerNode<T : Comparable<T>>(
     val queue: NonRootLockFreeQueue<Descriptor<T>>,
-    val left: AtomicReference<TreeNode<T>>,
-    val right: AtomicReference<TreeNode<T>>,
+    val left: TreeNodeReference<T>,
+    val right: TreeNodeReference<T>,
     val nodeParams: AtomicReference<Params<T>>,
     val rightSubtreeMin: T,
     val id: Long,
@@ -49,7 +49,7 @@ class InnerNode<T : Comparable<T>>(
         )
     }
 
-    fun route(x: T): AtomicReference<TreeNode<T>> {
+    fun route(x: T): TreeNodeReference<T> {
         return if (x < rightSubtreeMin) {
             left
         } else {

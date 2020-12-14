@@ -42,7 +42,7 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>() {
     abstract override val result: SingleKeyWriteOperationResult
 
-    protected abstract fun processChild(childRef: AtomicReference<TreeNode<T>>)
+    protected abstract fun processChild(childRef: TreeNodeReference<T>)
 
     protected abstract fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T>
 
@@ -73,12 +73,12 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processChild(childRef: AtomicReference<TreeNode<T>>) {
-        when (val curChild = childRef.get()) {
+    override fun processChild(childRef: TreeNodeReference<T>) {
+        when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
             is EmptyNode -> {
                 if (curChild.creationTimestamp < timestamp) {
                     val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
-                    childRef.compareAndSet(curChild, newLeafNode)
+                    childRef.cas(curChild, newLeafNode)
                 }
                 result.tryFinish()
             }
@@ -102,15 +102,15 @@ class InsertDescriptor<T : Comparable<T>>(
                     )
                     val newInnerNode = InnerNode<T>(
                         id = nodeIdAllocator.allocateId(),
-                        left = AtomicReference(leftChild),
-                        right = AtomicReference(rightChild),
+                        left = TreeNodeReference(leftChild),
+                        right = TreeNodeReference(rightChild),
                         rightSubtreeMin = rightChild.key,
                         nodeParams = AtomicReference(nodeParams),
                         queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
                         initialSize = initialSize,
                         creationTimestamp = timestamp
                     )
-                    childRef.compareAndSet(curChild, newInnerNode)
+                    childRef.cas(curChild, newInnerNode)
                 }
                 result.tryFinish()
             }
@@ -133,16 +133,17 @@ class InsertDescriptor<T : Comparable<T>>(
 
 class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: SingleKeyWriteOperationResult
+    override val result: SingleKeyWriteOperationResult,
+    private val nodeIdAllocator: IdAllocator
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
-        fun <T : Comparable<T>> new(key: T): DeleteDescriptor<T> {
-            return DeleteDescriptor(key, SingleKeyWriteOperationResult())
+        fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): DeleteDescriptor<T> {
+            return DeleteDescriptor(key, SingleKeyWriteOperationResult(), nodeIdAllocator)
         }
     }
 
-    override fun processChild(childRef: AtomicReference<TreeNode<T>>) {
-        when (val curChild = childRef.get()) {
+    override fun processChild(childRef: TreeNodeReference<T>) {
+        when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
             is EmptyNode -> {
                 assert(curChild.creationTimestamp >= timestamp)
                 result.tryFinish()
@@ -152,7 +153,7 @@ class DeleteDescriptor<T : Comparable<T>>(
                     assert(curChild.creationTimestamp > timestamp)
                 } else if (curChild.creationTimestamp < timestamp) {
                     val newNode = EmptyNode<T>(creationTimestamp = timestamp)
-                    childRef.compareAndSet(curChild, newNode)
+                    childRef.cas(curChild, newNode)
                 }
                 result.tryFinish()
             }
@@ -175,16 +176,17 @@ class DeleteDescriptor<T : Comparable<T>>(
 
 class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
-    override val result: ExistResult
+    override val result: ExistResult,
+    private val nodeIdAllocator: IdAllocator
 ) : SingleKeyOperationDescriptor<T, Boolean>() {
     companion object {
-        fun <T : Comparable<T>> new(key: T): ExistsDescriptor<T> {
-            return ExistsDescriptor(key, ExistResult())
+        fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): ExistsDescriptor<T> {
+            return ExistsDescriptor(key, ExistResult(), nodeIdAllocator)
         }
     }
 
-    private fun processChild(childRef: AtomicReference<TreeNode<T>>) {
-        val curChild = childRef.get()
+    private fun processChild(childRef: TreeNodeReference<T>) {
+        val curChild = childRef.get(timestamp, nodeIdAllocator)
         assert(curChild.creationTimestamp != timestamp)
         when (curChild) {
             is EmptyNode -> {
@@ -214,7 +216,8 @@ class ExistsDescriptor<T : Comparable<T>>(
 class CountDescriptor<T : Comparable<T>>(
     private val leftBorder: T,
     private val rightBorder: T,
-    val result: CountResult
+    val result: CountResult,
+    private val nodeIdAllocator: IdAllocator
 ) : Descriptor<T>() {
     override fun toString(): String {
         return "{ContDescriptor: Left=$leftBorder, Right=$rightBorder, Timestamp=$timestamp}"
@@ -249,13 +252,13 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     override fun processRootNode(curNode: RootNode<T>) {
-        val curNodeResult = processChild(curNode.root.get())
+        val curNodeResult = processChild(curNode.root.get(timestamp, nodeIdAllocator))
         result.preRemoveFromNode(curNode.id, curNodeResult)
     }
 
     override fun processInnerNode(curNode: InnerNode<T>) {
-        val leftChild = curNode.left.get()
-        val rightChild = curNode.right.get()
+        val leftChild = curNode.left.get(timestamp, nodeIdAllocator)
+        val rightChild = curNode.right.get(timestamp, nodeIdAllocator)
 
         val curParams = curNode.nodeParams.get()
         assert(curParams.lastModificationTimestamp != timestamp)
@@ -278,8 +281,8 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     companion object {
-        fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T): CountDescriptor<T> {
-            return CountDescriptor(leftBorder, rightBorder, CountResult())
+        fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T, nodeIdAllocator: IdAllocator): CountDescriptor<T> {
+            return CountDescriptor(leftBorder, rightBorder, CountResult(), nodeIdAllocator)
         }
 
         enum class IntersectionResult {

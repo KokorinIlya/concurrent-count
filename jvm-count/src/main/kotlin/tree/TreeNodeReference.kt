@@ -13,35 +13,47 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         private const val bias = 10
     }
 
-    private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: InnerNode<T>) {
+    private fun <T : Comparable<T>> finishOperationsInSubtree(
+        innerNode: InnerNode<T>,
+        timestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
         innerNode.executeUntilTimestamp(null)
-        val left = innerNode.left.get()
-        val right = innerNode.right.get()
+        /*
+        TODO: maybe, not rebuild here
+         */
+        val left = innerNode.left.get(timestamp, nodeIdAllocator)
+        val right = innerNode.right.get(timestamp, nodeIdAllocator)
 
         if (left is InnerNode) {
-            finishOperationsInSubtree(left)
+            finishOperationsInSubtree(left, timestamp, nodeIdAllocator)
         }
 
         if (right is InnerNode) {
-            finishOperationsInSubtree(right)
+            finishOperationsInSubtree(right, timestamp, nodeIdAllocator)
         }
     }
 
-    private fun <T : Comparable<T>> collectKeysInChildSubtree(child: TreeNode<T>, keys: MutableList<T>) {
+    private fun <T : Comparable<T>> collectKeysInChildSubtree(
+        child: TreeNode<T>, keys: MutableList<T>,
+        timestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
         when (child) {
             is KeyNode -> keys.add(child.key)
-            is InnerNode -> collectKeysInSubtree(child, keys)
+            is InnerNode -> collectKeysInSubtree(child, keys, timestamp, nodeIdAllocator)
             else -> {
             }
         }
     }
 
-    private fun <T : Comparable<T>> collectKeysInSubtree(root: InnerNode<T>, keys: MutableList<T>) {
-        val curLeft = root.left.get()
-        val curRight = root.right.get()
+    private fun <T : Comparable<T>> collectKeysInSubtree(
+        root: InnerNode<T>, keys: MutableList<T>,
+        timestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
+        val curLeft = root.left.get(timestamp, nodeIdAllocator)
+        val curRight = root.right.get(timestamp, nodeIdAllocator)
 
-        collectKeysInChildSubtree(curLeft, keys)
-        collectKeysInChildSubtree(curRight, keys)
+        collectKeysInChildSubtree(curLeft, keys, timestamp, nodeIdAllocator)
+        collectKeysInChildSubtree(curRight, keys, timestamp, nodeIdAllocator)
     }
 
     private fun buildSubtreeFromKeys(
@@ -63,8 +75,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         val curSubtreeSize = endIndex - startIndex
         return InnerNode<T>(
             id = nodeIdAllocator.allocateId(),
-            left = AtomicReference(left),
-            right = AtomicReference(right),
+            left = TreeNodeReference(left),
+            right = TreeNodeReference(right),
             nodeParams = AtomicReference(
                 InnerNode.Companion.Params(
                     lastModificationTimestamp = curOperationTimestamp,
@@ -85,9 +97,9 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         innerNode: InnerNode<T>,
         curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
     ): TreeNode<T> {
-        finishOperationsInSubtree(innerNode)
+        finishOperationsInSubtree(innerNode, curOperationTimestamp, nodeIdAllocator)
         val curSubtreeKeys = mutableListOf<T>()
-        collectKeysInSubtree(innerNode, curSubtreeKeys)
+        collectKeysInSubtree(innerNode, curSubtreeKeys, curOperationTimestamp, nodeIdAllocator)
         val sortedKeys = curSubtreeKeys.toList()
         assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
         return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size, curOperationTimestamp, nodeIdAllocator)
@@ -99,9 +111,11 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
                 is KeyNode -> return node
                 is EmptyNode -> return node
                 is InnerNode -> {
+                    return node
                     /*
-                    TODO: do not rebuild, if least modification timestamp is greater than current timestamp
+                    TODO: maybe, do not rebuild, if least modification timestamp is greater than current timestamp
                      */
+                    /*
                     val curParams = node.nodeParams.get()
                     if (curParams.modificationsCount < threshold * node.initialSize + bias) {
                         return node
@@ -109,6 +123,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
 
                     val rebuildNode = getRebuilt(node, curOperationTimestamp, nodeIdAllocator)
                     ref.compareAndSet(node, rebuildNode)
+                     */
                 }
             }
         }

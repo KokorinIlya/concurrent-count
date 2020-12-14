@@ -76,7 +76,7 @@ class InsertDescriptor<T : Comparable<T>>(
     override fun processChild(childRef: TreeNodeReference<T>) {
         when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
             is EmptyNode -> {
-                if (curChild.creationTimestamp < timestamp) { // TODO: won't add new node after rebuilding
+                if (curChild.creationTimestamp <= timestamp) { // TODO: won't add new node after rebuilding
                     val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
                     childRef.cas(curChild, newLeafNode)
                 }
@@ -85,7 +85,7 @@ class InsertDescriptor<T : Comparable<T>>(
             is KeyNode -> {
                 if (curChild.key == key) {
                     assert(curChild.creationTimestamp >= timestamp)
-                } else if (curChild.creationTimestamp < timestamp) { // TODO: the same
+                } else if (curChild.creationTimestamp <= timestamp) { // TODO: the same
                     val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
                     val (leftChild, rightChild) = if (key < curChild.key) {
                         Pair(newLeafNode, curChild)
@@ -151,7 +151,7 @@ class DeleteDescriptor<T : Comparable<T>>(
             is KeyNode -> {
                 if (curChild.key != key) {
                     assert(curChild.creationTimestamp > timestamp)
-                } else if (curChild.creationTimestamp < timestamp) {
+                } else if (curChild.creationTimestamp <= timestamp) {
                     val newNode = EmptyNode<T>(creationTimestamp = timestamp)
                     childRef.cas(curChild, newNode)
                 }
@@ -235,7 +235,7 @@ class CountDescriptor<T : Comparable<T>>(
             is EmptyNode -> 0
             is KeyNode -> getAnswerForKeyNode(curChild)
             is InnerNode -> {
-                if (curChild.creationTimestamp < timestamp) {
+                if (curChild.creationTimestamp <= timestamp) {
                     result.preVisitNode(curChild.id)
                     curChild.queue.pushIf(this)
                 }

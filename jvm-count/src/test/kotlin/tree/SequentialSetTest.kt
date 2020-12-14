@@ -59,73 +59,79 @@ class SequentialSetTest {
         insertProb: Double, deleteProb: Double, countProb: Double,
         minKey: Int, maxKey: Int
     ) {
-        val random = Random(System.currentTimeMillis())
+        try {
+            val random = Random(System.currentTimeMillis())
 
-        repeat(testsCount) { testNum ->
-            if (testNum % 10 == 0) {
-                println(testNum)
-            }
+            repeat(testsCount) { testNum ->
+                if (testNum % 10 == 0) {
+                    println(testNum)
+                }
 
-            QueueLogger.clear()
+                QueueLogger.clear()
 
-            val lockFreeSet = LockFreeSet<Int>()
-            val sequentialSet = SequentialSet<Int>()
-            repeat(operationsPerTest) {
-                val curOp = random.nextDouble()
-                when {
-                    curOp <= insertProb -> {
-                        /*
-                        Insert
-                         */
-                        val x = random.nextInt(from = minKey, until = maxKey)
+                val lockFreeSet = LockFreeSet<Int>()
+                val sequentialSet = SequentialSet<Int>()
+                repeat(operationsPerTest) {
+                    val curOp = random.nextDouble()
+                    when {
+                        curOp <= insertProb -> {
+                            /*
+                            Insert
+                             */
+                            val x = random.nextInt(from = minKey, until = maxKey)
 
-                        QueueLogger.add("INSERT $x")
+                            QueueLogger.add("INSERT $x")
 
-                        val result = lockFreeSet.insert(x).result
-                        val expectedResult = sequentialSet.insert(x)
-                        assertEquals(result, expectedResult)
-                    }
-                    curOp <= insertProb + deleteProb -> {
-                        /*
-                        Delete
-                         */
-                        val x = random.nextInt(from = minKey, until = maxKey)
+                            val result = lockFreeSet.insert(x).result
+                            val expectedResult = sequentialSet.insert(x)
+                            assertEquals(result, expectedResult)
+                        }
+                        curOp <= insertProb + deleteProb -> {
+                            /*
+                            Delete
+                             */
+                            val x = random.nextInt(from = minKey, until = maxKey)
 
-                        QueueLogger.add("DELETE $x")
+                            QueueLogger.add("DELETE $x")
 
-                        val result = lockFreeSet.delete(x).result
-                        val expectedResult = sequentialSet.delete(x)
-                        assertEquals(result, expectedResult)
-                    }
-                    curOp <= insertProb + deleteProb + countProb -> {
-                        /*
-                        Count
-                         */
-                        val x = random.nextInt(from = minKey, until = maxKey)
-                        val y = random.nextInt(from = minKey, until = maxKey)
-                        val l = minOf(x, y)
-                        val r = maxOf(x, y)
+                            val result = lockFreeSet.delete(x).result
+                            val expectedResult = sequentialSet.delete(x)
+                            assertEquals(result, expectedResult)
+                        }
+                        curOp <= insertProb + deleteProb + countProb -> {
+                            /*
+                            Count
+                             */
+                            val x = random.nextInt(from = minKey, until = maxKey)
+                            val y = random.nextInt(from = minKey, until = maxKey)
+                            val l = minOf(x, y)
+                            val r = maxOf(x, y)
 
-                        QueueLogger.add("COUNT $l, $r")
+                            QueueLogger.add("COUNT $l, $r")
 
-                        val result = lockFreeSet.count(l, r).result
-                        val expectedResult = sequentialSet.count(l, r)
-                        assertEquals(expectedResult, result)
-                    }
-                    else -> {
-                        /*
-                        Exists
-                         */
-                        val x = random.nextInt(from = minKey, until = maxKey)
+                            val result = lockFreeSet.count(l, r).result
+                            val expectedResult = sequentialSet.count(l, r)
+                            assertEquals(expectedResult, result)
+                        }
+                        else -> {
+                            /*
+                            Exists
+                             */
+                            val x = random.nextInt(from = minKey, until = maxKey)
 
-                        QueueLogger.add("EXISTS $x")
+                            QueueLogger.add("EXISTS $x")
 
-                        val result = lockFreeSet.exists(x).result
-                        val expectedResult = sequentialSet.exists(x)
-                        assertEquals(result, expectedResult)
+                            val result = lockFreeSet.exists(x).result
+                            val expectedResult = sequentialSet.exists(x)
+                            assertEquals(result, expectedResult)
+                        }
                     }
                 }
             }
+        } catch (e: Throwable) {
+            println("LOGS:")
+            println(QueueLogger.getLogs().joinToString(separator = "\n"))
+            throw e
         }
     }
 

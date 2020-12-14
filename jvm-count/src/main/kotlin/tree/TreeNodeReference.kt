@@ -71,7 +71,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             nodeParams = AtomicReference(
                 InnerNode.Companion.Params(
                     // TODO: won't be able to increment subtree size
-                    lastModificationTimestamp = curOperationTimestamp,
+                    lastModificationTimestamp = 0,
                     maxKey = maxKey,
                     minKey = minKey,
                     modificationsCount = 0,

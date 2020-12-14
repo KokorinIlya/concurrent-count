@@ -19,6 +19,29 @@ class LockFreeSet<T : Comparable<T>> {
         )
     }
 
+    private fun treeToString(curBuilder: StringBuilder, curNode: TreeNode<T>, level: Int) {
+        curBuilder.append("-".repeat(level))
+        when (curNode) {
+            is InnerNode -> {
+                curBuilder.append("inner: ${curNode.rightSubtreeMin}; ${curNode.id}\n")
+                treeToString(curBuilder, curNode.left.rawGet(), level + 1)
+                treeToString(curBuilder, curNode.right.rawGet(), level + 1)
+            }
+            is KeyNode -> {
+                curBuilder.append("key: ${curNode.key}\n")
+            }
+            is EmptyNode -> {
+                curBuilder.append("empty")
+            }
+        }
+    }
+
+    fun treeToString(): String {
+        val builder = StringBuilder()
+        treeToString(builder, root.root.rawGet(), 0)
+        return builder.toString()
+    }
+
     private fun <R> executeSingleKeyOperation(
         descriptor: SingleKeyOperationDescriptor<T, R>
     ): TimestampLinearizedResult<R> {

@@ -40,6 +40,20 @@ class SequentialSetTest {
         assertEquals(1, lockFreeSet.count(22, 34).result)
     }
 
+    @Test
+    fun failedTestRebuilding() {
+        val lockFreeSet = LockFreeSet<Int>()
+        assertTrue(lockFreeSet.insert(1).result) // 1
+        assertTrue(lockFreeSet.insert(5).result) // 1, 5
+        assertTrue(lockFreeSet.insert(0).result) // 0, 1, 5
+        assertTrue(lockFreeSet.delete(1).result) // 0, 5
+        assertTrue(lockFreeSet.insert(7).result) // 0, 5, 7
+        assertTrue(lockFreeSet.insert(9).result) // 0, 5, 7, 9
+        assertTrue(lockFreeSet.exists(9).result)
+        assertTrue(lockFreeSet.delete(9).result)
+    }
+
+    @Suppress("SameParameterValue")
     private fun doTest(
         testsCount: Int, operationsPerTest: Int,
         insertProb: Double, deleteProb: Double, countProb: Double,
@@ -65,6 +79,8 @@ class SequentialSetTest {
                          */
                         val x = random.nextInt(from = minKey, until = maxKey)
 
+                        QueueLogger.add("INSERT $x")
+
                         val result = lockFreeSet.insert(x).result
                         val expectedResult = sequentialSet.insert(x)
                         assertEquals(result, expectedResult)
@@ -74,6 +90,8 @@ class SequentialSetTest {
                         Delete
                          */
                         val x = random.nextInt(from = minKey, until = maxKey)
+
+                        QueueLogger.add("DELETE $x")
 
                         val result = lockFreeSet.delete(x).result
                         val expectedResult = sequentialSet.delete(x)
@@ -88,6 +106,8 @@ class SequentialSetTest {
                         val l = minOf(x, y)
                         val r = maxOf(x, y)
 
+                        QueueLogger.add("COUNT $l, $r")
+
                         val result = lockFreeSet.count(l, r).result
                         val expectedResult = sequentialSet.count(l, r)
                         assertEquals(expectedResult, result)
@@ -98,6 +118,8 @@ class SequentialSetTest {
                          */
                         val x = random.nextInt(from = minKey, until = maxKey)
 
+                        QueueLogger.add("EXISTS $x")
+
                         val result = lockFreeSet.exists(x).result
                         val expectedResult = sequentialSet.exists(x)
                         assertEquals(result, expectedResult)
@@ -105,6 +127,15 @@ class SequentialSetTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun stress() {
+        doTest(
+            testsCount = 10000, operationsPerTest = 10,
+            insertProb = 0.55, deleteProb = 0.45, countProb = 0.0,
+            minKey = 0, maxKey = 10
+        )
     }
 
     @Test

@@ -76,7 +76,7 @@ class InsertDescriptor<T : Comparable<T>>(
     override fun processChild(childRef: TreeNodeReference<T>) {
         when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
             is EmptyNode -> {
-                if (curChild.creationTimestamp < timestamp) {
+                if (curChild.creationTimestamp < timestamp) { // TODO: won't add new node after rebuilding
                     val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
                     childRef.cas(curChild, newLeafNode)
                 }
@@ -85,7 +85,7 @@ class InsertDescriptor<T : Comparable<T>>(
             is KeyNode -> {
                 if (curChild.key == key) {
                     assert(curChild.creationTimestamp >= timestamp)
-                } else if (curChild.creationTimestamp < timestamp) {
+                } else if (curChild.creationTimestamp < timestamp) { // TODO: the same
                     val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
                     val (leftChild, rightChild) = if (key < curChild.key) {
                         Pair(newLeafNode, curChild)
@@ -186,9 +186,7 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     private fun processChild(childRef: TreeNodeReference<T>) {
-        val curChild = childRef.get(timestamp, nodeIdAllocator)
-        assert(curChild.creationTimestamp != timestamp)
-        when (curChild) {
+        when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
             is EmptyNode -> {
                 result.trySetResult(false)
             }
@@ -196,7 +194,6 @@ class ExistsDescriptor<T : Comparable<T>>(
                 result.trySetResult(curChild.key == key)
             }
             is InnerNode -> {
-                assert(curChild.nodeParams.get().lastModificationTimestamp != timestamp)
                 curChild.queue.pushIf(this)
             }
         }
@@ -207,8 +204,6 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     override fun processInnerNode(curNode: InnerNode<T>) {
-        assert(curNode.creationTimestamp != timestamp)
-        assert(curNode.nodeParams.get().lastModificationTimestamp != timestamp)
         processChild(curNode.route(key))
     }
 }
@@ -236,12 +231,10 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     private fun processChild(curChild: TreeNode<T>): Int {
-        assert(curChild.creationTimestamp != timestamp)
         return when (curChild) {
             is EmptyNode -> 0
             is KeyNode -> getAnswerForKeyNode(curChild)
             is InnerNode -> {
-                assert(curChild.nodeParams.get().lastModificationTimestamp != timestamp)
                 if (curChild.creationTimestamp < timestamp) {
                     result.preVisitNode(curChild.id)
                     curChild.queue.pushIf(this)
@@ -261,8 +254,6 @@ class CountDescriptor<T : Comparable<T>>(
         val rightChild = curNode.right.get(timestamp, nodeIdAllocator)
 
         val curParams = curNode.nodeParams.get()
-        assert(curParams.lastModificationTimestamp != timestamp)
-        assert(curNode.creationTimestamp != timestamp)
 
         if (curParams.lastModificationTimestamp > timestamp) {
             return

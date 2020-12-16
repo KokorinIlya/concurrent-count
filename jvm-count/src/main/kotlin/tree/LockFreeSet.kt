@@ -2,6 +2,7 @@ package tree
 
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
+import logging.QueueLogger
 import operations.*
 import queue.RootLockFreeQueue
 
@@ -14,8 +15,7 @@ class LockFreeSet<T : Comparable<T>> {
         root = RootNode<T>(
             queue = RootLockFreeQueue(initDescriptor),
             root = TreeNodeReference(EmptyNode(initDescriptor.timestamp)),
-            id = nodeIdAllocator.allocateId(),
-            nodeIdAllocator = nodeIdAllocator
+            id = nodeIdAllocator.allocateId()
         )
     }
 
@@ -23,16 +23,11 @@ class LockFreeSet<T : Comparable<T>> {
         curBuilder.append("-".repeat(level))
         when (curNode) {
             is InnerNode -> {
-                curBuilder.append("inner: ${curNode.rightSubtreeMin}; ${curNode.id}\n")
+                curBuilder.append(curNode.toString() + "\n")
                 treeToString(curBuilder, curNode.left.rawGet(), level + 1)
                 treeToString(curBuilder, curNode.right.rawGet(), level + 1)
             }
-            is KeyNode -> {
-                curBuilder.append("key: ${curNode.key}\n")
-            }
-            is EmptyNode -> {
-                curBuilder.append("empty")
-            }
+            else -> curBuilder.append(curNode.toString() + "\n")
         }
     }
 
@@ -52,6 +47,9 @@ class LockFreeSet<T : Comparable<T>> {
          */
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         assert(descriptor.timestamp == timestamp)
+
+        QueueLogger.add("Initiator: started operation $descriptor")
+
         root.executeUntilTimestamp(timestamp)
 
         var curNodeRef = root.root
@@ -61,11 +59,14 @@ class LockFreeSet<T : Comparable<T>> {
              */
             val curResult = descriptor.result.getResult()
             if (curResult != null) {
+                QueueLogger.add("Initiator: finished executing $descriptor")
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
 
             when (val curNode = curNodeRef.get(descriptor.timestamp, nodeIdAllocator)) {
                 is InnerNode -> {
+                    QueueLogger.add("Initiator: executing $descriptor at $curNode")
+
                     /*
                     Process current operation in the inner node (possible, affecting it's child, if it's child is
                     either KeyNode or EmptyNode). After that, go to next node, traversing the appropriate path.
@@ -78,11 +79,12 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.route(descriptor.key)
                 }
                 else -> {
-                    /*
-                    Program is ill-formed, since KeyNode and EmptyNode should be processed while processing their
-                    parent (InnerNode or RootNode)
-                     */
-                    throw IllegalStateException("Program is ill-formed")
+                    val resultAtLeaf =
+                        descriptor.result.getResult() ?: throw IllegalStateException(
+                            "Program is ill-formed, threadId=${Thread.currentThread().id}, desc=$descriptor"
+                        )
+                    QueueLogger.add("Initiator: finished executing $descriptor")
+                    return TimestampLinearizedResult(result = resultAtLeaf, timestamp = descriptor.timestamp)
                 }
             }
         }

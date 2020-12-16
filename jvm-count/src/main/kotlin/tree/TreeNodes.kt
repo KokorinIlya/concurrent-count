@@ -1,5 +1,6 @@
 package tree
 
+import logging.QueueLogger
 import operations.*
 import queue.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -17,6 +18,7 @@ class KeyNode<T : Comparable<T>>(
     }
 }
 
+// TODO: created on rebuilding or not (the same for key node)
 class EmptyNode<T : Comparable<T>>(
     override val creationTimestamp: Long
 ) : TreeNode<T>() {
@@ -36,7 +38,7 @@ class InnerNode<T : Comparable<T>>(
     override val creationTimestamp: Long
 ) : TreeNode<T>() {
     override fun toString(): String {
-        return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id}"
+        return "{InnerNode: rightSubtreeMin=$rightSubtreeMin, id=$id, creationTimestamp=$creationTimestamp}"
     }
 
     companion object {
@@ -45,6 +47,7 @@ class InnerNode<T : Comparable<T>>(
             val maxKey: T,
             val subtreeSize: Int,
             val lastModificationTimestamp: Long,
+            val createdAtRebuilding: Boolean,
             val modificationsCount: Int
         )
     }
@@ -63,8 +66,11 @@ class InnerNode<T : Comparable<T>>(
             if (timestamp != null && curDescriptor.timestamp > timestamp) {
                 return
             }
+            QueueLogger.add("Helper: executing $curDescriptor at $this")
             curDescriptor.processInnerNode(this)
-            queue.popIf(curDescriptor.timestamp)
+
+            val popRes = queue.popIf(curDescriptor.timestamp)
+            QueueLogger.add("Helper: removing $curDescriptor from $this, result = $popRes")
         }
     }
 }

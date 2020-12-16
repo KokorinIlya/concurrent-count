@@ -130,6 +130,7 @@ class MultithreadedSetTest {
             }.forEach { it.join() }
 
             try {
+                QueueLogger.add("Tree:\n${set.treeToString()}")
                 assertEquals(operationsPerThread.size, threadsCount)
 
                 val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
@@ -142,7 +143,11 @@ class MultithreadedSetTest {
                 assertEquals(allOperations.size, totalOperations)
 
                 for (j in 0 until totalOperations) {
-                    assertEquals(expectedResult[j], results[j])
+                    assertEquals(
+                        expectedResult[j], results[j],
+                        "Operation ${allOperations[j].operation} " +
+                                "at timestamp ${allOperations[j].timestamp} failed"
+                    )
                 }
             } catch (e: AssertionFailedError) {
                 println("LOGS:")
@@ -151,6 +156,22 @@ class MultithreadedSetTest {
             }
         }
     }
+
+    /*
+    @Test
+    fun stress() {
+        doTest(
+            testsCount = 1_000_000,
+            threadsCount = 2,
+            operationsPerThreadCount = 4,
+            insertProb = 0.75,
+            deleteProb = 0.25,
+            countProb = 0.0,
+            keysFrom = 0,
+            keysTo = 5
+        )
+    }
+     */
 
     @Test
     fun stressManyThreadsSmallKeyRangeNoCount() {

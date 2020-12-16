@@ -2,6 +2,7 @@ package operations
 
 import allocation.IdAllocator
 import common.TimestampedValue
+import logging.QueueLogger
 import queue.NonRootLockFreeQueue
 import tree.*
 import java.util.concurrent.atomic.AtomicReference
@@ -41,8 +42,34 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
 
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>() {
     abstract override val result: SingleKeyWriteOperationResult
+    protected abstract val nodeIdAllocator: IdAllocator
 
-    protected abstract fun processChild(childRef: TreeNodeReference<T>)
+    protected abstract fun processEmptyChild(childRef: TreeNodeReference<T>, child: EmptyNode<T>)
+
+    protected abstract fun processKeyChild(childRef: TreeNodeReference<T>, child: KeyNode<T>)
+
+    private fun processChild(childRef: TreeNodeReference<T>) {
+        val curChild = childRef.get(timestamp, nodeIdAllocator)
+        QueueLogger.add("Helper: processing child $curChild while executing $this")
+        when (curChild) {
+            is EmptyNode -> {
+                processEmptyChild(childRef, curChild)
+                QueueLogger.add("Helper: finishing $this in $curChild")
+                result.tryFinish()
+            }
+            is KeyNode -> {
+                processKeyChild(childRef, curChild)
+                QueueLogger.add("Helper: finishing $this in $curChild")
+                result.tryFinish()
+            }
+            is InnerNode -> {
+                if (curChild.creationTimestamp <= timestamp) {
+                    val pushResult = curChild.queue.pushIf(this)
+                    QueueLogger.add("Helper: inserting $this into $curChild, result=$pushResult")
+                }
+            }
+        }
+    }
 
     protected abstract fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T>
 
@@ -53,9 +80,14 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     override fun processInnerNode(curNode: InnerNode<T>) {
         val curNodeParams = curNode.nodeParams.get()
 
-        if (curNodeParams.lastModificationTimestamp < timestamp) {
+        if (curNodeParams.lastModificationTimestamp < timestamp ||
+            curNodeParams.lastModificationTimestamp == timestamp && curNodeParams.createdAtRebuilding
+        ) {
             val newNodeParams = getNewParams(curNodeParams)
-            curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
+            val casRes = curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
+            QueueLogger.add("Helper: executing $this at $curNode, " +
+                    "changing params from $curNodeParams to $newNodeParams, " +
+                    "result=$casRes")
         }
 
         processChild(curNode.route(key))
@@ -65,7 +97,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
 class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyWriteOperationResult,
-    private val nodeIdAllocator: IdAllocator
+    override val nodeIdAllocator: IdAllocator
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): InsertDescriptor<T> {
@@ -73,68 +105,64 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processChild(childRef: TreeNodeReference<T>) {
-        when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
-            is EmptyNode -> {
-                if (curChild.creationTimestamp <= timestamp) { // TODO: won't add new node after rebuilding
-                    val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
-                    childRef.cas(curChild, newLeafNode)
-                }
-                result.tryFinish()
-            }
-            is KeyNode -> {
-                if (curChild.key == key) {
-                    assert(curChild.creationTimestamp >= timestamp)
-                } else if (curChild.creationTimestamp <= timestamp) { // TODO: the same
-                    val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
-                    val (leftChild, rightChild) = if (key < curChild.key) {
-                        Pair(newLeafNode, curChild)
-                    } else {
-                        Pair(curChild, newLeafNode)
-                    }
-                    val initialSize = 2
-                    val nodeParams = InnerNode.Companion.Params(
-                        lastModificationTimestamp = timestamp,
-                        maxKey = rightChild.key,
-                        minKey = leftChild.key,
-                        modificationsCount = 0,
-                        subtreeSize = initialSize
-                    )
-                    val newInnerNode = InnerNode<T>(
-                        id = nodeIdAllocator.allocateId(),
-                        left = TreeNodeReference(leftChild),
-                        right = TreeNodeReference(rightChild),
-                        rightSubtreeMin = rightChild.key,
-                        nodeParams = AtomicReference(nodeParams),
-                        queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
-                        initialSize = initialSize,
-                        creationTimestamp = timestamp
-                    )
-                    childRef.cas(curChild, newInnerNode)
-                }
-                result.tryFinish()
-            }
-            is InnerNode -> {
-                curChild.queue.pushIf(this)
-            }
-        }
-    }
-
     override fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T> {
         return InnerNode.Companion.Params(
             lastModificationTimestamp = timestamp,
+            createdAtRebuilding = false,
             maxKey = maxOf(curNodeParams.maxKey, key),
             minKey = minOf(curNodeParams.minKey, key),
             modificationsCount = curNodeParams.modificationsCount + 1,
             subtreeSize = curNodeParams.subtreeSize + 1
         )
     }
+
+    override fun processEmptyChild(childRef: TreeNodeReference<T>, child: EmptyNode<T>) {
+        if (child.creationTimestamp <= timestamp) {
+            val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
+            childRef.cas(child, newLeafNode)
+        }
+    }
+
+    override fun processKeyChild(childRef: TreeNodeReference<T>, child: KeyNode<T>) {
+        if (child.key == key) {
+            assert(child.creationTimestamp >= timestamp) {
+                "Assert: child_timestamp=${child.creationTimestamp}, op_timestamp=$timestamp"
+            }
+        } else if (child.creationTimestamp <= timestamp) {
+            val newLeafNode = KeyNode(key = key, creationTimestamp = timestamp)
+            val (leftChild, rightChild) = if (key < child.key) {
+                Pair(newLeafNode, child)
+            } else {
+                Pair(child, newLeafNode)
+            }
+            val initialSize = 2
+            val nodeParams = InnerNode.Companion.Params(
+                lastModificationTimestamp = timestamp,
+                createdAtRebuilding = false,
+                maxKey = rightChild.key,
+                minKey = leftChild.key,
+                modificationsCount = 0,
+                subtreeSize = initialSize
+            )
+            val newInnerNode = InnerNode<T>(
+                id = nodeIdAllocator.allocateId(),
+                left = TreeNodeReference(leftChild),
+                right = TreeNodeReference(rightChild),
+                rightSubtreeMin = rightChild.key,
+                nodeParams = AtomicReference(nodeParams),
+                queue = NonRootLockFreeQueue(initValue = DummyDescriptor()),
+                initialSize = initialSize,
+                creationTimestamp = timestamp
+            )
+            childRef.cas(child, newInnerNode)
+        }
+    }
 }
 
 class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
     override val result: SingleKeyWriteOperationResult,
-    private val nodeIdAllocator: IdAllocator
+    override val nodeIdAllocator: IdAllocator
 ) : SingleKeyWriteOperationDescriptor<T>() {
     companion object {
         fun <T : Comparable<T>> new(key: T, nodeIdAllocator: IdAllocator): DeleteDescriptor<T> {
@@ -142,35 +170,33 @@ class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processChild(childRef: TreeNodeReference<T>) {
-        when (val curChild = childRef.get(timestamp, nodeIdAllocator)) {
-            is EmptyNode -> {
-                assert(curChild.creationTimestamp >= timestamp)
-                result.tryFinish()
-            }
-            is KeyNode -> {
-                if (curChild.key != key) {
-                    assert(curChild.creationTimestamp > timestamp)
-                } else if (curChild.creationTimestamp <= timestamp) {
-                    val newNode = EmptyNode<T>(creationTimestamp = timestamp)
-                    childRef.cas(curChild, newNode)
-                }
-                result.tryFinish()
-            }
-            is InnerNode -> {
-                curChild.queue.pushIf(this)
-            }
-        }
-    }
-
     override fun getNewParams(curNodeParams: InnerNode.Companion.Params<T>): InnerNode.Companion.Params<T> {
         return InnerNode.Companion.Params(
             lastModificationTimestamp = timestamp,
+            createdAtRebuilding = false,
             maxKey = curNodeParams.maxKey,
             minKey = curNodeParams.minKey,
             modificationsCount = curNodeParams.modificationsCount + 1,
             subtreeSize = curNodeParams.subtreeSize - 1
         )
+    }
+
+    override fun processEmptyChild(childRef: TreeNodeReference<T>, child: EmptyNode<T>) {
+        assert(child.creationTimestamp >= timestamp)
+    }
+
+    override fun processKeyChild(childRef: TreeNodeReference<T>, child: KeyNode<T>) {
+        if (child.key != key) {
+            assert(child.creationTimestamp >= timestamp) {
+                "Assert: " +
+                        "Thread ${Thread.currentThread().id}; " +
+                        "child_timestamp=${child.creationTimestamp}, " +
+                        "op_timestamp=$timestamp"
+            }
+        } else if (child.creationTimestamp <= timestamp) {
+            val newNode = EmptyNode<T>(creationTimestamp = timestamp)
+            childRef.cas(child, newNode)
+        }
     }
 }
 

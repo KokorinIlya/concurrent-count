@@ -1,6 +1,7 @@
 package tree
 
 import allocation.IdAllocator
+import logging.QueueLogger
 import operations.DummyDescriptor
 import queue.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
@@ -13,38 +14,53 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         private const val bias = 2
     }
 
-    private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: InnerNode<T>) {
+    private fun <T : Comparable<T>> finishOperationsInSubtree(
+        innerNode: InnerNode<T>,
+        curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
         innerNode.executeUntilTimestamp(null)
         /*
         TODO: maybe, rebuild here
          */
-        val left = innerNode.left.ref.get()
-        val right = innerNode.right.ref.get()
+        val left = innerNode.left.rawGet()
+        val right = innerNode.right.rawGet()
 
         if (left is InnerNode) {
-            finishOperationsInSubtree(left)
+            finishOperationsInSubtree(left, curOperationTimestamp, nodeIdAllocator)
         }
 
         if (right is InnerNode) {
-            finishOperationsInSubtree(right)
+            finishOperationsInSubtree(right, curOperationTimestamp, nodeIdAllocator)
         }
     }
 
-    private fun <T : Comparable<T>> collectKeysInChildSubtree(child: TreeNode<T>, keys: MutableList<T>) {
+    private fun <T : Comparable<T>> collectKeysInChildSubtree(
+        child: TreeNode<T>, keys: MutableList<T>,
+        curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
         when (child) {
             is KeyNode -> keys.add(child.key)
-            is InnerNode -> collectKeysInSubtree(child, keys)
+            is InnerNode -> collectKeysInSubtree(child, keys, curOperationTimestamp, nodeIdAllocator)
             is EmptyNode -> {
             }
         }
     }
 
-    private fun <T : Comparable<T>> collectKeysInSubtree(root: InnerNode<T>, keys: MutableList<T>) {
-        val curLeft = root.left.ref.get()
-        val curRight = root.right.ref.get()
+    private fun <T : Comparable<T>> collectKeysInSubtree(
+        root: InnerNode<T>, keys: MutableList<T>,
+        curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
+    ) {
+        /*
+        val curParams = root.nodeParams.get()
+        assert(curParams.lastModificationTimestamp < curOperationTimestamp) {
+            "nodeParams=$curParams, timestamp=$curOperationTimestamp"
+        }
+         */
+        val curLeft = root.left.rawGet()
+        val curRight = root.right.rawGet()
 
-        collectKeysInChildSubtree(curLeft, keys)
-        collectKeysInChildSubtree(curRight, keys)
+        collectKeysInChildSubtree(curLeft, keys, curOperationTimestamp, nodeIdAllocator)
+        collectKeysInChildSubtree(curRight, keys, curOperationTimestamp, nodeIdAllocator)
     }
 
     private fun buildSubtreeFromKeys(
@@ -70,8 +86,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             right = TreeNodeReference(right),
             nodeParams = AtomicReference(
                 InnerNode.Companion.Params(
-                    // TODO: won't be able to increment subtree size
-                    lastModificationTimestamp = 0,
+                    lastModificationTimestamp = curOperationTimestamp, // TODO: choose max from subtree
+                    createdAtRebuilding = true,
                     maxKey = maxKey,
                     minKey = minKey,
                     modificationsCount = 0,
@@ -89,11 +105,12 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         innerNode: InnerNode<T>,
         curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
     ): TreeNode<T> {
-        finishOperationsInSubtree(innerNode)
+        finishOperationsInSubtree(innerNode, curOperationTimestamp, nodeIdAllocator)
         val curSubtreeKeys = mutableListOf<T>()
-        collectKeysInSubtree(innerNode, curSubtreeKeys)
+        collectKeysInSubtree(innerNode, curSubtreeKeys, curOperationTimestamp, nodeIdAllocator)
         val sortedKeys = curSubtreeKeys.toList()
         assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
+        QueueLogger.add("Rebuilding, timestamp=$curOperationTimestamp, keys=$sortedKeys")
         return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size, curOperationTimestamp, nodeIdAllocator)
     }
 
@@ -107,12 +124,24 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
                     TODO: maybe, do not rebuild, if least modification timestamp is greater than current timestamp
                      */
                     val curParams = node.nodeParams.get()
-                    if (curParams.modificationsCount < threshold * node.initialSize + bias) {
+                    if (curParams.modificationsCount < threshold * node.initialSize + bias ||
+                        curParams.lastModificationTimestamp >= curOperationTimestamp
+                    ) {
                         return node
                     }
 
+                    QueueLogger.add(
+                        "Started rebuilding $node, mod_count=${curParams.modificationsCount}, " +
+                                "init_size=${node.initialSize}, timestamp=$curOperationTimestamp"
+                    )
+
                     val rebuildNode = getRebuilt(node, curOperationTimestamp, nodeIdAllocator)
-                    ref.compareAndSet(node, rebuildNode)
+                    val rebuildingRes = ref.compareAndSet(node, rebuildNode)
+
+                    QueueLogger.add(
+                        "Finished rebuilding $node, mod_count=${curParams.modificationsCount}, " +
+                                "init_size=${node.initialSize}, timestamp=$curOperationTimestamp, result=$rebuildingRes"
+                    )
                 }
             }
         }

@@ -1,6 +1,6 @@
 package tree
 
-import allocation.IdAllocator
+import logging.QueueLogger
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
@@ -8,8 +8,7 @@ import queue.RootLockFreeQueue
 class RootNode<T : Comparable<T>>(
     val queue: RootLockFreeQueue<Descriptor<T>>,
     val root: TreeNodeReference<T>,
-    val id: Long,
-    private val nodeIdAllocator: IdAllocator
+    val id: Long
 ) {
     companion object {
         private enum class QueueTraverseResult {
@@ -34,6 +33,7 @@ class RootNode<T : Comparable<T>>(
             val curTimestamp = curDescriptor.timestamp
 
             if (curTimestamp >= descriptor.timestamp) {
+                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered, answer not needed")
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }
 
@@ -44,12 +44,14 @@ class RootNode<T : Comparable<T>>(
             prevTimestamp = curTimestamp
 
             if (curDescriptor is InsertDescriptor && curDescriptor.key == descriptor.key) {
+                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered")
                 assert(
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
                 )
                 traversalResult = QueueTraverseResult.KEY_EXISTS
             } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == descriptor.key) {
+                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered")
                 assert(
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_EXISTS
@@ -66,12 +68,19 @@ class RootNode<T : Comparable<T>>(
         var curNodeRef = root
 
         while (true) {
-            when (val curNode = curNodeRef.get(descriptor.timestamp, nodeIdAllocator)) {
+            when (val curNode = curNodeRef.rawGet()) {
                 is InnerNode -> {
                     when (traverseQueue(curNode.queue, descriptor)) {
-                        QueueTraverseResult.KEY_EXISTS -> return true
-                        QueueTraverseResult.KEY_NOT_EXISTS -> return false
+                        QueueTraverseResult.KEY_EXISTS -> {
+                            QueueLogger.add("Deciding $descriptor, insert found in queue")
+                            return true
+                        }
+                        QueueTraverseResult.KEY_NOT_EXISTS -> {
+                            QueueLogger.add("Deciding $descriptor, delete found in queue")
+                            return false
+                        }
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> {
+                            QueueLogger.add("Deciding $descriptor, answer not needed")
                             assert(descriptor.result.decisionMade())
                             return null
                         }
@@ -80,8 +89,14 @@ class RootNode<T : Comparable<T>>(
                         }
                     }
                 }
-                is KeyNode ->  return curNode.key == descriptor.key
-                is EmptyNode -> return false
+                is KeyNode -> {
+                    QueueLogger.add("Deciding $descriptor, $curNode is final node")
+                    return curNode.key == descriptor.key
+                }
+                is EmptyNode -> {
+                    QueueLogger.add("Deciding $descriptor, $curNode is final node")
+                    return false
+                }
             }
         }
     }
@@ -93,10 +108,12 @@ class RootNode<T : Comparable<T>>(
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     false -> {
+                        QueueLogger.add("$curDescriptor should be executed")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     true -> {
+                        QueueLogger.add("$curDescriptor should not be executed")
                         curDescriptor.result.trySetDecision(false)
                     }
                 }
@@ -104,10 +121,12 @@ class RootNode<T : Comparable<T>>(
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
                     true -> {
+                        QueueLogger.add("$curDescriptor should be executed")
                         curDescriptor.result.trySetDecision(true)
                         curDescriptor.processRootNode(this)
                     }
                     false -> {
+                        QueueLogger.add("$curDescriptor should not be executed")
                         curDescriptor.result.trySetDecision(false)
                     }
                 }
@@ -125,8 +144,12 @@ class RootNode<T : Comparable<T>>(
             if (curDescriptor.timestamp > timestamp) {
                 return
             }
+
+            QueueLogger.add("Helper: executing $curDescriptor at root")
             executeSingleDescriptor(curDescriptor)
-            queue.popIf(curDescriptor.timestamp)
+
+            val popRes = queue.popIf(curDescriptor.timestamp)
+            QueueLogger.add("Helper: removing $curDescriptor from root, result = $popRes")
         }
     }
 }

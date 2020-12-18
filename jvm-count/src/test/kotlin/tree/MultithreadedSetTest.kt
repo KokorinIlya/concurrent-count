@@ -56,7 +56,7 @@ class MultithreadedSetTest {
         val random = Random(System.currentTimeMillis())
 
         repeat(testsCount) { testNum ->
-            if (testNum % 10 == 0) {
+            if (testNum % 1000 == 0) {
                 println(testNum)
             }
             val set = LockFreeSet<Int>()
@@ -157,21 +157,19 @@ class MultithreadedSetTest {
         }
     }
 
-    /*
     @Test
     fun stress() {
         doTest(
-            testsCount = 1_000_000,
-            threadsCount = 2,
-            operationsPerThreadCount = 4,
+            testsCount = 5_000_000,
+            threadsCount = 3,
+            operationsPerThreadCount = 5,
             insertProb = 0.75,
             deleteProb = 0.25,
             countProb = 0.0,
             keysFrom = 0,
-            keysTo = 5
+            keysTo = 10
         )
     }
-     */
 
     @Test
     fun stressManyThreadsSmallKeyRangeNoCount() {

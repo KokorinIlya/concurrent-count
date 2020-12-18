@@ -11,7 +11,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
 
     companion object {
         private const val threshold = 0.5
-        private const val bias = 2
+        private const val bias = 1
     }
 
     private fun <T : Comparable<T>> finishOperationsInSubtree(

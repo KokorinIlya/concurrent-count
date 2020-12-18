@@ -101,34 +101,32 @@ class RootNode<T : Comparable<T>>(
         }
     }
 
-    private fun executeSingleDescriptor(curDescriptor: Descriptor<T>) {
+    private fun executeDescriptor(curDescriptor: SingleKeyWriteOperationDescriptor<T>) {
+        QueueLogger.add("$curDescriptor should be executed")
+        curDescriptor.result.trySetDecision(true)
+        curDescriptor.processRootNode(this)
+    }
+
+    private fun declineDescriptor(curDescriptor: SingleKeyWriteOperationDescriptor<T>) {
+        QueueLogger.add("$curDescriptor should not be executed")
+        curDescriptor.result.trySetDecision(false)
+        curDescriptor.result.tryFinish()
+    }
+
+    private fun tryExecuteSingleDescriptor(curDescriptor: Descriptor<T>) {
         when (curDescriptor) {
             is ExistsDescriptor -> curDescriptor.processRootNode(this)
             is CountDescriptor -> curDescriptor.processRootNode(this)
             is InsertDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
-                    false -> {
-                        QueueLogger.add("$curDescriptor should be executed")
-                        curDescriptor.result.trySetDecision(true)
-                        curDescriptor.processRootNode(this)
-                    }
-                    true -> {
-                        QueueLogger.add("$curDescriptor should not be executed")
-                        curDescriptor.result.trySetDecision(false)
-                    }
+                    false -> executeDescriptor(curDescriptor)
+                    true -> declineDescriptor(curDescriptor)
                 }
             }
             is DeleteDescriptor<T> -> {
                 when (checkExistence(curDescriptor)) {
-                    true -> {
-                        QueueLogger.add("$curDescriptor should be executed")
-                        curDescriptor.result.trySetDecision(true)
-                        curDescriptor.processRootNode(this)
-                    }
-                    false -> {
-                        QueueLogger.add("$curDescriptor should not be executed")
-                        curDescriptor.result.trySetDecision(false)
-                    }
+                    true -> executeDescriptor(curDescriptor)
+                    false -> declineDescriptor(curDescriptor)
                 }
             }
             /*
@@ -146,7 +144,7 @@ class RootNode<T : Comparable<T>>(
             }
 
             QueueLogger.add("Helper: executing $curDescriptor at root")
-            executeSingleDescriptor(curDescriptor)
+            tryExecuteSingleDescriptor(curDescriptor)
 
             val popRes = queue.popIf(curDescriptor.timestamp)
             QueueLogger.add("Helper: removing $curDescriptor from root, result = $popRes")

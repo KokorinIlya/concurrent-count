@@ -63,9 +63,12 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                 result.tryFinish()
             }
             is InnerNode -> {
-                if (curChild.creationTimestamp <= timestamp) {
+                val childParams = curChild.nodeParams.get()
+                if (childParams.lastModificationTimestamp <= timestamp) {
                     val pushResult = curChild.queue.pushIf(this)
                     QueueLogger.add("Helper: inserting $this into $curChild, result=$pushResult")
+                } else {
+                    result.tryFinish()
                 }
             }
         }
@@ -85,9 +88,11 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         ) {
             val newNodeParams = getNewParams(curNodeParams)
             val casRes = curNode.nodeParams.compareAndSet(curNodeParams, newNodeParams)
-            QueueLogger.add("Helper: executing $this at $curNode, " +
-                    "changing params from $curNodeParams to $newNodeParams, " +
-                    "result=$casRes")
+            QueueLogger.add(
+                "Helper: executing $this at $curNode, " +
+                        "changing params from $curNodeParams to $newNodeParams, " +
+                        "result=$casRes"
+            )
         }
 
         processChild(curNode.route(key))

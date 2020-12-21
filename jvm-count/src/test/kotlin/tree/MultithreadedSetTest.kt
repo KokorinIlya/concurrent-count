@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.opentest4j.AssertionFailedError
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
@@ -61,11 +62,14 @@ class MultithreadedSetTest {
             }
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
+            val barrier = CyclicBarrier(threadsCount)
+
 
             QueueLogger.clear()
 
             (1..threadsCount).map { threadIndex ->
                 thread {
+                    barrier.await()
                     val currentThreadOperations = (1..operationsPerThreadCount).map {
                         val curOp = random.nextDouble()
                         when {

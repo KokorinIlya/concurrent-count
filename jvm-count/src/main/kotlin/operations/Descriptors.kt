@@ -54,13 +54,13 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         when (curChild) {
             is EmptyNode -> {
                 processEmptyChild(childRef, curChild)
-                QueueLogger.add("Helper: finishing $this in $curChild")
                 result.tryFinish()
+                QueueLogger.add("Helper: finished $this in $curChild")
             }
             is KeyNode -> {
                 processKeyChild(childRef, curChild)
-                QueueLogger.add("Helper: finishing $this in $curChild")
                 result.tryFinish()
+                QueueLogger.add("Helper: finished $this in $curChild")
             }
             is InnerNode -> {
                 val childParams = curChild.nodeParams.get()
@@ -69,6 +69,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                     QueueLogger.add("Helper: inserting $this into $curChild, result=$pushResult")
                 } else {
                     result.tryFinish()
+                    QueueLogger.add("Helper: finished $this in $curChild")
                 }
             }
         }

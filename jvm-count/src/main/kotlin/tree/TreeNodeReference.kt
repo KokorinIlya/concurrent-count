@@ -18,6 +18,9 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         innerNode: InnerNode<T>,
         curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
     ) {
+        /*
+        TODO: not rebuild when finish is being executed
+         */
         innerNode.executeUntilTimestamp(null)
         /*
         TODO: maybe, rebuild here
@@ -120,9 +123,6 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
                 is KeyNode -> return node
                 is EmptyNode -> return node
                 is InnerNode -> {
-                    /*
-                    TODO: maybe, do not rebuild, if least modification timestamp is greater than current timestamp
-                     */
                     val curParams = node.nodeParams.get()
                     if (curParams.modificationsCount < threshold * node.initialSize + bias ||
                         curParams.lastModificationTimestamp >= curOperationTimestamp

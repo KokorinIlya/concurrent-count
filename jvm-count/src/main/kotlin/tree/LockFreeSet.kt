@@ -63,6 +63,7 @@ class LockFreeSet<T : Comparable<T>> {
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
 
+            // TODO: do not rebuild, if the operation is stalled
             when (val curNode = curNodeRef.get(descriptor.timestamp, nodeIdAllocator)) {
                 is InnerNode -> {
                     QueueLogger.add("Initiator: executing $descriptor at $curNode")

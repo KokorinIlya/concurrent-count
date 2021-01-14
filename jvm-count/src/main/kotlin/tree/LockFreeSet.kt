@@ -2,7 +2,6 @@ package tree
 
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
-import logging.QueueLogger
 import operations.*
 import queue.RootLockFreeQueue
 
@@ -11,30 +10,12 @@ class LockFreeSet<T : Comparable<T>> {
     private val root: RootNode<T>
 
     init {
-        val initDescriptor = DummyDescriptor<T>()
+        val initDescriptor = DummyDescriptor<T>(0L)
         root = RootNode<T>(
             queue = RootLockFreeQueue(initDescriptor),
-            root = TreeNodeReference(EmptyNode(initDescriptor.timestamp)),
+            root = TreeNodeReference(EmptyNode(initDescriptor.timestamp, createdOnRebuild = false)),
             id = nodeIdAllocator.allocateId()
         )
-    }
-
-    private fun treeToString(curBuilder: StringBuilder, curNode: TreeNode<T>, level: Int) {
-        curBuilder.append("-".repeat(level))
-        when (curNode) {
-            is InnerNode -> {
-                curBuilder.append(curNode.toString() + "\n")
-                treeToString(curBuilder, curNode.left.rawGet(), level + 1)
-                treeToString(curBuilder, curNode.right.rawGet(), level + 1)
-            }
-            else -> curBuilder.append(curNode.toString() + "\n")
-        }
-    }
-
-    fun treeToString(): String {
-        val builder = StringBuilder()
-        treeToString(builder, root.root.rawGet(), 0)
-        return builder.toString()
     }
 
     private fun <R> executeSingleKeyOperation(
@@ -48,8 +29,6 @@ class LockFreeSet<T : Comparable<T>> {
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         assert(descriptor.timestamp == timestamp)
 
-        QueueLogger.add("Initiator: started operation $descriptor")
-
         root.executeUntilTimestamp(timestamp)
 
         var curNodeRef = root.root
@@ -59,14 +38,11 @@ class LockFreeSet<T : Comparable<T>> {
              */
             val curResult = descriptor.result.getResult()
             if (curResult != null) {
-                QueueLogger.add("Initiator: finished executing $descriptor")
                 return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
             }
 
-            // TODO: do not rebuild, if the operation is stalled
-            when (val curNode = curNodeRef.get(descriptor.timestamp, nodeIdAllocator)) {
+            when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
-                    QueueLogger.add("Initiator: executing $descriptor at $curNode")
 
                     /*
                     Process current operation in the inner node (possible, affecting it's child, if it's child is
@@ -76,15 +52,14 @@ class LockFreeSet<T : Comparable<T>> {
                     Also note, that if next node on the appropriate path is leaf node (either KeyNode or EmptyNode),
                     request should be fully completed on the current iteration of the loop.
                      */
-                    curNode.executeUntilTimestamp(timestamp)
-                    curNodeRef = curNode.route(descriptor.key)
+                    curNode.content.executeUntilTimestamp(timestamp)
+                    curNodeRef = curNode.content.route(descriptor.key)
                 }
                 else -> {
                     val resultAtLeaf =
                         descriptor.result.getResult() ?: throw IllegalStateException(
                             "Program is ill-formed, threadId=${Thread.currentThread().id}, desc=$descriptor"
                         )
-                    QueueLogger.add("Initiator: finished executing $descriptor")
                     return TimestampLinearizedResult(result = resultAtLeaf, timestamp = descriptor.timestamp)
                 }
             }
@@ -100,24 +75,23 @@ class LockFreeSet<T : Comparable<T>> {
     }
 
     fun exists(x: T): TimestampLinearizedResult<Boolean> {
-        return executeSingleKeyOperation(ExistsDescriptor.new(x, nodeIdAllocator))
+        return executeSingleKeyOperation(ExistsDescriptor.new(x))
     }
 
     private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
-        curNode.executeUntilTimestamp(descriptor.timestamp)
+        curNode.content.executeUntilTimestamp(descriptor.timestamp)
         if (descriptor.result.getResult() != null) {
             return
         }
 
-        val curNodeParams = curNode.nodeParams.get()
         val intersectionResult = descriptor.intersectBorders(
-            minKey = curNodeParams.minKey,
-            maxKey = curNodeParams.maxKey
+            minKey = curNode.minKey,
+            maxKey = curNode.maxKey
         )
 
         if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
-            val curLeft = curNode.left.get(descriptor.timestamp, nodeIdAllocator)
-            val curRight = curNode.right.get(descriptor.timestamp, nodeIdAllocator)
+            val curLeft = curNode.content.left.get()
+            val curRight = curNode.content.right.get()
 
             if (curLeft is InnerNode) {
                 countInNode(curLeft, descriptor)
@@ -130,14 +104,14 @@ class LockFreeSet<T : Comparable<T>> {
 
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
         require(left <= right)
-        val descriptor = CountDescriptor.new(left, right, nodeIdAllocator)
+        val descriptor = CountDescriptor.new(left, right)
         descriptor.result.preVisitNode(root.id)
         val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
         assert(descriptor.timestamp == timestamp)
 
         root.executeUntilTimestamp(timestamp)
 
-        val realRoot = root.root.get(descriptor.timestamp, nodeIdAllocator)
+        val realRoot = root.root.get()
         if (realRoot is InnerNode) {
             countInNode(realRoot, descriptor)
         }

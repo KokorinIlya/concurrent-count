@@ -1,6 +1,5 @@
 package tree
 
-import logging.QueueLogger
 import operations.*
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
@@ -10,13 +9,11 @@ class RootNode<T : Comparable<T>>(
     val root: TreeNodeReference<T>,
     val id: Long
 ) {
-    companion object {
-        private enum class QueueTraverseResult {
-            KEY_EXISTS,
-            KEY_NOT_EXISTS,
-            UNABLE_TO_DETERMINE,
-            ANSWER_NOT_NEEDED
-        }
+    private enum class QueueTraverseResult {
+        KEY_EXISTS,
+        KEY_NOT_EXISTS,
+        UNABLE_TO_DETERMINE,
+        ANSWER_NOT_NEEDED
     }
 
     private fun traverseQueue(
@@ -33,7 +30,6 @@ class RootNode<T : Comparable<T>>(
             val curTimestamp = curDescriptor.timestamp
 
             if (curTimestamp >= descriptor.timestamp) {
-                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered, answer not needed")
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }
 
@@ -44,14 +40,12 @@ class RootNode<T : Comparable<T>>(
             prevTimestamp = curTimestamp
 
             if (curDescriptor is InsertDescriptor && curDescriptor.key == descriptor.key) {
-                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered")
                 assert(
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
                 )
                 traversalResult = QueueTraverseResult.KEY_EXISTS
             } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == descriptor.key) {
-                QueueLogger.add("Checking $descriptor at root, $curDescriptor encountered")
                 assert(
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_EXISTS
@@ -68,33 +62,28 @@ class RootNode<T : Comparable<T>>(
         var curNodeRef = root
 
         while (true) {
-            when (val curNode = curNodeRef.rawGet()) {
+            when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
-                    when (traverseQueue(curNode.queue, descriptor)) {
+                    when (traverseQueue(curNode.content.queue, descriptor)) {
                         QueueTraverseResult.KEY_EXISTS -> {
-                            QueueLogger.add("Deciding $descriptor, insert found in queue")
                             return true
                         }
                         QueueTraverseResult.KEY_NOT_EXISTS -> {
-                            QueueLogger.add("Deciding $descriptor, delete found in queue")
                             return false
                         }
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> {
-                            QueueLogger.add("Deciding $descriptor, answer not needed")
                             assert(descriptor.result.decisionMade())
                             return null
                         }
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
-                            curNodeRef = curNode.route(descriptor.key)
+                            curNodeRef = curNode.content.route(descriptor.key)
                         }
                     }
                 }
                 is KeyNode -> {
-                    QueueLogger.add("Deciding $descriptor, $curNode is final node")
                     return curNode.key == descriptor.key
                 }
                 is EmptyNode -> {
-                    QueueLogger.add("Deciding $descriptor, $curNode is final node")
                     return false
                 }
             }
@@ -102,13 +91,11 @@ class RootNode<T : Comparable<T>>(
     }
 
     private fun executeDescriptor(curDescriptor: SingleKeyWriteOperationDescriptor<T>) {
-        QueueLogger.add("$curDescriptor should be executed")
         curDescriptor.result.trySetDecision(true)
         curDescriptor.processRootNode(this)
     }
 
     private fun declineDescriptor(curDescriptor: SingleKeyWriteOperationDescriptor<T>) {
-        QueueLogger.add("$curDescriptor should not be executed")
         curDescriptor.result.trySetDecision(false)
         curDescriptor.result.tryFinish()
     }
@@ -142,12 +129,8 @@ class RootNode<T : Comparable<T>>(
             if (curDescriptor.timestamp > timestamp) {
                 return
             }
-
-            QueueLogger.add("Helper: executing $curDescriptor at root")
             tryExecuteSingleDescriptor(curDescriptor)
-
-            val popRes = queue.popIf(curDescriptor.timestamp)
-            QueueLogger.add("Helper: removing $curDescriptor from root, result = $popRes")
+            queue.popIf(curDescriptor.timestamp)
         }
     }
 }

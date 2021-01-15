@@ -57,7 +57,7 @@ class MultithreadedSetTest {
         val random = Random(System.currentTimeMillis())
 
         repeat(testsCount) { testNum ->
-            if (testNum % 1000 == 0) {
+            if (testNum % 10 == 0) {
                 println(testNum)
             }
             val set = LockFreeSet<Int>()
@@ -134,7 +134,6 @@ class MultithreadedSetTest {
             }.forEach { it.join() }
 
             try {
-                QueueLogger.add("Tree:\n${set.treeToString()}")
                 assertEquals(operationsPerThread.size, threadsCount)
 
                 val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
@@ -159,20 +158,6 @@ class MultithreadedSetTest {
                 throw e
             }
         }
-    }
-
-    @Test
-    fun stress() {
-        doTest(
-            testsCount = 5_000_000,
-            threadsCount = 3,
-            operationsPerThreadCount = 5,
-            insertProb = 0.75,
-            deleteProb = 0.25,
-            countProb = 0.0,
-            keysFrom = 0,
-            keysTo = 10
-        )
     }
 
     @Test
@@ -231,6 +216,7 @@ class MultithreadedSetTest {
         )
     }
 
+    /*
     @Test
     fun stressManyThreadsSmallKeyRangeCount() {
         doTest(
@@ -286,4 +272,5 @@ class MultithreadedSetTest {
             keysTo = 10_000
         )
     }
+     */
 }

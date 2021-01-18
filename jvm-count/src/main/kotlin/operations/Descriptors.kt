@@ -19,7 +19,7 @@ sealed class Descriptor<T : Comparable<T>> : TimestampedValue {
     private var timestampValue: Long? = null
 
     override var timestamp: Long
-        get() = timestampValue ?: throw IllegalStateException("Timestamp not initialized")
+        get() = timestampValue ?: throw NoSuchElementException("Timestamp not initialized")
         set(value) {
             timestampValue = value
         }
@@ -341,10 +341,10 @@ class DummyDescriptor<T : Comparable<T>>(private val ts: Long) : Descriptor<T>()
         }
 
     override fun processRootNode(curNode: RootNode<T>) {
-        throw IllegalStateException("Program is ill-formed")
+        throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
-        throw IllegalStateException("Program is ill-formed")
+        throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 }

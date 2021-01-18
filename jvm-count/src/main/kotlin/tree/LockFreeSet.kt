@@ -59,7 +59,9 @@ class LockFreeSet<T : Comparable<T>> {
                     if (descriptor is SingleKeyWriteOperationDescriptor) { // TODO
                         descriptor.result.tryFinish()
                     }
-                    val result = descriptor.result.getResult() ?: throw IllegalStateException("Program is ill-formed")
+                    val result = descriptor.result.getResult() ?: throw AssertionError(
+                        "Result should be known at this point"
+                    )
                     return TimestampLinearizedResult(result, timestamp)
                 }
             }
@@ -118,7 +120,7 @@ class LockFreeSet<T : Comparable<T>> {
 
         val result = descriptor.result.getResult()
         if (result == null) {
-            throw IllegalStateException("Program is ill-formed")
+            throw AssertionError("Count result should be known at this point")
         } else {
             return TimestampLinearizedResult(result = result, timestamp = timestamp)
         }

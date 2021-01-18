@@ -1,6 +1,7 @@
 package queue
 
 import common.TimestampedValue
+import java.lang.AssertionError
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -64,7 +65,9 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
                     Queue is definitely non-empty, head.next is the first non-dummy element in the queue and it should
                     exist (since queue is not empty)
                      */
-                    throw IllegalStateException("Program is ill-formed")
+                    throw AssertionError(
+                        "Queue is empty, when it is supposed to contain at least one element"
+                    )
                 } else {
                     /*
                     Perform some action on non-empty queue (for example, for pop operation it can be head moving) and

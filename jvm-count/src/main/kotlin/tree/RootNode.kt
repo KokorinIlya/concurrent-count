@@ -104,13 +104,13 @@ class RootNode<T : Comparable<T>>(
         when (curDescriptor) {
             is ExistsDescriptor -> curDescriptor.processRootNode(this)
             is CountDescriptor -> curDescriptor.processRootNode(this)
-            is InsertDescriptor<T> -> {
+            is InsertDescriptor -> {
                 when (checkExistence(curDescriptor)) {
                     false -> executeDescriptor(curDescriptor)
                     true -> declineDescriptor(curDescriptor)
                 }
             }
-            is DeleteDescriptor<T> -> {
+            is DeleteDescriptor -> {
                 when (checkExistence(curDescriptor)) {
                     true -> executeDescriptor(curDescriptor)
                     false -> declineDescriptor(curDescriptor)
@@ -119,7 +119,7 @@ class RootNode<T : Comparable<T>>(
             /*
             Dummy descriptors are never returned from queue.peek()
              */
-            else -> throw IllegalStateException("Program is ill-formed")
+            else -> throw AssertionError("Received dummy descriptor from queue.peek()")
         }
     }
 

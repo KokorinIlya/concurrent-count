@@ -56,8 +56,11 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.content.route(descriptor.key)
                 }
                 else -> {
-                    // TODO
-                    throw IllegalStateException("Program is ill-formed, descriptor=$descriptor")
+                    if (descriptor is SingleKeyWriteOperationDescriptor) { // TODO
+                        descriptor.result.tryFinish()
+                    }
+                    val result = descriptor.result.getResult() ?: throw IllegalStateException("Program is ill-formed")
+                    return TimestampLinearizedResult(result, timestamp)
                 }
             }
         }

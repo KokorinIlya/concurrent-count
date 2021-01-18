@@ -67,7 +67,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             initialSize = curSubtreeSize,
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
-            queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)), // TODO: maybe, 0
+            queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
             rightSubtreeMin = rightSubtreeMin
         )
 

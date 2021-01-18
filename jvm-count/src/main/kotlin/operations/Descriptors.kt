@@ -242,17 +242,16 @@ class CountDescriptor<T : Comparable<T>>(
         assert(leftBorder <= rightBorder)
     }
 
-
     companion object {
         fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T): CountDescriptor<T> {
             return CountDescriptor(leftBorder, rightBorder, CountResult())
         }
+    }
 
-        enum class IntersectionResult {
-            NO_INTERSECTION,
-            NODE_INSIDE_REQUEST,
-            GO_TO_CHILDREN
-        }
+    enum class IntersectionResult {
+        NO_INTERSECTION,
+        NODE_INSIDE_REQUEST,
+        GO_TO_CHILDREN
     }
 
     fun intersectBorders(minKey: T, maxKey: T): IntersectionResult {
@@ -266,12 +265,71 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
+    private fun processKeyChild(curChild: KeyNode<T>): Int? {
+        assert(curChild.creationTimestamp != timestamp)
+        return when {
+            curChild.creationTimestamp > timestamp -> null
+            curChild.key in leftBorder..rightBorder -> {
+                assert(curChild.creationTimestamp < timestamp)
+                1
+            }
+            else -> {
+                assert(curChild.creationTimestamp < timestamp)
+                0
+            }
+        }
+    }
+
+    private fun processEmptyChild(curChild: EmptyNode<T>): Int? {
+        assert(curChild.creationTimestamp != timestamp)
+        return if (curChild.creationTimestamp > timestamp) {
+            null
+        } else {
+            0
+        }
+    }
+
+    private fun processInnerChild(curChild: InnerNode<T>): Int? {
+        assert(curChild.lastModificationTimestamp != timestamp)
+        if (curChild.lastModificationTimestamp > timestamp) {
+            return null
+        }
+        return when (intersectBorders(minKey = curChild.minKey, maxKey = curChild.maxKey)) {
+            IntersectionResult.NO_INTERSECTION -> 0
+            IntersectionResult.NODE_INSIDE_REQUEST -> curChild.subtreeSize
+            IntersectionResult.GO_TO_CHILDREN -> {
+                result.preVisitNode(curChild.content.id)
+                curChild.content.queue.pushIf(this)
+                0
+            }
+        }
+    }
+
+    private fun processSingleChild(childRef: TreeNodeReference<T>): Int? {
+        return when (val curChild = childRef.get()) {
+            is KeyNode -> processKeyChild(curChild)
+            is EmptyNode -> processEmptyChild(curChild)
+            is InnerNode -> processInnerChild(curChild)
+        }
+    }
+
     override fun processRootNode(curNode: RootNode<T>) {
-        TODO("Not yet implemented")
+        val childRes = processSingleChild(curNode.root)
+        if (childRes == null) {
+            assert(result.isAnswerKnown(curNode.id))
+            return
+        }
+        result.preRemoveFromNode(curNode.id, childRes)
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
-        TODO("Not yet implemented")
+        val leftRes = processSingleChild(curNode.left)
+        val rightRes = processSingleChild(curNode.right)
+        if (leftRes == null || rightRes == null) {
+            assert(result.isAnswerKnown(curNode.id))
+            return
+        }
+        result.preRemoveFromNode(curNode.id, leftRes + rightRes)
     }
 }
 

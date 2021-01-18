@@ -37,7 +37,6 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQu
 
             /*
             Try to push new value to the tail of the queue
-            TODO: maybe, compareAndSet should be used instead of compareAndExchange
              */
             val nextTail = curTail.next.compareAndExchange(null, newTail)
             if (nextTail === null) {

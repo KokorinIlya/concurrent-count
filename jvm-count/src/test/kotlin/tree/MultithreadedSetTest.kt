@@ -216,7 +216,6 @@ class MultithreadedSetTest {
         )
     }
 
-    /*
     @Test
     fun stressManyThreadsSmallKeyRangeCount() {
         doTest(
@@ -272,5 +271,4 @@ class MultithreadedSetTest {
             keysTo = 10_000
         )
     }
-     */
 }

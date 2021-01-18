@@ -56,11 +56,8 @@ class LockFreeSet<T : Comparable<T>> {
                     curNodeRef = curNode.content.route(descriptor.key)
                 }
                 else -> {
-                    val resultAtLeaf =
-                        descriptor.result.getResult() ?: throw IllegalStateException(
-                            "Program is ill-formed, threadId=${Thread.currentThread().id}, desc=$descriptor"
-                        )
-                    return TimestampLinearizedResult(result = resultAtLeaf, timestamp = descriptor.timestamp)
+                    // TODO
+                    throw IllegalStateException("Program is ill-formed, descriptor=$descriptor")
                 }
             }
         }
@@ -89,7 +86,7 @@ class LockFreeSet<T : Comparable<T>> {
             maxKey = curNode.maxKey
         )
 
-        if (intersectionResult == CountDescriptor.Companion.IntersectionResult.GO_TO_CHILDREN) {
+        if (intersectionResult == CountDescriptor.IntersectionResult.GO_TO_CHILDREN) {
             val curLeft = curNode.content.left.get()
             val curRight = curNode.content.right.get()
 

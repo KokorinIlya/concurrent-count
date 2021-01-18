@@ -85,7 +85,12 @@ class CountResult : OperationResult<Int>() {
         visitedNodes.add(nodeId)
     }
 
+    fun isAnswerKnown(nodeId: Long): Boolean = answerLock.withLock {
+        answerNodes.containsKey(nodeId)
+    }
+
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) = answerLock.withLock {
+        assert(visitedLock.withLock { visitedNodes.contains(nodeId) })
         answerNodes.putIfAbsent(nodeId, nodeAnswer)
     }
 

@@ -348,3 +348,27 @@ class DummyDescriptor<T : Comparable<T>>(private val ts: Long) : Descriptor<T>()
         throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 }
+
+class CountDescriptorNoBorders<T : Comparable<T>>(
+    private val leftBorder: T?,
+    private val rightBorder: T?,
+    val result: CountResult
+) : Descriptor<T>() {
+    companion object {
+        fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T): CountDescriptorNoBorders<T> {
+            return CountDescriptorNoBorders(leftBorder, rightBorder, CountResult())
+        }
+    }
+
+    init {
+        assert(leftBorder == null || rightBorder == null || leftBorder <= rightBorder)
+    }
+
+    override fun processRootNode(curNode: RootNode<T>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun processInnerNode(curNode: InnerNodeContent<T>) {
+        TODO("Not yet implemented")
+    }
+}

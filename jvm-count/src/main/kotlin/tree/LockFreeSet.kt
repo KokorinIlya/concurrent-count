@@ -125,4 +125,8 @@ class LockFreeSet<T : Comparable<T>> {
             return TimestampLinearizedResult(result = result, timestamp = timestamp)
         }
     }
+
+    fun countNoBorders(left: T, right: T): TimestampLinearizedResult<Int> {
+        TODO()
+    }
 }

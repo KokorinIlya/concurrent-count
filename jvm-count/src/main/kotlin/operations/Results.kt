@@ -1,7 +1,7 @@
 package operations
 
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 
 /**
@@ -78,25 +78,27 @@ class CountResult : OperationResult<Int>() {
     private val visitedNodes = HashSet<Long>()
     private val answerNodes = HashMap<Long, Int>()
 
-    private val answerLock = ReentrantLock()
-    private val visitedLock = ReentrantLock()
+    private val answerLock = ReentrantReadWriteLock()
+    private val visitedLock = ReentrantReadWriteLock()
 
-    fun preVisitNode(nodeId: Long) = visitedLock.withLock {
+    fun preVisitNode(nodeId: Long) = visitedLock.writeLock().withLock {
         visitedNodes.add(nodeId)
     }
 
-    fun isAnswerKnown(nodeId: Long): Boolean = answerLock.withLock {
+    fun isAnswerKnown(nodeId: Long): Boolean = answerLock.readLock().withLock {
         answerNodes.containsKey(nodeId)
     }
 
-    fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) = answerLock.withLock {
-        assert(visitedLock.withLock { visitedNodes.contains(nodeId) })
-        answerNodes.putIfAbsent(nodeId, nodeAnswer)
+    fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
+        assert(visitedLock.readLock().withLock { visitedNodes.contains(nodeId) })
+        answerLock.writeLock().withLock {
+            answerNodes.putIfAbsent(nodeId, nodeAnswer)
+        }
     }
 
     override fun getResult(): Int? {
-        val totalNodesWithKnownAnswer = answerLock.withLock { answerNodes.size }
-        val totalVisitedNodes = visitedLock.withLock { visitedNodes.size }
+        val totalNodesWithKnownAnswer = answerLock.readLock().withLock { answerNodes.size }
+        val totalVisitedNodes = visitedLock.readLock().withLock { visitedNodes.size }
         assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
         return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*

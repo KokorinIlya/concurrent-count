@@ -317,9 +317,9 @@ class CountDescriptor<T : Comparable<T>>(
         val childRes = processSingleChild(curNode.root)
         if (childRes == null) {
             assert(result.isAnswerKnown(curNode.id))
-            return
+        } else {
+            result.preRemoveFromNode(curNode.id, childRes)
         }
-        result.preRemoveFromNode(curNode.id, childRes)
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
@@ -327,9 +327,9 @@ class CountDescriptor<T : Comparable<T>>(
         val rightRes = processSingleChild(curNode.right)
         if (leftRes == null || rightRes == null) {
             assert(result.isAnswerKnown(curNode.id))
-            return
+        } else {
+            result.preRemoveFromNode(curNode.id, leftRes + rightRes)
         }
-        result.preRemoveFromNode(curNode.id, leftRes + rightRes)
     }
 }
 

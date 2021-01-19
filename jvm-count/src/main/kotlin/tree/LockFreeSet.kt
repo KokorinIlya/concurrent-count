@@ -2,7 +2,13 @@ package tree
 
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
-import operations.*
+import descriptors.DummyDescriptor
+import descriptors.count.CountDescriptor
+import descriptors.singlekey.ExistsDescriptor
+import descriptors.singlekey.SingleKeyOperationDescriptor
+import descriptors.singlekey.write.DeleteDescriptor
+import descriptors.singlekey.write.InsertDescriptor
+import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import queue.RootLockFreeQueue
 
 class LockFreeSet<T : Comparable<T>> {
@@ -124,9 +130,5 @@ class LockFreeSet<T : Comparable<T>> {
         } else {
             return TimestampLinearizedResult(result = result, timestamp = timestamp)
         }
-    }
-
-    fun countNoBorders(left: T, right: T): TimestampLinearizedResult<Int> {
-        TODO()
     }
 }

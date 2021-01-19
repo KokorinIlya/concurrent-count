@@ -22,31 +22,4 @@ data class InnerNode<T : Comparable<T>>(
     val subtreeSize: Int,
     val lastModificationTimestamp: Long,
     val modificationsCount: Int
-) : TreeNode<T>() {
-    override fun toString(): String {
-        val builder = StringBuilder()
-        dumpToString(builder, 0)
-        return builder.toString()
-    }
-
-    private fun dumpChild(child: TreeNode<T>, stringBuilder: StringBuilder, level: Int) {
-        if (child is InnerNode) {
-            child.dumpToString(stringBuilder, level + 1)
-        } else {
-            stringBuilder.append("-".repeat(level + 1))
-            stringBuilder.append(child.toString())
-            stringBuilder.append("\n")
-        }
-    }
-
-    private fun dumpToString(stringBuilder: StringBuilder, level: Int) {
-        stringBuilder.append("-".repeat(level))
-        stringBuilder.append(
-            "{Inner: minKey=$minKey, maxKey=$maxKey, size=$subtreeSize, " +
-                    "modTs=$lastModificationTimestamp}, modCnt=$modificationsCount, " +
-                    "initSz=${content.initialSize}, id=${content.id}, rightMin=${content.rightSubtreeMin}}\n"
-        )
-        dumpChild(content.left.get(), stringBuilder, level)
-        dumpChild(content.right.get(), stringBuilder, level)
-    }
-}
+) : TreeNode<T>()

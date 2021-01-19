@@ -1,7 +1,7 @@
 package tree
 
 import allocation.IdAllocator
-import operations.DummyDescriptor
+import descriptors.DummyDescriptor
 import queue.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReference
 
@@ -67,7 +67,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             initialSize = curSubtreeSize,
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
-            queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+            queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(curOperationTimestamp - 1)),
             rightSubtreeMin = rightSubtreeMin
         )
 

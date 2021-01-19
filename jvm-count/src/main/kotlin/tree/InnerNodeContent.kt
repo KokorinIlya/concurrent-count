@@ -1,6 +1,6 @@
 package tree
 
-import operations.Descriptor
+import descriptors.Descriptor
 import queue.NonRootLockFreeQueue
 
 class InnerNodeContent<T : Comparable<T>>(

@@ -1,6 +1,11 @@
 package tree
 
-import operations.*
+import descriptors.Descriptor
+import descriptors.count.CountDescriptor
+import descriptors.singlekey.ExistsDescriptor
+import descriptors.singlekey.write.DeleteDescriptor
+import descriptors.singlekey.write.InsertDescriptor
+import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import queue.NonRootLockFreeQueue
 import queue.RootLockFreeQueue
 
@@ -101,7 +106,7 @@ class RootNode<T : Comparable<T>>(
     }
 
     private fun tryExecuteSingleDescriptor(curDescriptor: Descriptor<T>) {
-        when (curDescriptor) {
+        when (curDescriptor) { // TODO: move to shouldExecuteDescriptor(RootNode) & processRootNode
             is ExistsDescriptor -> curDescriptor.processRootNode(this)
             is CountDescriptor -> curDescriptor.processRootNode(this)
             is InsertDescriptor -> {

@@ -10,7 +10,7 @@ class DummyDescriptor<T : Comparable<T>>(private val ts: Long) : Descriptor<T>()
             throw UnsupportedOperationException("Cannot change timestamp of dummy descriptor")
         }
 
-    override fun processRootNode(curNode: RootNode<T>) {
+    override fun tryProcessRootNode(curNode: RootNode<T>) {
         throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 

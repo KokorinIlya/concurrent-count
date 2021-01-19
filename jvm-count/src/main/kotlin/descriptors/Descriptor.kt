@@ -23,7 +23,7 @@ abstract class Descriptor<T : Comparable<T>> : TimestampedValue {
             timestampValue = value
         }
 
-    abstract fun processRootNode(curNode: RootNode<T>)
+    abstract fun tryProcessRootNode(curNode: RootNode<T>)
 
     abstract fun processInnerNode(curNode: InnerNodeContent<T>)
 }

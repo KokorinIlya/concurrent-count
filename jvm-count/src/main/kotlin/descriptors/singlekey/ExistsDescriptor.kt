@@ -13,7 +13,7 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processInnerChild(curChild: InnerNode<T>) {
+    private fun processInnerChild(curChild: InnerNode<T>) {
         assert(curChild.lastModificationTimestamp != timestamp)
         val pushRes = curChild.content.queue.pushIf(this)
         if (curChild.lastModificationTimestamp > timestamp) {
@@ -21,11 +21,7 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
-        return curChildRef.get()
-    }
-
-    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {
+    private fun processEmptyChild(curChild: EmptyNode<T>) {
         assert(curChild.creationTimestamp != timestamp)
         if (curChild.creationTimestamp > timestamp) {
             assert(result.getResult() != null)
@@ -34,12 +30,24 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: KeyNode<T>) {
+    private fun processKeyChild(curChild: KeyNode<T>) {
         assert(curChild.creationTimestamp != timestamp)
         if (curChild.creationTimestamp > timestamp) {
             assert(result.getResult() != null)
         } else {
             result.trySetResult(curChild.key == key)
         }
+    }
+
+    override fun processChild(curChildRef: TreeNodeReference<T>) {
+        when (val curChild = curChildRef.get()) {
+            is EmptyNode -> processEmptyChild(curChild)
+            is KeyNode -> processKeyChild(curChild)
+            is InnerNode -> processInnerChild(curChild)
+        }
+    }
+
+    override fun tryProcessRootNode(curNode: RootNode<T>) {
+        processChild(curNode.root)
     }
 }

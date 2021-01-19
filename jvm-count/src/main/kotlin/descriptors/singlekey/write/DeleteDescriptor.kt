@@ -45,4 +45,6 @@ class DeleteDescriptor<T : Comparable<T>>(
             assert(result.getResult() != null)
         }
     }
+
+    override fun shouldBeExecuted(keyExists: Boolean): Boolean = keyExists
 }

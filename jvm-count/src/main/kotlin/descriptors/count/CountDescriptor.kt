@@ -85,7 +85,7 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processRootNode(curNode: RootNode<T>) {
+    override fun tryProcessRootNode(curNode: RootNode<T>) {
         val childRes = processSingleChild(curNode.root)
         if (childRes == null) {
             assert(result.isAnswerKnown(curNode.id))

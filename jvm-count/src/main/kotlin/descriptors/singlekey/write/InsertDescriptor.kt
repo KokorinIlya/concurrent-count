@@ -77,4 +77,6 @@ class InsertDescriptor<T : Comparable<T>>(
     override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
         return curChildRef.getInsert(key, timestamp, nodeIdAllocator)
     }
+
+    override fun shouldBeExecuted(keyExists: Boolean): Boolean = !keyExists
 }

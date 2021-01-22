@@ -40,7 +40,7 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processKeyChild(curChild: KeyNode<T>): Int? { // TODO: move to abstract
+    private fun processKeyChild(curChild: KeyNode<T>): Int? {
         assert(curChild.creationTimestamp != timestamp)
         @Suppress("CascadeIf")
         return if (curChild.creationTimestamp > timestamp) {

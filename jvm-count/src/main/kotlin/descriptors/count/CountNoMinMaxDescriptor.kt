@@ -13,6 +13,10 @@ sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
                 null
             }
         }
+
+        fun <T: Comparable<T>> new(left: T, right: T): BothBorderCountDescriptor<T> {
+            return BothBorderCountDescriptor<T>(leftBorder = left, rightBorder = right, result = CountResult())
+        }
     }
 
     protected fun saveNodeAnswer(curNodeId: Long, curNodeRes: Int?) {

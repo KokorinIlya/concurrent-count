@@ -4,12 +4,15 @@ import allocation.IdAllocator
 import allocation.SequentialIdAllocator
 import descriptors.DummyDescriptor
 import descriptors.count.CountDescriptor
+import descriptors.count.CountNoMinMaxDescriptor
 import descriptors.singlekey.ExistsDescriptor
 import descriptors.singlekey.SingleKeyOperationDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
 import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import queue.RootLockFreeQueue
+import result.CountResult
+import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
@@ -124,11 +127,88 @@ class LockFreeSet<T : Comparable<T>> {
             countInNode(realRoot, descriptor)
         }
 
-        val result = descriptor.result.getResult()
-        if (result == null) {
-            throw AssertionError("Count result should be known at this point")
-        } else {
-            return TimestampLinearizedResult(result = result, timestamp = timestamp)
+        val result = descriptor.result.getResult() ?: throw AssertionError(
+            "Count result should be known at this point"
+        )
+        return TimestampLinearizedResult(result = result, timestamp = timestamp)
+    }
+
+    private fun doCountNoMinMax(
+        result: CountResult, startRef: TreeNodeReference<T>, timestamp: Long,
+        action: (InnerNodeContent<T>) -> TreeNodeReference<T>?
+    ) {
+        var curRef = startRef
+        while (result.getResult() == null) {
+            when (val curNode = curRef.get()) {
+                is InnerNode -> {
+                    curNode.content.executeUntilTimestamp(timestamp)
+                    val nextRef = action(curNode.content) ?: return
+                    curRef = nextRef
+                }
+                else -> {
+                    return
+                }
+            }
         }
+    }
+
+    private fun doCountNoMinMaxRightBorder(
+        startRef: TreeNodeReference<T>, rightBorder: T,
+        timestamp: Long, result: CountResult
+    ) {
+        doCountNoMinMax(result, startRef, timestamp) {
+            if (rightBorder < it.rightSubtreeMin) {
+                it.left
+            } else {
+                it.right
+            }
+        }
+    }
+
+    private fun doCountNoMinMaxLeftBorder(
+        startRef: TreeNodeReference<T>, leftBorder: T,
+        timestamp: Long, result: CountResult
+    ) {
+        doCountNoMinMax(result, startRef, timestamp) {
+            if (leftBorder >= it.rightSubtreeMin) {
+                it.right
+            } else {
+                it.left
+            }
+        }
+    }
+
+    private fun doCountNoMinMaxBothBorders(
+        startRef: TreeNodeReference<T>, leftBorder: T, rightBorder: T,
+        timestamp: Long, result: CountResult
+    ) {
+        assert(leftBorder <= rightBorder)
+        doCountNoMinMax(result, startRef, timestamp) {
+            when {
+                rightBorder < it.rightSubtreeMin -> it.left
+                leftBorder >= it.rightSubtreeMin -> it.right
+                else -> {
+                    doCountNoMinMaxLeftBorder(it.left, leftBorder, timestamp, result)
+                    doCountNoMinMaxRightBorder(it.right, rightBorder, timestamp, result)
+                    null
+                }
+            }
+        }
+    }
+
+    fun countNoMinMax(left: T, right: T): TimestampLinearizedResult<Int> {
+        require(left <= right)
+        val descriptor = CountNoMinMaxDescriptor.new(left, right)
+        descriptor.result.preVisitNode(root.id)
+        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+        assert(descriptor.timestamp == timestamp)
+
+        root.executeUntilTimestamp(timestamp)
+        doCountNoMinMaxBothBorders(root.root, left, right, timestamp, descriptor.result)
+
+        val result = descriptor.result.getResult() ?: throw AssertionError(
+            "Count result should be known at this point"
+        )
+        return TimestampLinearizedResult(result = result, timestamp = timestamp)
     }
 }

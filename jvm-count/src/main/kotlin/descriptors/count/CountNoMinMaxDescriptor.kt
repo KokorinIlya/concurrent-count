@@ -58,6 +58,7 @@ sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     assert(!curChild.content.queue.pushIf(this))
                     null
                 } else {
+                    result.preVisitNode(curChild.content.id)
                     curChild.content.queue.pushIf(this)
                     0
                 }

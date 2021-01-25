@@ -107,7 +107,11 @@ class MultithreadedSetTest {
                                 val l = minOf(x, y)
                                 val r = maxOf(x, y)
 
-                                val result = set.count(left = l, right = r)
+                                val result = if (random.nextBoolean()) {
+                                    set.countNoMinMax(left = l, right = r)
+                                } else {
+                                    set.count(left = l, right = r)
+                                }
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
                                     result = CountResult(res = result.result),

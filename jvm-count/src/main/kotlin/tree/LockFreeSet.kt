@@ -3,15 +3,14 @@ package tree
 import allocation.IdAllocator
 import allocation.SequentialIdAllocator
 import descriptors.DummyDescriptor
-import descriptors.count.CountDescriptor
-import descriptors.count.CountNoMinMaxDescriptor
 import descriptors.singlekey.ExistsDescriptor
-import descriptors.singlekey.SingleKeyOperationDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
-import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
+import initiator.singlekey.executeSingleKeyOperation
+import initiator.count.doCountNoMinMax
+import initiator.count.doCount
+import initiator.singlekey.doWaitFreeContains
 import queue.RootLockFreeQueue
-import result.CountResult
 import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>> {
@@ -27,188 +26,27 @@ class LockFreeSet<T : Comparable<T>> {
         )
     }
 
-    private fun <R> executeSingleKeyOperation(
-        descriptor: SingleKeyOperationDescriptor<T, R>
-    ): TimestampLinearizedResult<R> {
-        /*
-        Push descriptor to the root queue, execute all preceding operations and either throw current operation away
-        or propagate it downwards. If current operation was thrown away, we will learn it at the very beginning of the
-         first iteration of the loop.
-         */
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
-
-        root.executeUntilTimestamp(timestamp)
-
-        var curNodeRef = root.root
-        while (true) {
-            /*
-            If answer is set, then no further actions is required
-             */
-            val curResult = descriptor.result.getResult()
-            if (curResult != null) {
-                return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
-            }
-
-            when (val curNode = curNodeRef.get()) {
-                is InnerNode -> {
-
-                    /*
-                    Process current operation in the inner node (possible, affecting it's child, if it's child is
-                    either KeyNode or EmptyNode). After that, go to next node, traversing the appropriate path.
-                    If the request has been finished by some other thread, we will learn it in the very beginning
-                    of the next iteration of the loop.
-                    Also note, that if next node on the appropriate path is leaf node (either KeyNode or EmptyNode),
-                    request should be fully completed on the current iteration of the loop.
-                     */
-                    curNode.content.executeUntilTimestamp(timestamp)
-                    curNodeRef = curNode.content.route(descriptor.key)
-                }
-                else -> {
-                    if (descriptor is SingleKeyWriteOperationDescriptor) { // TODO
-                        descriptor.result.tryFinish()
-                    }
-                    val result = descriptor.result.getResult() ?: throw AssertionError(
-                        "Result should be known at this point"
-                    )
-                    return TimestampLinearizedResult(result, timestamp)
-                }
-            }
-        }
-    }
-
     fun insert(x: T): TimestampLinearizedResult<Boolean> {
-        return executeSingleKeyOperation(InsertDescriptor.new(x, nodeIdAllocator))
+        return executeSingleKeyOperation(root, InsertDescriptor.new(x, nodeIdAllocator))
     }
 
     fun delete(x: T): TimestampLinearizedResult<Boolean> {
-        return executeSingleKeyOperation(DeleteDescriptor.new(x, nodeIdAllocator))
+        return executeSingleKeyOperation(root, DeleteDescriptor.new(x, nodeIdAllocator))
     }
 
     fun exists(x: T): TimestampLinearizedResult<Boolean> {
-        return executeSingleKeyOperation(ExistsDescriptor.new(x))
-    }
-
-    private fun countInNode(curNode: InnerNode<T>, descriptor: CountDescriptor<T>) {
-        curNode.content.executeUntilTimestamp(descriptor.timestamp)
-        if (descriptor.result.getResult() != null) {
-            return
-        }
-
-        val intersectionResult = descriptor.intersectBorders(
-            minKey = curNode.minKey,
-            maxKey = curNode.maxKey
-        )
-
-        if (intersectionResult == CountDescriptor.IntersectionResult.GO_TO_CHILDREN) {
-            val curLeft = curNode.content.left.get()
-            val curRight = curNode.content.right.get()
-
-            if (curLeft is InnerNode) {
-                countInNode(curLeft, descriptor)
-            }
-            if (curRight is InnerNode) {
-                countInNode(curRight, descriptor)
-            }
-        }
+        return executeSingleKeyOperation(root, ExistsDescriptor.new(x))
     }
 
     fun count(left: T, right: T): TimestampLinearizedResult<Int> {
-        require(left <= right)
-        val descriptor = CountDescriptor.new(left, right)
-        descriptor.result.preVisitNode(root.id)
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
-
-        root.executeUntilTimestamp(timestamp)
-
-        val realRoot = root.root.get()
-        if (realRoot is InnerNode) {
-            countInNode(realRoot, descriptor)
-        }
-
-        val result = descriptor.result.getResult() ?: throw AssertionError(
-            "Count result should be known at this point"
-        )
-        return TimestampLinearizedResult(result = result, timestamp = timestamp)
-    }
-
-    private fun doCountNoMinMax(
-        result: CountResult, startRef: TreeNodeReference<T>, timestamp: Long,
-        action: (InnerNodeContent<T>) -> TreeNodeReference<T>?
-    ) {
-        var curRef = startRef
-        while (result.getResult() == null) {
-            when (val curNode = curRef.get()) {
-                is InnerNode -> {
-                    curNode.content.executeUntilTimestamp(timestamp)
-                    val nextRef = action(curNode.content) ?: return
-                    curRef = nextRef
-                }
-                else -> {
-                    return
-                }
-            }
-        }
-    }
-
-    private fun doCountNoMinMaxRightBorder(
-        startRef: TreeNodeReference<T>, rightBorder: T,
-        timestamp: Long, result: CountResult
-    ) {
-        doCountNoMinMax(result, startRef, timestamp) {
-            if (rightBorder < it.rightSubtreeMin) {
-                it.left
-            } else {
-                it.right
-            }
-        }
-    }
-
-    private fun doCountNoMinMaxLeftBorder(
-        startRef: TreeNodeReference<T>, leftBorder: T,
-        timestamp: Long, result: CountResult
-    ) {
-        doCountNoMinMax(result, startRef, timestamp) {
-            if (leftBorder >= it.rightSubtreeMin) {
-                it.right
-            } else {
-                it.left
-            }
-        }
-    }
-
-    private fun doCountNoMinMaxBothBorders(
-        startRef: TreeNodeReference<T>, leftBorder: T, rightBorder: T,
-        timestamp: Long, result: CountResult
-    ) {
-        assert(leftBorder <= rightBorder)
-        doCountNoMinMax(result, startRef, timestamp) {
-            when {
-                rightBorder < it.rightSubtreeMin -> it.left
-                leftBorder >= it.rightSubtreeMin -> it.right
-                else -> {
-                    doCountNoMinMaxLeftBorder(it.left, leftBorder, timestamp, result)
-                    doCountNoMinMaxRightBorder(it.right, rightBorder, timestamp, result)
-                    null
-                }
-            }
-        }
+        return doCount(root, left, right)
     }
 
     fun countNoMinMax(left: T, right: T): TimestampLinearizedResult<Int> {
-        require(left <= right)
-        val descriptor = CountNoMinMaxDescriptor.new(left, right)
-        descriptor.result.preVisitNode(root.id)
-        val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-        assert(descriptor.timestamp == timestamp)
+        return doCountNoMinMax(root, left, right)
+    }
 
-        root.executeUntilTimestamp(timestamp)
-        doCountNoMinMaxBothBorders(root.root, left, right, timestamp, descriptor.result)
-
-        val result = descriptor.result.getResult() ?: throw AssertionError(
-            "Count result should be known at this point"
-        )
-        return TimestampLinearizedResult(result = result, timestamp = timestamp)
+    fun containsWaitFree(key: T): Boolean {
+        return doWaitFreeContains(root, key)
     }
 }

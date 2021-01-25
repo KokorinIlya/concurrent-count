@@ -54,4 +54,15 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQu
             }
         }
     }
+
+    fun getMaxTimestamp(): Long {
+        val curTail = tail.get()
+        val nextTail = curTail.next.get()
+        return if (nextTail != null) {
+            assert(nextTail.data.timestamp == curTail.data.timestamp + 1)
+            nextTail.data.timestamp
+        } else {
+            curTail.data.timestamp
+        }
+    }
 }

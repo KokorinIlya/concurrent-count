@@ -1,10 +1,7 @@
 package descriptors.singlekey.write
 
 import allocation.IdAllocator
-import descriptors.Descriptor
-import descriptors.DummyDescriptor
 import descriptors.singlekey.SingleKeyOperationDescriptor
-import queue.NonRootLockFreeQueue
 import queue.traverse
 import result.SingleKeyWriteOperationResult
 import tree.*
@@ -28,34 +25,33 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         ANSWER_NOT_NEEDED
     }
 
-    private fun traverseQueue(queue: NonRootLockFreeQueue<Descriptor<T>>): QueueTraverseResult {
-        return queue.traverse(
-            initialValue = QueueTraverseResult.UNABLE_TO_DETERMINE,
-            shouldReturn = { it >= timestamp },
-            returnValue = { QueueTraverseResult.ANSWER_NOT_NEEDED },
-            key = key,
-            insertDescriptorProcessor = {
-                assert(
-                    it == QueueTraverseResult.UNABLE_TO_DETERMINE || it == QueueTraverseResult.KEY_NOT_EXISTS
-                )
-                QueueTraverseResult.KEY_EXISTS
-            },
-            deleteDescriptorProcessor = {
-                assert(
-                    it == QueueTraverseResult.UNABLE_TO_DETERMINE || it == QueueTraverseResult.KEY_EXISTS
-                )
-                QueueTraverseResult.KEY_NOT_EXISTS
-            }
-        )
-    }
-
     private fun checkExistence(root: RootNode<T>): Boolean? {
         var curNodeRef = root.root
 
         while (true) {
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
-                    when (traverseQueue(curNode.content.queue)) {
+                    val traversalResult = curNode.content.queue.traverse(
+                        initialValue = QueueTraverseResult.UNABLE_TO_DETERMINE,
+                        shouldReturn = { it >= timestamp },
+                        returnValue = { QueueTraverseResult.ANSWER_NOT_NEEDED },
+                        key = key,
+                        insertDescriptorProcessor = {
+                            assert(
+                                it == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                                        it == QueueTraverseResult.KEY_NOT_EXISTS
+                            )
+                            QueueTraverseResult.KEY_EXISTS
+                        },
+                        deleteDescriptorProcessor = {
+                            assert(
+                                it == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                                        it == QueueTraverseResult.KEY_EXISTS
+                            )
+                            QueueTraverseResult.KEY_NOT_EXISTS
+                        }
+                    )
+                    when (traversalResult) {
                         QueueTraverseResult.KEY_EXISTS -> {
                             return true
                         }

@@ -62,14 +62,11 @@ class MultithreadedSetTest {
             }
             val set = LockFreeSet<Int>()
             val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
-            val barrier = CyclicBarrier(threadsCount)
-
 
             QueueLogger.clear()
 
             (1..threadsCount).map { threadIndex ->
                 thread {
-                    barrier.await()
                     val currentThreadOperations = (1..operationsPerThreadCount).map {
                         val curOp = random.nextDouble()
                         when {

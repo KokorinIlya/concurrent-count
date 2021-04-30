@@ -118,7 +118,7 @@ class WaitFreeContainsTest {
     }
 
     @Test
-    fun stressNotRanges() {
+    fun stressNotRangesFewThreads() {
         val genEven: (Random) -> Int = { it.nextInt(0, 1_000_000) * 2 }
         val genOdd: (Random) -> Int = { it.nextInt(0, 1_000_000) * 2 + 1 }
         doStressTest(
@@ -127,6 +127,20 @@ class WaitFreeContainsTest {
             insertProb = 0.2,
             deleteProb = 0.15,
             generators = listOf(genEven, genOdd)
+        )
+    }
+
+    @Test
+    fun stressNotRangesManyThreads() {
+        val generators = (0..31).map { curNum ->
+            { random: Random -> random.nextInt(0, 100_000) * 100 + curNum }
+        }
+        doStressTest(
+            testsCount = 1000,
+            actionPerTest = 1000,
+            insertProb = 0.2,
+            deleteProb = 0.15,
+            generators = generators
         )
     }
 }

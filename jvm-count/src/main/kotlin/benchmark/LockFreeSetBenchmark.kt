@@ -70,9 +70,8 @@ private fun doSingleRun(
 private fun doBenchmark(
     runsCount: Int, threadsCount: Int, operationsPerThread: Int,
     expectedSize: Int, modifyProb: Double, countProb: Double,
-    rangeBegin: Int, rangeEnd: Int,
-    filePath: String
-) {
+    rangeBegin: Int, rangeEnd: Int
+): Double {
     assert(rangeEnd - rangeBegin >= expectedSize)
     var sumRes = 0.0
     repeat(runsCount) {
@@ -82,18 +81,18 @@ private fun doBenchmark(
             rangeBegin, rangeEnd
         )
     }
-    Files.newBufferedWriter(Paths.get(filePath)).use {
-        it.write("${sumRes / runsCount}")
-    }
+    return sumRes / runsCount
 }
 
 fun main() {
-    for (threadsCount in 1..16) {
-        doBenchmark(
-            runsCount = 10, threadsCount = threadsCount, operationsPerThread = 100_000,
-            expectedSize = 100_000, modifyProb = 0.1, countProb = 0.5,
-            rangeBegin = -1_000_000, rangeEnd = 1_000_000,
-            filePath = "result-$threadsCount.txt"
-        )
+    Files.newBufferedWriter(Paths.get("result.txt")).use {
+        for (threadsCount in 1..16) {
+            val ops = doBenchmark(
+                runsCount = 10, threadsCount = threadsCount, operationsPerThread = 100_000,
+                expectedSize = 100_000, modifyProb = 0.1, countProb = 0.5,
+                rangeBegin = -1_000_000, rangeEnd = 1_000_000
+            )
+            it.write("$threadsCount threads, $ops ops / millisecond")
+        }
     }
 }

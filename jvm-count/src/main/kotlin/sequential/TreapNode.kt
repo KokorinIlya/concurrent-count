@@ -1,5 +1,8 @@
 package sequential
 
+import common.DefinedBorder
+import common.RequestBorder
+
 data class TreapNode<T : Comparable<T>>(
     val key: T, val priority: Long,
     val left: TreapNode<T>?,
@@ -20,6 +23,30 @@ data class TreapNode<T : Comparable<T>>(
         } else {
             doCopy(newLeft = left.removeLeftmost())
         }
+    }
+}
+
+fun <T : Comparable<T>> TreapNode<T>?.doCount(
+    leftBorder: T, rightBorder: T,
+    minPossibleKey: RequestBorder<T>, maxPossibleKey: RequestBorder<T>
+): Int {
+    assert(
+        minPossibleKey !is DefinedBorder || maxPossibleKey !is DefinedBorder ||
+                minPossibleKey.border < maxPossibleKey.border
+    )
+    return if (this == null) {
+        0
+    } else if (minPossibleKey is DefinedBorder && minPossibleKey.border >= leftBorder &&
+        maxPossibleKey is DefinedBorder && maxPossibleKey.border < rightBorder
+    ) {
+        size
+    } else {
+        if (key in leftBorder..rightBorder) {
+            1
+        } else {
+            0
+        } + left.doCount(leftBorder, rightBorder, minPossibleKey, DefinedBorder(border = key)) +
+                right.doCount(leftBorder, rightBorder, DefinedBorder(border = key), maxPossibleKey)
     }
 }
 

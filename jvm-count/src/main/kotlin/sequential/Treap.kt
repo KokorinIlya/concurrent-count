@@ -1,5 +1,6 @@
 package sequential
 
+import common.InfBorder
 import kotlin.random.Random
 
 class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val random: Random) {
@@ -33,5 +34,10 @@ class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val rand
         val newRight = splitRight!!.removeLeftmost()
         head = merge(splitLeft, newRight)
         return true
+    }
+
+    fun count(leftBorder: T, rightBorder: T): Int {
+        assert(leftBorder <= rightBorder)
+        return head.doCount(leftBorder, rightBorder, InfBorder(""), InfBorder(""))
     }
 }

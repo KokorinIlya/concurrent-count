@@ -14,6 +14,11 @@ test {
     useJUnitPlatform()
 }
 
+task runLockFreeSetBenchmark(type: JavaExec) {
+    main = 'benchmark.LockFreeSetBenchmark'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation 'org.jetbrains.kotlinx:lincheck:2.9'

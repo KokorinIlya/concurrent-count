@@ -88,10 +88,12 @@ private fun doBenchmark(
 }
 
 fun main() {
-    doBenchmark(
-        runsCount = 2, threadsCount = 4, operationsPerThread = 10000,
-        expectedSize = 100, modifyProb = 0.1, countProb = 0.5,
-        rangeBegin = -1_000_000, rangeEnd = 1_000_000,
-        filePath = "result.txt"
-    )
+    for (threadsCount in 1..16) {
+        doBenchmark(
+            runsCount = 10, threadsCount = threadsCount, operationsPerThread = 100_000,
+            expectedSize = 100_000, modifyProb = 0.1, countProb = 0.5,
+            rangeBegin = -1_000_000, rangeEnd = 1_000_000,
+            filePath = "result-$threadsCount.txt"
+        )
+    }
 }

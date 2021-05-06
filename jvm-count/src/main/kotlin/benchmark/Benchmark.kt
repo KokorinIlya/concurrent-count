@@ -147,9 +147,9 @@ private fun doTreapBenchmark(
 
 fun main() {
     Files.newBufferedWriter(Paths.get("result-lock-free.txt")).use {
-        for (threadsCount in 1..8) {
+        for (threadsCount in 1..32) {
             val ops = doLockFreeSetBenchmark(
-                runsCount = 1, threadsCount = threadsCount, operationsPerThread = 10_000,
+                runsCount = 5, threadsCount = threadsCount, operationsPerThread = 10_000,
                 expectedSize = 10_000, modifyProb = 0.1, countProb = 0.0,
                 rangeBegin = -1_000_000, rangeEnd = 1_000_000
             )
@@ -159,7 +159,7 @@ fun main() {
 
     Files.newBufferedWriter(Paths.get("result-treap.txt")).use {
         val ops = doTreapBenchmark(
-            runsCount = 1, operationsCount = 10_000,
+            runsCount = 5, operationsCount = 10_000,
             expectedSize = 10_000, modifyProb = 0.1, countProb = 0.0,
             rangeBegin = -1_000_000, rangeEnd = 1_000_000
         )

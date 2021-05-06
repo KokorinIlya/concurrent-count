@@ -14,7 +14,7 @@ test {
     useJUnitPlatform()
 }
 
-task runLockFreeSetBenchmark(type: JavaExec) {
+task runBenchmark(type: JavaExec) {
     main = 'benchmark.Benchmark'
     classpath = sourceSets.main.runtimeClasspath
 }

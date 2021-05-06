@@ -2,7 +2,8 @@
 
 package benchmark
 
-import sequential.Treap
+import common.CountSet
+import sequential.persistent.Treap
 import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -10,6 +11,41 @@ import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
+
+private fun doOperations(
+    operationsCount: Int, random: Random,
+    modifyProb: Double, countProb: Double,
+    rangeBegin: Int, rangeEnd: Int,
+    set: CountSet<Int>
+) {
+    repeat(operationsCount) {
+        val curP = random.nextDouble(from = 0.0, until = 1.0)
+        when {
+            curP < modifyProb -> {
+                val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+                set.insert(curKey)
+            }
+            curP < 2 * modifyProb -> {
+                val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+                set.delete(curKey)
+            }
+            curP < 2 * modifyProb + countProb -> {
+                val a = random.nextInt(from = rangeBegin, until = rangeEnd)
+                val b = random.nextInt(from = rangeBegin, until = rangeEnd)
+                val (leftBorder, rightBorder) = if (a < b) {
+                    Pair(a, b)
+                } else {
+                    Pair(b, a)
+                }
+                set.count(leftBorder, rightBorder)
+            }
+            else -> {
+                val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+                set.contains(curKey)
+            }
+        }
+    }
+}
 
 private fun doLockFreeSetSingleRun(
     threadsCount: Int, operationsPerThread: Int,
@@ -21,7 +57,7 @@ private fun doLockFreeSetSingleRun(
     var curSize = 0
     while (curSize < expectedSize) {
         val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-        val addRes = set.insert(curKey)
+        val addRes = set.insertTimestamped(curKey)
         if (addRes.result) {
             curSize += 1
         }
@@ -31,33 +67,12 @@ private fun doLockFreeSetSingleRun(
         thread {
             barrier.countDown()
             barrier.await()
-            repeat(operationsPerThread) {
-                val curP = random.nextDouble(from = 0.0, until = 1.0)
-                when {
-                    curP < modifyProb -> {
-                        val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                        set.insert(curKey)
-                    }
-                    curP < 2 * modifyProb -> {
-                        val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                        set.delete(curKey)
-                    }
-                    curP < 2 * modifyProb + countProb -> {
-                        val a = random.nextInt(from = rangeBegin, until = rangeEnd)
-                        val b = random.nextInt(from = rangeBegin, until = rangeEnd)
-                        val (leftBorder, rightBorder) = if (a < b) {
-                            Pair(a, b)
-                        } else {
-                            Pair(b, a)
-                        }
-                        set.countNoMinMax(leftBorder, rightBorder)
-                    }
-                    else -> {
-                        val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                        set.exists(curKey)
-                    }
-                }
-            }
+            doOperations(
+                operationsCount = operationsPerThread, random = random,
+                modifyProb = modifyProb, countProb = countProb,
+                rangeBegin = rangeBegin, rangeEnd = rangeEnd,
+                set = set
+            )
         }
     }
     val time = kotlin.system.measureTimeMillis {
@@ -91,7 +106,7 @@ private fun doTreapSingleRun(
     rangeBegin: Int, rangeEnd: Int
 ): Double {
     val random = Random(System.currentTimeMillis())
-    val treap = Treap<Int>(head = null, random = random)
+    val treap = Treap<Int>(random = random)
     var curSize = 0
     while (curSize < expectedSize) {
         val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
@@ -101,33 +116,12 @@ private fun doTreapSingleRun(
         }
     }
     val time = kotlin.system.measureTimeMillis {
-        repeat(operationsCount) {
-            val curP = random.nextDouble(from = 0.0, until = 1.0)
-            when {
-                curP < modifyProb -> {
-                    val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                    treap.insert(curKey)
-                }
-                curP < 2 * modifyProb -> {
-                    val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                    treap.remove(curKey)
-                }
-                curP < 2 * modifyProb + countProb -> {
-                    val a = random.nextInt(from = rangeBegin, until = rangeEnd)
-                    val b = random.nextInt(from = rangeBegin, until = rangeEnd)
-                    val (leftBorder, rightBorder) = if (a < b) {
-                        Pair(a, b)
-                    } else {
-                        Pair(b, a)
-                    }
-                    treap.count(leftBorder, rightBorder)
-                }
-                else -> {
-                    val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
-                    treap.contains(curKey)
-                }
-            }
-        }
+        doOperations(
+            operationsCount = operationsCount, random = random,
+            modifyProb = modifyProb, countProb = countProb,
+            rangeBegin = rangeBegin, rangeEnd = rangeEnd,
+            set = treap
+        )
     }
     return operationsCount.toDouble() / time.toDouble()
 }

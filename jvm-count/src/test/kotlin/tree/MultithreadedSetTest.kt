@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.opentest4j.AssertionFailedError
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
@@ -75,7 +74,7 @@ class MultithreadedSetTest {
                                 Insert
                                  */
                                 val x = random.nextInt(from = keysFrom, until = keysTo)
-                                val result = set.insert(x)
+                                val result = set.insertTimestamped(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
                                     result = InsertResult(res = result.result),
@@ -87,7 +86,7 @@ class MultithreadedSetTest {
                                 Delete
                                  */
                                 val x = random.nextInt(from = keysFrom, until = keysTo)
-                                val result = set.delete(x)
+                                val result = set.deleteTimestamped(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
                                     result = DeleteResult(res = result.result),
@@ -105,9 +104,9 @@ class MultithreadedSetTest {
                                 val r = maxOf(x, y)
 
                                 val result = if (random.nextBoolean()) {
-                                    set.countNoMinMax(left = l, right = r)
+                                    set.countTimestamped(left = l, right = r)
                                 } else {
-                                    set.count(left = l, right = r)
+                                    set.countMinMaxTimestamped(left = l, right = r)
                                 }
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
@@ -120,7 +119,7 @@ class MultithreadedSetTest {
                                 Exists
                                  */
                                 val x = random.nextInt(from = keysFrom, until = keysTo)
-                                val result = set.exists(x)
+                                val result = set.containsTimestamped(x)
                                 TimestampedOperationWithResult(
                                     timestamp = result.timestamp,
                                     result = ExistsResult(res = result.result),

@@ -1,4 +1,4 @@
-package sequential
+package sequential.persistent
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
@@ -19,7 +19,7 @@ class TreapTest {
                 println(testNum)
             }
 
-            val treap = Treap<Int>(head = null, random = random)
+            val treap = Treap<Int>(random = random)
             val set = SequentialSet<Int>()
             repeat(operationsPerTest) {
                 val curOp = random.nextDouble()
@@ -40,7 +40,7 @@ class TreapTest {
                          */
                         val x = random.nextInt(from = minKey, until = maxKey)
 
-                        val result = treap.remove(x)
+                        val result = treap.delete(x)
                         val expectedResult = set.delete(x)
                         assertEquals(result, expectedResult)
                     }

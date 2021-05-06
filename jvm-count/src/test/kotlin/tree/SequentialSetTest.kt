@@ -9,48 +9,48 @@ class SequentialSetTest {
     @Test
     fun simpleTest() {
         val set = LockFreeSet<Int>()
-        assertTrue(set.insert(1).result)
-        assertTrue(set.exists(1).result)
-        assertFalse(set.exists(2).result)
-        assertFalse(set.insert(1).result)
-        assertTrue(set.insert(7).result)
-        assertTrue(set.insert(-1).result)
-        assertEquals(set.count(0, 8).result, 2)
+        assertTrue(set.insertTimestamped(1).result)
+        assertTrue(set.containsTimestamped(1).result)
+        assertFalse(set.containsTimestamped(2).result)
+        assertFalse(set.insertTimestamped(1).result)
+        assertTrue(set.insertTimestamped(7).result)
+        assertTrue(set.insertTimestamped(-1).result)
+        assertEquals(set.countMinMaxTimestamped(0, 8).result, 2)
     }
 
     @Test
     fun failedTest() {
         val lockFreeSet = LockFreeSet<Int>()
-        assertTrue(lockFreeSet.insert(71).result)
-        assertEquals(1, lockFreeSet.count(6, 81).result)
-        assertTrue(lockFreeSet.insert(22).result)
-        assertEquals(0, lockFreeSet.count(23, 53).result)
-        assertTrue(lockFreeSet.insert(15).result)
-        assertFalse(lockFreeSet.insert(15).result)
-        assertEquals(0, lockFreeSet.count(58, 63).result)
-        assertEquals(2, lockFreeSet.count(4, 43).result)
+        assertTrue(lockFreeSet.insertTimestamped(71).result)
+        assertEquals(1, lockFreeSet.countMinMaxTimestamped(6, 81).result)
+        assertTrue(lockFreeSet.insertTimestamped(22).result)
+        assertEquals(0, lockFreeSet.countMinMaxTimestamped(23, 53).result)
+        assertTrue(lockFreeSet.insertTimestamped(15).result)
+        assertFalse(lockFreeSet.insertTimestamped(15).result)
+        assertEquals(0, lockFreeSet.countMinMaxTimestamped(58, 63).result)
+        assertEquals(2, lockFreeSet.countMinMaxTimestamped(4, 43).result)
     }
 
     @Test
     fun otherFailedTest() {
         val lockFreeSet = LockFreeSet<Int>()
-        assertTrue(lockFreeSet.insert(96).result)
-        assertEquals(0, lockFreeSet.count(0, 66).result)
-        assertTrue(lockFreeSet.insert(34).result)
-        assertEquals(1, lockFreeSet.count(22, 34).result)
+        assertTrue(lockFreeSet.insertTimestamped(96).result)
+        assertEquals(0, lockFreeSet.countMinMaxTimestamped(0, 66).result)
+        assertTrue(lockFreeSet.insertTimestamped(34).result)
+        assertEquals(1, lockFreeSet.countMinMaxTimestamped(22, 34).result)
     }
 
     @Test
     fun failedTestRebuilding() {
         val lockFreeSet = LockFreeSet<Int>()
-        assertTrue(lockFreeSet.insert(1).result) // 1
-        assertTrue(lockFreeSet.insert(5).result) // 1, 5
-        assertTrue(lockFreeSet.insert(0).result) // 0, 1, 5
-        assertTrue(lockFreeSet.delete(1).result) // 0, 5
-        assertTrue(lockFreeSet.insert(7).result) // 0, 5, 7
-        assertTrue(lockFreeSet.insert(9).result) // 0, 5, 7, 9
-        assertTrue(lockFreeSet.exists(9).result)
-        assertTrue(lockFreeSet.delete(9).result)
+        assertTrue(lockFreeSet.insertTimestamped(1).result) // 1
+        assertTrue(lockFreeSet.insertTimestamped(5).result) // 1, 5
+        assertTrue(lockFreeSet.insertTimestamped(0).result) // 0, 1, 5
+        assertTrue(lockFreeSet.deleteTimestamped(1).result) // 0, 5
+        assertTrue(lockFreeSet.insertTimestamped(7).result) // 0, 5, 7
+        assertTrue(lockFreeSet.insertTimestamped(9).result) // 0, 5, 7, 9
+        assertTrue(lockFreeSet.containsTimestamped(9).result)
+        assertTrue(lockFreeSet.deleteTimestamped(9).result)
     }
 
     @Suppress("SameParameterValue")
@@ -80,7 +80,7 @@ class SequentialSetTest {
                              */
                             val x = random.nextInt(from = minKey, until = maxKey)
 
-                            val result = lockFreeSet.insert(x).result
+                            val result = lockFreeSet.insertTimestamped(x).result
                             val expectedResult = sequentialSet.insert(x)
                             assertEquals(result, expectedResult)
                         }
@@ -90,7 +90,7 @@ class SequentialSetTest {
                              */
                             val x = random.nextInt(from = minKey, until = maxKey)
 
-                            val result = lockFreeSet.delete(x).result
+                            val result = lockFreeSet.deleteTimestamped(x).result
                             val expectedResult = sequentialSet.delete(x)
                             assertEquals(result, expectedResult)
                         }
@@ -103,7 +103,7 @@ class SequentialSetTest {
                             val l = minOf(x, y)
                             val r = maxOf(x, y)
 
-                            val result = lockFreeSet.count(l, r).result
+                            val result = lockFreeSet.countMinMaxTimestamped(l, r).result
                             val expectedResult = sequentialSet.count(l, r)
                             assertEquals(expectedResult, result)
                         }
@@ -113,7 +113,7 @@ class SequentialSetTest {
                              */
                             val x = random.nextInt(from = minKey, until = maxKey)
 
-                            val result = lockFreeSet.exists(x).result
+                            val result = lockFreeSet.containsTimestamped(x).result
                             val expectedResult = sequentialSet.exists(x)
                             assertEquals(result, expectedResult)
                         }

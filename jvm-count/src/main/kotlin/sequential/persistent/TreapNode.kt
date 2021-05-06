@@ -1,4 +1,4 @@
-package sequential
+package sequential.persistent
 
 import common.DefinedBorder
 import common.RequestBorder

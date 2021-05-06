@@ -1,10 +1,13 @@
-package sequential
+package sequential.persistent
 
+import common.CountSet
 import common.InfBorder
 import kotlin.random.Random
 
-class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val random: Random) {
-    fun contains(key: T): Boolean {
+class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val random: Random): CountSet<T> {
+    constructor(random: Random) : this(head = null, random = random)
+
+    override fun contains(key: T): Boolean {
         var curNode = head ?: return false
         while (true) {
             curNode = when {
@@ -15,7 +18,7 @@ class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val rand
         }
     }
 
-    fun insert(key: T): Boolean {
+    override fun insert(key: T): Boolean {
         if (contains(key)) {
             return false
         }
@@ -26,7 +29,7 @@ class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val rand
         return true
     }
 
-    fun remove(key: T): Boolean {
+    override fun delete(key: T): Boolean {
         if (!contains(key)) {
             return false
         }
@@ -36,7 +39,7 @@ class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val rand
         return true
     }
 
-    fun count(leftBorder: T, rightBorder: T): Int {
+    override fun count(leftBorder: T, rightBorder: T): Int {
         assert(leftBorder <= rightBorder)
         return head.doCount(leftBorder, rightBorder, InfBorder(""), InfBorder(""))
     }

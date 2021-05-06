@@ -29,13 +29,13 @@ class WaitFreeContainsTest {
                         when {
                             op <= insertProb -> {
                                 val x = curGen(random)
-                                val res = set.insert(x).result
+                                val res = set.insertTimestamped(x).result
                                 val expectedRes = curThreadSet.add(x)
                                 assertEquals(expectedRes, res)
                             }
                             op <= insertProb + deleteProb -> {
                                 val x = curGen(random)
-                                val res = set.delete(x).result
+                                val res = set.deleteTimestamped(x).result
                                 val expectedRes = curThreadSet.remove(x)
                                 assertEquals(expectedRes, res)
                             }

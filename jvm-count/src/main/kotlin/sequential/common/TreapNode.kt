@@ -1,9 +1,7 @@
 package sequential.common
 
 import common.DefinedBorder
-import common.InfBorder
 import common.RequestBorder
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 abstract class TreapNode<T : Comparable<T>> {
@@ -48,6 +46,7 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
     }
 }
 
+@Suppress("unused")
 fun <T : Comparable<T>> TreapNode<T>?.getHeight(): Int {
     return if (this == null) {
         0

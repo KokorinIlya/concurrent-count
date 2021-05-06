@@ -3,21 +3,21 @@ package sequential.persistent
 import common.DefinedBorder
 import common.RequestBorder
 
-data class TreapNode<T : Comparable<T>>(
+data class PersistentTreapNode<T : Comparable<T>>(
     val key: T, val priority: Long,
-    val left: TreapNode<T>?,
-    val right: TreapNode<T>?,
+    val left: PersistentTreapNode<T>?,
+    val right: PersistentTreapNode<T>?,
     val size: Int
 ) {
     fun doCopy(
         newKey: T = this.key, newPriority: Long = this.priority,
-        newLeft: TreapNode<T>? = this.left, newRight: TreapNode<T>? = this.right
-    ): TreapNode<T> {
+        newLeft: PersistentTreapNode<T>? = this.left, newRight: PersistentTreapNode<T>? = this.right
+    ): PersistentTreapNode<T> {
         val newSize = newLeft.getSize() + newRight.getSize() + 1
-        return TreapNode(newKey, newPriority, newLeft, newRight, newSize)
+        return PersistentTreapNode(newKey, newPriority, newLeft, newRight, newSize)
     }
 
-    fun removeLeftmost(): TreapNode<T>? {
+    fun removeLeftmost(): PersistentTreapNode<T>? {
         return if (left == null) {
             right
         } else {
@@ -26,7 +26,7 @@ data class TreapNode<T : Comparable<T>>(
     }
 }
 
-fun <T : Comparable<T>> TreapNode<T>?.doCount(
+fun <T : Comparable<T>> PersistentTreapNode<T>?.doCount(
     leftBorder: T, rightBorder: T,
     minPossibleKey: RequestBorder<T>, maxPossibleKey: RequestBorder<T>
 ): Int {
@@ -50,11 +50,13 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
     }
 }
 
-fun <T : Comparable<T>> TreapNode<T>?.getSize(): Int {
+fun <T : Comparable<T>> PersistentTreapNode<T>?.getSize(): Int {
     return this?.size ?: 0
 }
 
-fun <T : Comparable<T>> TreapNode<T>?.split(splitKey: T): Pair<TreapNode<T>?, TreapNode<T>?> {
+fun <T : Comparable<T>> PersistentTreapNode<T>?.split(
+    splitKey: T
+): Pair<PersistentTreapNode<T>?, PersistentTreapNode<T>?> {
     return when {
         this == null -> Pair(null, null)
         splitKey > key -> {
@@ -70,7 +72,7 @@ fun <T : Comparable<T>> TreapNode<T>?.split(splitKey: T): Pair<TreapNode<T>?, Tr
     }
 }
 
-fun <T : Comparable<T>> merge(left: TreapNode<T>?, right: TreapNode<T>?): TreapNode<T>? {
+fun <T : Comparable<T>> merge(left: PersistentTreapNode<T>?, right: PersistentTreapNode<T>?): PersistentTreapNode<T>? {
     return when {
         left == null -> right
         right == null -> left

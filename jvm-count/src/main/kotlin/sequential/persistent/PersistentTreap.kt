@@ -4,7 +4,10 @@ import common.CountSet
 import common.InfBorder
 import kotlin.random.Random
 
-class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val random: Random): CountSet<T> {
+class PersistentTreap<T : Comparable<T>>(
+    private var head: PersistentTreapNode<T>?,
+    private val random: Random
+) : CountSet<T> {
     constructor(random: Random) : this(head = null, random = random)
 
     override fun contains(key: T): Boolean {
@@ -23,7 +26,10 @@ class Treap<T : Comparable<T>>(private var head: TreapNode<T>?, private val rand
             return false
         }
         val (left, right) = head.split(key)
-        val keyTreap = TreapNode(key = key, priority = random.nextLong(), left = null, right = null, size = 1)
+        val keyTreap = PersistentTreapNode(
+            key = key, priority = random.nextLong(),
+            left = null, right = null, size = 1
+        )
         val curRes = merge(left, keyTreap)
         head = merge(curRes, right)
         return true

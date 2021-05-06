@@ -1,5 +1,7 @@
 package tree
 
+import common.SequentialSet
+import common.testSequentialSet
 import logging.QueueLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
@@ -71,54 +73,12 @@ class SequentialSetTest {
 
                 val lockFreeSet = LockFreeSet<Int>()
                 val sequentialSet = SequentialSet<Int>()
-                repeat(operationsPerTest) {
-                    val curOp = random.nextDouble()
-                    when {
-                        curOp <= insertProb -> {
-                            /*
-                            Insert
-                             */
-                            val x = random.nextInt(from = minKey, until = maxKey)
-
-                            val result = lockFreeSet.insertTimestamped(x).result
-                            val expectedResult = sequentialSet.insert(x)
-                            assertEquals(result, expectedResult)
-                        }
-                        curOp <= insertProb + deleteProb -> {
-                            /*
-                            Delete
-                             */
-                            val x = random.nextInt(from = minKey, until = maxKey)
-
-                            val result = lockFreeSet.deleteTimestamped(x).result
-                            val expectedResult = sequentialSet.delete(x)
-                            assertEquals(result, expectedResult)
-                        }
-                        curOp <= insertProb + deleteProb + countProb -> {
-                            /*
-                            Count
-                             */
-                            val x = random.nextInt(from = minKey, until = maxKey)
-                            val y = random.nextInt(from = minKey, until = maxKey)
-                            val l = minOf(x, y)
-                            val r = maxOf(x, y)
-
-                            val result = lockFreeSet.countMinMaxTimestamped(l, r).result
-                            val expectedResult = sequentialSet.count(l, r)
-                            assertEquals(expectedResult, result)
-                        }
-                        else -> {
-                            /*
-                            Exists
-                             */
-                            val x = random.nextInt(from = minKey, until = maxKey)
-
-                            val result = lockFreeSet.containsTimestamped(x).result
-                            val expectedResult = sequentialSet.exists(x)
-                            assertEquals(result, expectedResult)
-                        }
-                    }
-                }
+                testSequentialSet(
+                    operationsPerTest = operationsPerTest, random = random,
+                    insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
+                    minKey = minKey, maxKey = maxKey,
+                    setToTest = lockFreeSet, stressSet = sequentialSet
+                )
             }
         } catch (e: Throwable) {
             println("LOGS:")

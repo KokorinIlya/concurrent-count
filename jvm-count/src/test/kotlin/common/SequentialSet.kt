@@ -1,4 +1,4 @@
-package tree
+package common
 
 class SequentialSet<T : Comparable<T>> {
     private val set = HashSet<T>()

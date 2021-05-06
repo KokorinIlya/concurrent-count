@@ -3,7 +3,7 @@
 package benchmark
 
 import common.CountSet
-import sequential.persistent.Treap
+import sequential.modifiable.ModifiableTreap
 import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -106,7 +106,7 @@ private fun doTreapSingleRun(
     rangeBegin: Int, rangeEnd: Int
 ): Double {
     val random = Random(System.currentTimeMillis())
-    val treap = Treap<Int>(random = random)
+    val treap = ModifiableTreap<Int>(random = random)
     var curSize = 0
     while (curSize < expectedSize) {
         val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)

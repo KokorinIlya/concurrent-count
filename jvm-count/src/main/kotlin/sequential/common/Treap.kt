@@ -4,7 +4,7 @@ import common.CountSet
 import common.InfBorder
 
 abstract class Treap<T : Comparable<T>> : CountSet<T> {
-    protected abstract val head: TreapNode<T>?
+    abstract val head: TreapNode<T>?
 
     override fun contains(key: T): Boolean {
         var curNode = head ?: return false

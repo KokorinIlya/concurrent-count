@@ -4,6 +4,7 @@ package benchmark
 
 import common.CountSet
 import sequential.modifiable.ModifiableTreap
+import sequential.persistent.PersistentTreap
 import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -146,10 +147,10 @@ private fun doTreapBenchmark(
 
 fun main() {
     Files.newBufferedWriter(Paths.get("result-lock-free.txt")).use {
-        for (threadsCount in 1..16) {
+        for (threadsCount in 1..32) {
             val ops = doLockFreeSetBenchmark(
-                runsCount = 10, threadsCount = threadsCount, operationsPerThread = 100_000,
-                expectedSize = 100_000, modifyProb = 0.1, countProb = 0.5,
+                runsCount = 10, threadsCount = threadsCount, operationsPerThread = 10_000,
+                expectedSize = 10_000, modifyProb = 0.1, countProb = 0.5,
                 rangeBegin = -1_000_000, rangeEnd = 1_000_000
             )
             it.write("$threadsCount threads, $ops ops / millisecond\n")
@@ -158,8 +159,8 @@ fun main() {
 
     Files.newBufferedWriter(Paths.get("result-treap.txt")).use {
         val ops = doTreapBenchmark(
-            runsCount = 10, operationsCount = 100_000,
-            expectedSize = 100_000, modifyProb = 0.1, countProb = 0.5,
+            runsCount = 10, operationsCount = 10_000,
+            expectedSize = 10_000, modifyProb = 0.1, countProb = 0.5,
             rangeBegin = -1_000_000, rangeEnd = 1_000_000
         )
         it.write("$ops ops / millisecond\n")

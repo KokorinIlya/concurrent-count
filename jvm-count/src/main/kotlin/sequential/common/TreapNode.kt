@@ -1,7 +1,10 @@
 package sequential.common
 
 import common.DefinedBorder
+import common.InfBorder
 import common.RequestBorder
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.max
 
 abstract class TreapNode<T : Comparable<T>> {
     abstract val left: TreapNode<T>?
@@ -9,6 +12,14 @@ abstract class TreapNode<T : Comparable<T>> {
     abstract val key: T
     abstract val priority: Long
     abstract val size: Int
+}
+
+private fun <T : Comparable<T>> noIntersection(
+    leftBorder: T, rightBorder: T,
+    minPossibleKey: RequestBorder<T>, maxPossibleKey: RequestBorder<T>
+): Boolean {
+    return minPossibleKey is DefinedBorder && minPossibleKey.border > rightBorder ||
+            maxPossibleKey is DefinedBorder && maxPossibleKey.border <= leftBorder
 }
 
 fun <T : Comparable<T>> TreapNode<T>?.doCount(
@@ -25,6 +36,8 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
         maxPossibleKey is DefinedBorder && maxPossibleKey.border < rightBorder
     ) {
         size
+    } else if (noIntersection(leftBorder, rightBorder, minPossibleKey, maxPossibleKey)) {
+        0
     } else {
         if (key in leftBorder..rightBorder) {
             1
@@ -32,6 +45,14 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
             0
         } + left.doCount(leftBorder, rightBorder, minPossibleKey, DefinedBorder(border = key)) +
                 right.doCount(leftBorder, rightBorder, DefinedBorder(border = key), maxPossibleKey)
+    }
+}
+
+fun <T : Comparable<T>> TreapNode<T>?.getHeight(): Int {
+    return if (this == null) {
+        0
+    } else {
+        max(left.getHeight(), right.getHeight()) + 1
     }
 }
 

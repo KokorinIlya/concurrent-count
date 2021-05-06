@@ -60,7 +60,7 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T> {
     }
 
     override fun contains(key: T): Boolean {
-        return containsTimestamped(key).result
+        return containsWaitFree(key) //containsTimestamped(key).result
     }
 
     override fun count(leftBorder: T, rightBorder: T): Int {

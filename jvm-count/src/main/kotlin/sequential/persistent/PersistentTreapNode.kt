@@ -1,14 +1,14 @@
 package sequential.persistent
 
-import common.DefinedBorder
-import common.RequestBorder
+import sequential.common.TreapNode
+import sequential.common.getSize
 
-data class PersistentTreapNode<T : Comparable<T>>(
-    val key: T, val priority: Long,
-    val left: PersistentTreapNode<T>?,
-    val right: PersistentTreapNode<T>?,
-    val size: Int
-) {
+class PersistentTreapNode<T : Comparable<T>>(
+    override val key: T, override val priority: Long,
+    override val left: PersistentTreapNode<T>?,
+    override val right: PersistentTreapNode<T>?,
+    override val size: Int
+) : TreapNode<T>() {
     fun doCopy(
         newKey: T = this.key, newPriority: Long = this.priority,
         newLeft: PersistentTreapNode<T>? = this.left, newRight: PersistentTreapNode<T>? = this.right
@@ -17,41 +17,15 @@ data class PersistentTreapNode<T : Comparable<T>>(
         return PersistentTreapNode(newKey, newPriority, newLeft, newRight, newSize)
     }
 
-    fun removeLeftmost(): PersistentTreapNode<T>? {
+    fun removeLeftmost(keyToDelete: T): PersistentTreapNode<T>? {
         return if (left == null) {
+            assert(key == keyToDelete)
             right
         } else {
-            doCopy(newLeft = left.removeLeftmost())
+            assert(key > keyToDelete)
+            doCopy(newLeft = left.removeLeftmost(keyToDelete))
         }
     }
-}
-
-fun <T : Comparable<T>> PersistentTreapNode<T>?.doCount(
-    leftBorder: T, rightBorder: T,
-    minPossibleKey: RequestBorder<T>, maxPossibleKey: RequestBorder<T>
-): Int {
-    assert(
-        minPossibleKey !is DefinedBorder || maxPossibleKey !is DefinedBorder ||
-                minPossibleKey.border < maxPossibleKey.border
-    )
-    return if (this == null) {
-        0
-    } else if (minPossibleKey is DefinedBorder && minPossibleKey.border >= leftBorder &&
-        maxPossibleKey is DefinedBorder && maxPossibleKey.border < rightBorder
-    ) {
-        size
-    } else {
-        if (key in leftBorder..rightBorder) {
-            1
-        } else {
-            0
-        } + left.doCount(leftBorder, rightBorder, minPossibleKey, DefinedBorder(border = key)) +
-                right.doCount(leftBorder, rightBorder, DefinedBorder(border = key), maxPossibleKey)
-    }
-}
-
-fun <T : Comparable<T>> PersistentTreapNode<T>?.getSize(): Int {
-    return this?.size ?: 0
 }
 
 fun <T : Comparable<T>> PersistentTreapNode<T>?.split(
@@ -72,7 +46,10 @@ fun <T : Comparable<T>> PersistentTreapNode<T>?.split(
     }
 }
 
-fun <T : Comparable<T>> merge(left: PersistentTreapNode<T>?, right: PersistentTreapNode<T>?): PersistentTreapNode<T>? {
+fun <T : Comparable<T>> merge(
+    left: PersistentTreapNode<T>?,
+    right: PersistentTreapNode<T>?
+): PersistentTreapNode<T>? {
     return when {
         left == null -> right
         right == null -> left

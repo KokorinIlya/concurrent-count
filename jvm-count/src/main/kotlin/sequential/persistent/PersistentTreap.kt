@@ -1,25 +1,13 @@
 package sequential.persistent
 
-import common.CountSet
-import common.InfBorder
+import sequential.common.Treap
 import kotlin.random.Random
 
 class PersistentTreap<T : Comparable<T>>(
-    private var head: PersistentTreapNode<T>?,
+    override var head: PersistentTreapNode<T>?,
     private val random: Random
-) : CountSet<T> {
+) : Treap<T>() {
     constructor(random: Random) : this(head = null, random = random)
-
-    override fun contains(key: T): Boolean {
-        var curNode = head ?: return false
-        while (true) {
-            curNode = when {
-                key == curNode.key -> return true
-                key < curNode.key -> curNode.left ?: return false
-                else -> curNode.right ?: return false
-            }
-        }
-    }
 
     override fun insert(key: T): Boolean {
         if (contains(key)) {
@@ -40,13 +28,8 @@ class PersistentTreap<T : Comparable<T>>(
             return false
         }
         val (splitLeft, splitRight) = head.split(key)
-        val newRight = splitRight!!.removeLeftmost()
+        val newRight = splitRight!!.removeLeftmost(key)
         head = merge(splitLeft, newRight)
         return true
-    }
-
-    override fun count(leftBorder: T, rightBorder: T): Int {
-        assert(leftBorder <= rightBorder)
-        return head.doCount(leftBorder, rightBorder, InfBorder(""), InfBorder(""))
     }
 }

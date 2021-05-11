@@ -3,9 +3,13 @@
 package benchmark
 
 import common.CountSet
+import treap.concurrent.LockTreap
+import treap.concurrent.UniversalConstructionTreap
 import treap.modifiable.ModifiableTreap
+import treap.persistent.PersistentTreap
 import tree.LockFreeSet
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -101,27 +105,42 @@ private fun doBenchmark(
     return sumRes / runsCount
 }
 
-fun main() {
-    val expectedSize = 10_000
-    Files.newBufferedWriter(Paths.get("result-lock-free.txt")).use {
+
+private fun doMultipleThreadsBenchmark(
+    basePath: Path, benchName: String, @Suppress("SameParameterValue") expectedSize: Int,
+    setGetter: (Random) -> CountSet<Int>
+) {
+    Files.newBufferedWriter(basePath.resolve("$benchName.txt")).use {
         for (threadsCount in 1..32) {
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
                 expectedSize = expectedSize, modifyProb = 0.1, countProb = 0.0,
                 rangeBegin = 0, rangeEnd = 2 * expectedSize,
-                setGetter = { LockFreeSet() }
+                setGetter = setGetter
             )
             it.write("$threadsCount threads, $ops ops / millisecond\n")
         }
     }
+}
 
-    Files.newBufferedWriter(Paths.get("result-treap.txt")).use {
-        val ops = doBenchmark(
-            runsCount = 1, milliseconds = 5_000, threadsCount = 1,
-            setGetter = { random -> ModifiableTreap(random = random) },
-            expectedSize = expectedSize, modifyProb = 0.1, countProb = 0.0,
-            rangeBegin = 0, rangeEnd = 2 * expectedSize
-        )
-        it.write("$ops ops / millisecond\n")
-    }
+fun main() {
+    val basePath = Paths.get("benchmarks")
+    Files.createDirectories(basePath)
+    val expectedSize = 10_000
+    doMultipleThreadsBenchmark(
+        basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
+        setGetter = { LockFreeSet() }
+    )
+    doMultipleThreadsBenchmark(
+        basePath = basePath, benchName = "lock-persistent", expectedSize = expectedSize,
+        setGetter = { random -> LockTreap(treap = PersistentTreap(random)) }
+    )
+    doMultipleThreadsBenchmark(
+        basePath = basePath, benchName = "lock-modifiable", expectedSize = expectedSize,
+        setGetter = { random -> LockTreap(treap = ModifiableTreap(random)) }
+    )
+    doMultipleThreadsBenchmark(
+        basePath = basePath, benchName = "universal", expectedSize = expectedSize,
+        setGetter = { random -> UniversalConstructionTreap(random) }
+    )
 }

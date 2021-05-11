@@ -1,4 +1,4 @@
-package sequential.modifiable
+package treap.modifiable
 
 import common.testSequentialSet
 import org.junit.jupiter.api.Test

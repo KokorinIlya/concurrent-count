@@ -1,7 +1,7 @@
-package sequential.modifiable
+package treap.modifiable
 
-import sequential.common.TreapNode
-import sequential.common.getSize
+import treap.common.TreapNode
+import treap.common.getSize
 
 class ModifiableTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,

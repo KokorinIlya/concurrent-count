@@ -1,7 +1,12 @@
-package sequential.persistent
+package treap.persistent
 
-import sequential.common.TreapNode
-import sequential.common.getSize
+import common.None
+import common.Optional
+import common.Some
+import treap.common.TreapNode
+import treap.common.contains
+import treap.common.getSize
+import kotlin.random.Random
 
 class PersistentTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,
@@ -55,5 +60,29 @@ fun <T : Comparable<T>> merge(
         right == null -> left
         left.priority > right.priority -> left.doCopy(newRight = merge(left.right, right))
         else -> right.doCopy(newLeft = merge(left, right.left))
+    }
+}
+
+fun <T : Comparable<T>> PersistentTreapNode<T>?.insert(newKey: T, random: Random): Optional<PersistentTreapNode<T>?> {
+    return if (contains(newKey)) {
+        None
+    } else {
+        val (left, right) = split(newKey)
+        val keyTreap = PersistentTreapNode(
+            key = newKey, priority = random.nextLong(),
+            left = null, right = null, size = 1
+        )
+        val curRes = merge(left, keyTreap)
+        Some(data = merge(curRes, right))
+    }
+}
+
+fun <T : Comparable<T>> PersistentTreapNode<T>?.delete(deletedKey: T): Optional<PersistentTreapNode<T>?> {
+    return if (!contains(deletedKey)) {
+        None
+    } else {
+        val (splitLeft, splitRight) = split(deletedKey)
+        val newRight = splitRight!!.removeLeftmost(deletedKey)
+        Some(data = merge(splitLeft, newRight))
     }
 }

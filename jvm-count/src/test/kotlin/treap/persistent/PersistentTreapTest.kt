@@ -1,4 +1,4 @@
-package sequential.persistent
+package treap.persistent
 
 import common.testSequentialSet
 import org.junit.jupiter.api.Test

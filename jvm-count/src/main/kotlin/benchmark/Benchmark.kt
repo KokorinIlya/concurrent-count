@@ -3,8 +3,7 @@
 package benchmark
 
 import common.CountSet
-import sequential.modifiable.ModifiableTreap
-import sequential.persistent.PersistentTreap
+import treap.modifiable.ModifiableTreap
 import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Paths

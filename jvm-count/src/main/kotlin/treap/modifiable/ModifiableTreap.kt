@@ -1,20 +1,17 @@
-package sequential.persistent
+package treap.modifiable
 
-import sequential.common.Treap
+import treap.common.Treap
 import kotlin.random.Random
 
-class PersistentTreap<T : Comparable<T>>(
-    override var head: PersistentTreapNode<T>?,
-    private val random: Random
-) : Treap<T>() {
-    constructor(random: Random) : this(head = null, random = random)
+class ModifiableTreap<T : Comparable<T>>(private val random: Random) : Treap<T>() {
+    override var head: ModifiableTreapNode<T>? = null
 
     override fun insert(key: T): Boolean {
         if (contains(key)) {
             return false
         }
         val (left, right) = head.split(key)
-        val keyTreap = PersistentTreapNode(
+        val keyTreap = ModifiableTreapNode(
             key = key, priority = random.nextLong(),
             left = null, right = null, size = 1
         )
@@ -28,8 +25,14 @@ class PersistentTreap<T : Comparable<T>>(
             return false
         }
         val (splitLeft, splitRight) = head.split(key)
-        val newRight = splitRight!!.removeLeftmost(key)
-        head = merge(splitLeft, newRight)
+        head = if (splitRight!!.key == key) {
+            assert(splitRight.left == null)
+            merge(splitLeft, splitRight.right)
+        } else {
+            assert(splitRight.left != null)
+            splitRight.removeLeftmost(key)
+            merge(splitLeft, splitRight)
+        }
         return true
     }
 }

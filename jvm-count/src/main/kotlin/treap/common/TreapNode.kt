@@ -1,6 +1,7 @@
-package sequential.common
+package treap.common
 
 import common.DefinedBorder
+import common.InfBorder
 import common.RequestBorder
 import kotlin.math.max
 
@@ -10,6 +11,17 @@ abstract class TreapNode<T : Comparable<T>> {
     abstract val key: T
     abstract val priority: Long
     abstract val size: Int
+}
+
+fun <T: Comparable<T>> TreapNode<T>?.contains(checkedKey: T): Boolean {
+    var curNode = this ?: return false
+    while (true) {
+        curNode = when {
+            checkedKey == curNode.key -> return true
+            checkedKey < curNode.key -> curNode.left ?: return false
+            else -> curNode.right ?: return false
+        }
+    }
 }
 
 private fun <T : Comparable<T>> noIntersection(
@@ -44,6 +56,11 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
         } + left.doCount(leftBorder, rightBorder, minPossibleKey, DefinedBorder(border = key)) +
                 right.doCount(leftBorder, rightBorder, DefinedBorder(border = key), maxPossibleKey)
     }
+}
+
+fun <T : Comparable<T>> TreapNode<T>?.count(leftBorder: T, rightBorder: T): Int {
+    assert(leftBorder <= rightBorder)
+    return doCount(leftBorder, rightBorder, InfBorder(""), InfBorder(""))
 }
 
 @Suppress("unused")

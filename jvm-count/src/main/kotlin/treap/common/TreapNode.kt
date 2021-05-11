@@ -13,7 +13,7 @@ abstract class TreapNode<T : Comparable<T>> {
     abstract val size: Int
 }
 
-fun <T: Comparable<T>> TreapNode<T>?.contains(checkedKey: T): Boolean {
+fun <T : Comparable<T>> TreapNode<T>?.contains(checkedKey: T): Boolean {
     var curNode = this ?: return false
     while (true) {
         curNode = when {
@@ -60,7 +60,7 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
 
 fun <T : Comparable<T>> TreapNode<T>?.count(leftBorder: T, rightBorder: T): Int {
     assert(leftBorder <= rightBorder)
-    return doCount(leftBorder, rightBorder, InfBorder(""), InfBorder(""))
+    return doCount(leftBorder, rightBorder, InfBorder, InfBorder)
 }
 
 @Suppress("unused")

@@ -1,8 +1,8 @@
 package common
 
-sealed class RequestBorder<T>
+sealed class RequestBorder<out T>
 
-data class InfBorder<T>(val x: String) : RequestBorder<T>() // TODO: object
+object InfBorder : RequestBorder<Nothing>()
 
 data class DefinedBorder<T>(val border: T) : RequestBorder<T>()
 

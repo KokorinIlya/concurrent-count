@@ -16,32 +16,36 @@ class UniversalConstructionTreap<T : Comparable<T>>(private val random: Random) 
     private val head = AtomicReference<PersistentTreapNode<T>?>(null)
 
     private fun doWriteOperation(
-        writeOperation: PersistentTreapNode<T>?.() -> Optional<PersistentTreapNode<T>?>
+        writeOperation: (PersistentTreapNode<T>?) -> Optional<PersistentTreapNode<T>?>
     ): Boolean {
-        while (true) {
+        loop@ while (true) {
             val curHead = head.get()
-            when (val res = curHead.writeOperation()) {
+            return when (val res = writeOperation(curHead)) {
                 is Some -> {
                     val newHead = res.data
                     if (head.compareAndSet(curHead, newHead)) {
-                        return true
+                        true
+                    } else {
+                        continue@loop
                     }
                 }
-                is None -> return false
+                is None -> false
             }
         }
     }
 
-    override fun insert(key: T): Boolean = doWriteOperation { insert(key, random) }
+    override fun insert(key: T): Boolean = doWriteOperation { curHead -> curHead.insert(key, random) }
 
-    override fun delete(key: T): Boolean = doWriteOperation { delete(key) }
+    override fun delete(key: T): Boolean = doWriteOperation { curHead -> curHead.delete(key) }
 
-    private fun <R> doReadOperation(readOperation: PersistentTreapNode<T>?.() -> R): R {
+    private fun <R> doReadOperation(readOperation: (PersistentTreapNode<T>?) -> R): R {
         val curHead = head.get()
-        return curHead.readOperation()
+        return readOperation(curHead)
     }
 
-    override fun contains(key: T): Boolean = doReadOperation { contains(key) }
+    override fun contains(key: T): Boolean = doReadOperation { curHead -> curHead.contains(key) }
 
-    override fun count(leftBorder: T, rightBorder: T): Int = doReadOperation { count(leftBorder, rightBorder) }
+    override fun count(leftBorder: T, rightBorder: T): Int = doReadOperation { curHead ->
+        curHead.count(leftBorder, rightBorder)
+    }
 }

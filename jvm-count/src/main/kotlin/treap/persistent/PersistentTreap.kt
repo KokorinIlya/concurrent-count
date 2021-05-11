@@ -10,9 +10,9 @@ class PersistentTreap<T : Comparable<T>>(private val random: Random) : Treap<T>(
     override var head: PersistentTreapNode<T>? = null
 
     private fun modify(
-        modificationFun: PersistentTreapNode<T>?.() -> Optional<PersistentTreapNode<T>?>
+        modificationFun: (PersistentTreapNode<T>?) -> Optional<PersistentTreapNode<T>?>
     ): Boolean {
-        return when (val res = head.modificationFun()) {
+        return when (val res = modificationFun(head)) {
             is Some -> {
                 head = res.data
                 true
@@ -21,7 +21,7 @@ class PersistentTreap<T : Comparable<T>>(private val random: Random) : Treap<T>(
         }
     }
 
-    override fun insert(key: T): Boolean = modify { insert(key, random) }
+    override fun insert(key: T): Boolean = modify { curHead -> curHead.insert(key, random) }
 
-    override fun delete(key: T): Boolean = modify { delete(key) }
+    override fun delete(key: T): Boolean = modify { curHead -> curHead.delete(key) }
 }

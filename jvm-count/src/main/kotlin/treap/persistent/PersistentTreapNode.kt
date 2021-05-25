@@ -1,8 +1,5 @@
 package treap.persistent
 
-import common.None
-import common.Optional
-import common.Some
 import treap.common.TreapNode
 import treap.common.contains
 import treap.common.getSize
@@ -63,9 +60,12 @@ fun <T : Comparable<T>> merge(
     }
 }
 
-fun <T : Comparable<T>> PersistentTreapNode<T>?.insert(newKey: T, random: Random): Optional<PersistentTreapNode<T>?> {
+fun <T : Comparable<T>> PersistentTreapNode<T>?.insert(
+    newKey: T,
+    random: Random
+): Pair<PersistentTreapNode<T>?, Boolean> {
     return if (contains(newKey)) {
-        None
+        Pair(this, false)
     } else {
         val (left, right) = split(newKey)
         val keyTreap = PersistentTreapNode(
@@ -73,16 +73,16 @@ fun <T : Comparable<T>> PersistentTreapNode<T>?.insert(newKey: T, random: Random
             left = null, right = null, size = 1
         )
         val curRes = merge(left, keyTreap)
-        Some(data = merge(curRes, right))
+        Pair(merge(curRes, right), true)
     }
 }
 
-fun <T : Comparable<T>> PersistentTreapNode<T>?.delete(deletedKey: T): Optional<PersistentTreapNode<T>?> {
+fun <T : Comparable<T>> PersistentTreapNode<T>?.delete(deletedKey: T): Pair<PersistentTreapNode<T>?, Boolean> {
     return if (!contains(deletedKey)) {
-        None
+        Pair(this, false)
     } else {
         val (splitLeft, splitRight) = split(deletedKey)
         val newRight = splitRight!!.removeLeftmost(deletedKey)
-        Some(data = merge(splitLeft, newRight))
+        Pair(merge(splitLeft, newRight), true)
     }
 }

@@ -15,13 +15,13 @@ class UniversalConstructionTreap<T : Comparable<T>>(private val random: Random) 
     private fun <R> doWriteOperation(
         writeOperation: (PersistentTreapNode<T>?) -> Pair<PersistentTreapNode<T>?, R>
     ): R {
-        loop@ while (true) {
+        while (true) {
             val curHead = head.get()
-            val (newHead, res) = writeOperation(curHead);
+            val (newHead, res) = writeOperation(curHead)
             if (head.compareAndSet(curHead, newHead)) {
                 return res
             } else {
-                continue@loop
+                continue
             }
         }
     }

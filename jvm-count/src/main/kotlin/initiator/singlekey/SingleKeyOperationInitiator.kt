@@ -32,7 +32,6 @@ fun <T: Comparable<T>, R> executeSingleKeyOperation(
 
         when (val curNode = curNodeRef.get()) {
             is InnerNode -> {
-
                 /*
                 Process current operation in the inner node (possible, affecting it's child, if it's child is
                 either KeyNode or EmptyNode). After that, go to next node, traversing the appropriate path.

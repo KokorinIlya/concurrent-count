@@ -2,11 +2,32 @@ package initiator.singlekey
 
 import descriptors.singlekey.SingleKeyOperationDescriptor
 import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
+import queue.traverse
 import result.TimestampLinearizedResult
 import tree.InnerNode
 import tree.RootNode
 
-fun <T: Comparable<T>, R> executeSingleKeyOperation(
+private fun <T : Comparable<T>> checkParallel(
+    root: RootNode<T>,
+    descriptor: SingleKeyWriteOperationDescriptor<T>
+): Boolean? {
+    val rootTraversalResult = root.queue.traverse<T, Boolean?>(
+        initialValue = null,
+        shouldReturn = { it >= descriptor.timestamp },
+        returnValue = { it },
+        key = descriptor.key,
+        insertDescriptorProcessor = {
+            true
+        },
+        deleteDescriptorProcessor = {
+            false
+        }
+    )
+
+    return rootTraversalResult ?: descriptor.checkExistenceInner(root)
+}
+
+fun <T : Comparable<T>, R> executeSingleKeyOperation(
     root: RootNode<T>,
     descriptor: SingleKeyOperationDescriptor<T, R>
 ): TimestampLinearizedResult<R> {
@@ -17,6 +38,15 @@ fun <T: Comparable<T>, R> executeSingleKeyOperation(
      */
     val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
     assert(descriptor.timestamp == timestamp)
+
+    if (descriptor is SingleKeyWriteOperationDescriptor) {
+        val keyExists = checkParallel(root, descriptor)
+        if (keyExists == null) {
+            assert(descriptor.result.decisionMade())
+        } else {
+            descriptor.setDecision(keyExists)
+        }
+    }
 
     root.executeUntilTimestamp(timestamp)
 

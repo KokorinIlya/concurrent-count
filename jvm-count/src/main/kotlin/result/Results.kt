@@ -22,13 +22,11 @@ sealed class OperationResult<R> {
 }
 
 class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
-    companion object {
-        enum class Status {
-            UNDECIDED,
-            SHOULD_BE_EXECUTED,
-            DECLINED,
-            EXECUTED
-        }
+    enum class Status {
+        UNDECIDED,
+        SHOULD_BE_EXECUTED,
+        DECLINED,
+        EXECUTED
     }
 
     private val status: AtomicReference<Status> = AtomicReference(Status.UNDECIDED)
@@ -40,6 +38,8 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
             else -> null
         }
     }
+
+    fun getRawStatus(): Status = status.get()
 
     fun decisionMade(): Boolean = status.get() != Status.UNDECIDED
 

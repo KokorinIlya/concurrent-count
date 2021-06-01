@@ -18,14 +18,14 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         }
     }
 
-    private enum class QueueTraverseResult {
+    enum class QueueTraverseResult {
         KEY_EXISTS,
         KEY_NOT_EXISTS,
         UNABLE_TO_DETERMINE,
         ANSWER_NOT_NEEDED
     }
 
-    private fun checkExistence(root: RootNode<T>): Boolean? {
+    fun checkExistenceInner(root: RootNode<T>): Boolean? {
         var curNodeRef = root.root
 
         while (true) {
@@ -79,6 +79,11 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
 
     protected abstract fun shouldBeExecuted(keyExists: Boolean): Boolean
 
+    fun setDecision(keyExists: Boolean) {
+        val opShouldBeExecuted = shouldBeExecuted(keyExists)
+        result.trySetDecision(opShouldBeExecuted)
+    }
+
     private fun execute(root: RootNode<T>) {
         result.trySetDecision(true)
         processChild(root.root)
@@ -90,12 +95,21 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        val keyExists = checkExistence(curNode)
-        if (keyExists == null) {
-            assert(result.decisionMade())
-            return
+        val opShouldBeExecuted = when (result.getRawStatus()) {
+            SingleKeyWriteOperationResult.Status.EXECUTED -> return
+            SingleKeyWriteOperationResult.Status.UNDECIDED -> {
+                val keyExists = checkExistenceInner(curNode)
+                if (keyExists == null) {
+                    assert(result.decisionMade())
+                    return
+                } else {
+                    shouldBeExecuted(keyExists)
+                }
+            }
+            SingleKeyWriteOperationResult.Status.SHOULD_BE_EXECUTED -> true
+            SingleKeyWriteOperationResult.Status.DECLINED -> false
         }
-        if (shouldBeExecuted(keyExists)) {
+        if (opShouldBeExecuted) {
             execute(curNode)
         } else {
             decline()

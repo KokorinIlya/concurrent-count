@@ -111,10 +111,10 @@ private fun doMultipleThreadsBenchmark(
     setGetter: (Random) -> CountSet<Int>
 ) {
     Files.newBufferedWriter(basePath.resolve("$benchName.txt")).use {
-        for (threadsCount in 1..32) {
+        for (threadsCount in 1..16) {
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
-                expectedSize = expectedSize, modifyProb = 0.45, countProb = 0.0,
+                expectedSize = expectedSize, modifyProb = 0.5, countProb = 0.0,
                 rangeBegin = 0, rangeEnd = 2 * expectedSize,
                 setGetter = setGetter
             )
@@ -126,7 +126,7 @@ private fun doMultipleThreadsBenchmark(
 fun main() {
     val basePath = Paths.get("benchmarks")
     Files.createDirectories(basePath)
-    val expectedSize = 10_000
+    val expectedSize = 100_000
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
         setGetter = { LockFreeSet() }

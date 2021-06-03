@@ -3,6 +3,7 @@ package common
 import logging.QueueLogger
 import org.junit.jupiter.api.Assertions
 import org.opentest4j.AssertionFailedError
+import treap.persistent.PersistentTreap
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.random.Random
@@ -33,13 +34,13 @@ data class CountResult(val res: Int) : OperationResult()
 
 data class TimestampedOperationWithResult(val timestamp: Long, val operation: Operation, val result: OperationResult)
 
-private fun getSequentialResults(operations: List<Operation>): List<OperationResult> {
-    val set = SequentialSet<Int>()
+private fun getSequentialResults(operations: List<Operation>, random: Random): List<OperationResult> {
+    val set = PersistentTreap<Int>(random)
     return operations.map {
         when (it) {
             is InsertOperation -> InsertResult(set.insert(it.x))
             is DeleteOperation -> DeleteResult(set.delete(it.x))
-            is ExistsOperation -> ExistsResult(set.exists(it.x))
+            is ExistsOperation -> ExistsResult(set.contains(it.x))
             is CountOperation -> CountResult(set.count(it.left, it.right))
         }
     }
@@ -134,7 +135,7 @@ fun doLinCheck(
             Assertions.assertEquals(operationsPerThread.size, threadsCount)
 
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
-            val expectedResult = getSequentialResults(allOperations.map { it.operation })
+            val expectedResult = getSequentialResults(allOperations.map { it.operation }, random)
             val results = allOperations.map { it.result }
 
             val totalOperations = operationsPerThreadCount * threadsCount

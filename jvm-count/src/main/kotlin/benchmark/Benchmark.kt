@@ -18,20 +18,20 @@ import kotlin.random.Random
 
 private fun doSingleOperation(
     random: Random, rangeBegin: Int, rangeEnd: Int,
-    modifyProb: Double, countProb: Double,
+    insertProb: Double, deleteProb: Double, countProb: Double,
     set: CountSet<Int>
 ) {
     val curP = random.nextDouble(from = 0.0, until = 1.0)
     when {
-        curP < modifyProb -> {
+        curP < insertProb -> {
             val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
             set.insert(curKey)
         }
-        curP < 2 * modifyProb -> {
+        curP < insertProb + deleteProb -> {
             val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
             set.delete(curKey)
         }
-        curP < 2 * modifyProb + countProb -> {
+        curP < insertProb + deleteProb + countProb -> {
             val a = random.nextInt(from = rangeBegin, until = rangeEnd)
             val b = random.nextInt(from = rangeBegin, until = rangeEnd)
             val (leftBorder, rightBorder) = if (a < b) {
@@ -50,7 +50,7 @@ private fun doSingleOperation(
 
 private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
-    expectedSize: Int, modifyProb: Double, countProb: Double,
+    expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Int, rangeEnd: Int,
     setGetter: (Random) -> CountSet<Int>
 ): Double {
@@ -72,7 +72,7 @@ private fun doBenchmarkSingleRun(
             while (running.get()) {
                 doSingleOperation(
                     random = random, rangeBegin = rangeBegin, rangeEnd = rangeEnd,
-                    modifyProb = modifyProb, countProb = countProb, set = set
+                    insertProb = insertProb, deleteProb = deleteProb, countProb = countProb, set = set
                 )
                 curThreadOps += 1
             }
@@ -89,7 +89,7 @@ private fun doBenchmarkSingleRun(
 private fun doBenchmark(
     runsCount: Int, milliseconds: Long, threadsCount: Int,
     setGetter: (Random) -> CountSet<Int>,
-    expectedSize: Int, modifyProb: Double, countProb: Double,
+    expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Int, rangeEnd: Int
 ): Double {
     assert(rangeEnd - rangeBegin >= expectedSize)
@@ -98,7 +98,7 @@ private fun doBenchmark(
         sumRes += doBenchmarkSingleRun(
             milliseconds = milliseconds, threadsCount = threadsCount,
             setGetter = setGetter, expectedSize = expectedSize,
-            modifyProb = modifyProb, countProb = countProb,
+            insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
             rangeBegin = rangeBegin, rangeEnd = rangeEnd
         )
     }
@@ -114,7 +114,7 @@ private fun doMultipleThreadsBenchmark(
         for (threadsCount in 1..16) {
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
-                expectedSize = expectedSize, modifyProb = 0.5, countProb = 0.0,
+                expectedSize = expectedSize, insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
                 rangeBegin = 0, rangeEnd = 100 * expectedSize,
                 setGetter = setGetter
             )

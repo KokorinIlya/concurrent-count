@@ -26,7 +26,7 @@ class UniversalConstructionTreap<T : Comparable<T>>(
             val (newHead, res) = writeOperation(curHead)
             val newPair = Pair(newHead, curVersion + 2)
             if (head.compareAndSet(curPair, newPair)) {
-                return TimestampLinearizedResult(result = res, timestamp = curVersion)
+                return TimestampLinearizedResult(result = res, timestamp = curVersion + 2)
             } else {
                 continue
             }

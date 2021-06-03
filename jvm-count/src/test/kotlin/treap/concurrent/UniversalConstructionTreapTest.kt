@@ -1,9 +1,9 @@
-package tree
+package treap.concurrent
 
-import org.junit.jupiter.api.Test
 import common.doLinCheck
+import org.junit.jupiter.api.Test
 
-class MultithreadedSetTest {
+class UniversalConstructionTreapTest {
     @Suppress("SameParameterValue")
     private fun doTest(
         testsCount: Int, threadsCount: Int, operationsPerThreadCount: Int,
@@ -11,8 +11,8 @@ class MultithreadedSetTest {
         keysFrom: Int, keysTo: Int
     ) {
         doLinCheck(
-            setGetter = { LockFreeSet() },
-            countMethods = listOf("min_max", "no_min_max"),
+            setGetter = { random -> UniversalConstructionTreap(random) },
+            countMethods = listOf(""),
             testsCount = testsCount, threadsCount = threadsCount,
             operationsPerThreadCount = operationsPerThreadCount,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,

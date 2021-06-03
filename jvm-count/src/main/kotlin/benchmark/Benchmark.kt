@@ -126,7 +126,7 @@ private fun doMultipleThreadsBenchmark(
 fun main() {
     val basePath = Paths.get("benchmarks")
     Files.createDirectories(basePath)
-    val expectedSize = 10_000
+    val expectedSize = 100_000
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
         setGetter = { LockFreeSet() }

@@ -105,7 +105,7 @@ class MultithreadedSetTest {
                                 val r = maxOf(x, y)
 
                                 val result = if (random.nextBoolean()) {
-                                    set.countTimestamped(left = l, right = r)
+                                    set.countNoMinMaxTimestamped(left = l, right = r)
                                 } else {
                                     set.countMinMaxTimestamped(left = l, right = r)
                                 }

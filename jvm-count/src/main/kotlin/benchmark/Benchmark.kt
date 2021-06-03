@@ -114,8 +114,8 @@ private fun doMultipleThreadsBenchmark(
         for (threadsCount in 1..16) {
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
-                expectedSize = expectedSize, insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
-                rangeBegin = 0, rangeEnd = 100 * expectedSize,
+                expectedSize = expectedSize, insertProb = 0.1, deleteProb = 0.1, countProb = 0.2,
+                rangeBegin = 0, rangeEnd = 2 * expectedSize,
                 setGetter = setGetter
             )
             it.write("$threadsCount threads, $ops ops / millisecond\n")

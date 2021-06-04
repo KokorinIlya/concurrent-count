@@ -113,8 +113,8 @@ private fun doMultipleThreadsBenchmark(
     Files.newBufferedWriter(basePath.resolve("$benchName.bench")).use {
         for (threadsCount in 1..16) {
             val ops = doBenchmark(
-                runsCount = 10, threadsCount = threadsCount, milliseconds = 5_000,
-                expectedSize = expectedSize, insertProb = 0.2, deleteProb = 0.2, countProb = 0.2,
+                runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
+                expectedSize = expectedSize, insertProb = 0.4, deleteProb = 0.4, countProb = 0.1,
                 rangeBegin = 0, rangeEnd = 2 * expectedSize,
                 setGetter = setGetter
             )

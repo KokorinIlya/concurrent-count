@@ -2,17 +2,16 @@ package tree
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-import kotlin.random.Random
 
 class WaitFreeContainsTest {
     @Suppress("SameParameterValue")
     private fun doStressTest(
-        generators: List<(Random) -> Int>, testsCount: Int, actionPerTest: Int,
+        generators: List<() -> Int>, testsCount: Int, actionPerTest: Int,
         insertProb: Double, deleteProb: Double
     ) {
-        val random = Random(System.currentTimeMillis())
         repeat(testsCount) { testNum ->
             if (testNum % 10 == 0) {
                 println(testNum)
@@ -25,22 +24,22 @@ class WaitFreeContainsTest {
                     val curThreadSet = HashSet<Int>()
 
                     repeat(actionPerTest) {
-                        val op = random.nextDouble()
+                        val op = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
                         when {
                             op <= insertProb -> {
-                                val x = curGen(random)
+                                val x = curGen()
                                 val res = set.insertTimestamped(x).result
                                 val expectedRes = curThreadSet.add(x)
                                 assertEquals(expectedRes, res)
                             }
                             op <= insertProb + deleteProb -> {
-                                val x = curGen(random)
+                                val x = curGen()
                                 val res = set.deleteTimestamped(x).result
                                 val expectedRes = curThreadSet.remove(x)
                                 assertEquals(expectedRes, res)
                             }
                             else -> {
-                                val x = curGen(random)
+                                val x = curGen()
                                 val res = set.containsWaitFree(x)
                                 val expectedRes = curThreadSet.contains(x)
                                 assertEquals(expectedRes, res)
@@ -56,9 +55,9 @@ class WaitFreeContainsTest {
         }
     }
 
-    private fun bordersToGen(leftBorder: Int, rightBorder: Int): (Random) -> Int {
+    private fun bordersToGen(leftBorder: Int, rightBorder: Int): () -> Int {
         assert(leftBorder < rightBorder)
-        return { it.nextInt(leftBorder, rightBorder) }
+        return { ThreadLocalRandom.current().nextInt(leftBorder, rightBorder) }
     }
 
     @Test
@@ -119,8 +118,8 @@ class WaitFreeContainsTest {
 
     @Test
     fun stressNotRangesFewThreads() {
-        val genEven: (Random) -> Int = { it.nextInt(0, 1_000_000) * 2 }
-        val genOdd: (Random) -> Int = { it.nextInt(0, 1_000_000) * 2 + 1 }
+        val genEven: () -> Int = { ThreadLocalRandom.current().nextInt(0, 1_000_000) * 2 }
+        val genOdd: () -> Int = { ThreadLocalRandom.current().nextInt(0, 1_000_000) * 2 + 1 }
         doStressTest(
             testsCount = 1000,
             actionPerTest = 1000,
@@ -133,7 +132,7 @@ class WaitFreeContainsTest {
     @Test
     fun stressNotRangesManyThreads() {
         val generators = (0..31).map { curNum ->
-            { random: Random -> random.nextInt(0, 100_000) * 100 + curNum }
+            { ThreadLocalRandom.current().nextInt(0, 100_000) * 100 + curNum }
         }
         doStressTest(
             testsCount = 1000,

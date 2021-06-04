@@ -11,29 +11,29 @@ import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-import kotlin.random.Random
 
 private fun doSingleOperation(
-    random: Random, rangeBegin: Int, rangeEnd: Int,
+    rangeBegin: Int, rangeEnd: Int,
     insertProb: Double, deleteProb: Double, countProb: Double,
     set: CountSet<Int>
 ) {
-    val curP = random.nextDouble(from = 0.0, until = 1.0)
+    val curP = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
     when {
         curP < insertProb -> {
-            val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
             set.insert(curKey)
         }
         curP < insertProb + deleteProb -> {
-            val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
             set.delete(curKey)
         }
         curP < insertProb + deleteProb + countProb -> {
-            val a = random.nextInt(from = rangeBegin, until = rangeEnd)
-            val b = random.nextInt(from = rangeBegin, until = rangeEnd)
+            val a = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+            val b = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
             val (leftBorder, rightBorder) = if (a < b) {
                 Pair(a, b)
             } else {
@@ -42,7 +42,7 @@ private fun doSingleOperation(
             set.count(leftBorder, rightBorder)
         }
         else -> {
-            val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
             set.contains(curKey)
         }
     }
@@ -52,13 +52,12 @@ private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
     expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Int, rangeEnd: Int,
-    setGetter: (Random) -> CountSet<Int>
+    setGetter: () -> CountSet<Int>
 ): Double {
-    val random = Random(System.currentTimeMillis())
-    val set = setGetter(random)
+    val set = setGetter()
     var curSize = 0
     while (curSize < expectedSize) {
-        val curKey = random.nextInt(from = rangeBegin, until = rangeEnd)
+        val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
         val addRes = set.insert(curKey)
         if (addRes) {
             curSize += 1
@@ -71,7 +70,7 @@ private fun doBenchmarkSingleRun(
             var curThreadOps = 0
             while (running.get()) {
                 doSingleOperation(
-                    random = random, rangeBegin = rangeBegin, rangeEnd = rangeEnd,
+                    rangeBegin = rangeBegin, rangeEnd = rangeEnd,
                     insertProb = insertProb, deleteProb = deleteProb, countProb = countProb, set = set
                 )
                 curThreadOps += 1
@@ -88,7 +87,7 @@ private fun doBenchmarkSingleRun(
 @Suppress("SameParameterValue")
 private fun doBenchmark(
     runsCount: Int, milliseconds: Long, threadsCount: Int,
-    setGetter: (Random) -> CountSet<Int>,
+    setGetter: () -> CountSet<Int>,
     expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Int, rangeEnd: Int
 ): Double {
@@ -108,7 +107,7 @@ private fun doBenchmark(
 
 private fun doMultipleThreadsBenchmark(
     basePath: Path, benchName: String, @Suppress("SameParameterValue") expectedSize: Int,
-    setGetter: (Random) -> CountSet<Int>
+    setGetter: () -> CountSet<Int>
 ) {
     Files.newBufferedWriter(basePath.resolve("$benchName.bench")).use {
         for (threadsCount in 1..16) {
@@ -133,14 +132,14 @@ fun main() {
     )
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-persistent", expectedSize = expectedSize,
-        setGetter = { random -> LockTreap(treap = PersistentTreap(random)) }
+        setGetter = { LockTreap(treap = PersistentTreap()) }
     )
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-modifiable", expectedSize = expectedSize,
-        setGetter = { random -> LockTreap(treap = ModifiableTreap(random)) }
+        setGetter = { LockTreap(treap = ModifiableTreap()) }
     )
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "universal", expectedSize = expectedSize,
-        setGetter = { random -> UniversalConstructionTreap(random) }
+        setGetter = { UniversalConstructionTreap() }
     )
 }

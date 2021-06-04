@@ -3,7 +3,6 @@ package treap.persistent
 import treap.common.TreapNode
 import treap.common.contains
 import treap.common.getSize
-import kotlin.random.Random
 
 class PersistentTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,
@@ -62,14 +61,14 @@ fun <T : Comparable<T>> merge(
 
 fun <T : Comparable<T>> PersistentTreapNode<T>?.insert(
     newKey: T,
-    random: Random
+    newPriority: Long
 ): Pair<PersistentTreapNode<T>?, Boolean> {
     return if (contains(newKey)) {
         Pair(this, false)
     } else {
         val (left, right) = split(newKey)
         val keyTreap = PersistentTreapNode(
-            key = newKey, priority = random.nextLong(),
+            key = newKey, priority = newPriority,
             left = null, right = null, size = 1
         )
         val curRes = merge(left, keyTreap)

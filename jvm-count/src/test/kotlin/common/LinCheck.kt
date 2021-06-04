@@ -5,8 +5,8 @@ import org.junit.jupiter.api.Assertions
 import org.opentest4j.AssertionFailedError
 import treap.persistent.PersistentTreap
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import kotlin.concurrent.thread
-import kotlin.random.Random
 
 sealed class Operation
 
@@ -34,8 +34,8 @@ data class CountResult(val res: Int) : OperationResult()
 
 data class TimestampedOperationWithResult(val timestamp: Long, val operation: Operation, val result: OperationResult)
 
-private fun getSequentialResults(operations: List<Operation>, random: Random): List<OperationResult> {
-    val set = PersistentTreap<Int>(random)
+private fun getSequentialResults(operations: List<Operation>): List<OperationResult> {
+    val set = PersistentTreap<Int>()
     return operations.map {
         when (it) {
             is InsertOperation -> InsertResult(set.insert(it.x))
@@ -47,19 +47,17 @@ private fun getSequentialResults(operations: List<Operation>, random: Random): L
 }
 
 fun doLinCheck(
-    setGetter : (Random) -> CountLinearizableSet<Int>,
+    setGetter: () -> CountLinearizableSet<Int>,
     countMethods: List<String>,
     testsCount: Int, threadsCount: Int, operationsPerThreadCount: Int,
     insertProb: Double, deleteProb: Double, countProb: Double,
     keysFrom: Int, keysTo: Int
 ) {
-    val random = Random(System.currentTimeMillis())
-
     repeat(testsCount) { testNum ->
         if (testNum % 10 == 0) {
             println(testNum)
         }
-        val set = setGetter(random)
+        val set = setGetter()
         val operationsPerThread = ConcurrentHashMap<Int, List<TimestampedOperationWithResult>>()
 
         QueueLogger.clear()
@@ -67,13 +65,13 @@ fun doLinCheck(
         (1..threadsCount).map { threadIndex ->
             thread {
                 val currentThreadOperations = (1..operationsPerThreadCount).map {
-                    val curOp = random.nextDouble()
+                    val curOp = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
                     when {
                         curOp <= insertProb -> {
                             /*
                             Insert
                              */
-                            val x = random.nextInt(from = keysFrom, until = keysTo)
+                            val x = ThreadLocalRandom.current().nextInt(keysFrom, keysTo)
                             val result = set.insertTimestamped(x)
                             TimestampedOperationWithResult(
                                 timestamp = result.timestamp,
@@ -85,7 +83,7 @@ fun doLinCheck(
                             /*
                             Delete
                              */
-                            val x = random.nextInt(from = keysFrom, until = keysTo)
+                            val x = ThreadLocalRandom.current().nextInt(keysFrom, keysTo)
                             val result = set.deleteTimestamped(x)
                             TimestampedOperationWithResult(
                                 timestamp = result.timestamp,
@@ -97,13 +95,13 @@ fun doLinCheck(
                             /*
                             Count
                              */
-                            val x = random.nextInt(from = keysFrom, until = keysTo)
-                            val y = random.nextInt(from = keysFrom, until = keysTo)
+                            val x = ThreadLocalRandom.current().nextInt(keysFrom, keysTo)
+                            val y = ThreadLocalRandom.current().nextInt(keysFrom, keysTo)
 
                             val l = minOf(x, y)
                             val r = maxOf(x, y)
 
-                            val methodIdx = random.nextInt(from = 0, until = countMethods.size)
+                            val methodIdx = ThreadLocalRandom.current().nextInt(0, countMethods.size)
                             val method = countMethods[methodIdx]
                             val result = set.countTimestamped(l, r, method)
                             TimestampedOperationWithResult(
@@ -116,7 +114,7 @@ fun doLinCheck(
                             /*
                             Exists
                              */
-                            val x = random.nextInt(from = keysFrom, until = keysTo)
+                            val x = ThreadLocalRandom.current().nextInt(keysFrom, keysTo)
                             val result = set.containsTimestamped(x)
                             TimestampedOperationWithResult(
                                 timestamp = result.timestamp,
@@ -135,7 +133,7 @@ fun doLinCheck(
             Assertions.assertEquals(operationsPerThread.size, threadsCount)
 
             val allOperations = operationsPerThread.values.toList().flatten().sortedBy { it.timestamp }
-            val expectedResult = getSequentialResults(allOperations.map { it.operation }, random)
+            val expectedResult = getSequentialResults(allOperations.map { it.operation })
             val results = allOperations.map { it.result }
 
             val totalOperations = operationsPerThreadCount * threadsCount

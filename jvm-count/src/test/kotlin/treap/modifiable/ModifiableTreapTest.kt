@@ -19,7 +19,7 @@ class ModifiableTreapTest {
                 println(testNum)
             }
 
-            val treap = ModifiableTreap<Int>(random = random)
+            val treap = ModifiableTreap<Int>()
             val set = SequentialSet<Int>()
             testSequentialSet(
                 operationsPerTest = operationsPerTest, random = random,

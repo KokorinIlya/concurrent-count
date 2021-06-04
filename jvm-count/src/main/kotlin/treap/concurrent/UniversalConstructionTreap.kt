@@ -8,12 +8,10 @@ import treap.common.count
 import treap.persistent.PersistentTreapNode
 import treap.persistent.delete
 import treap.persistent.insert
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.random.Random
 
-class UniversalConstructionTreap<T : Comparable<T>>(
-    private val random: Random
-) : CountSet<T>, CountLinearizableSet<T> {
+class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
     private val head = AtomicReference<Pair<PersistentTreapNode<T>?, Long>>(Pair(null, 0))
 
     private fun <R> doWriteOperation(
@@ -33,8 +31,10 @@ class UniversalConstructionTreap<T : Comparable<T>>(
         }
     }
 
-    override fun insertTimestamped(key: T): TimestampLinearizedResult<Boolean> =
-        doWriteOperation { curHead -> curHead.insert(key, random) }
+    override fun insertTimestamped(key: T): TimestampLinearizedResult<Boolean> {
+        val priority = ThreadLocalRandom.current().nextLong()
+        return doWriteOperation { curHead -> curHead.insert(key, priority) }
+    }
 
     override fun deleteTimestamped(key: T): TimestampLinearizedResult<Boolean> =
         doWriteOperation { curHead -> curHead.delete(key) }

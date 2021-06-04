@@ -1,9 +1,9 @@
 package treap.modifiable
 
 import treap.common.Treap
-import kotlin.random.Random
+import java.util.concurrent.ThreadLocalRandom
 
-class ModifiableTreap<T : Comparable<T>>(private val random: Random) : Treap<T>() {
+class ModifiableTreap<T : Comparable<T>> : Treap<T>() {
     override var head: ModifiableTreapNode<T>? = null
 
     override fun insert(key: T): Boolean {
@@ -12,7 +12,7 @@ class ModifiableTreap<T : Comparable<T>>(private val random: Random) : Treap<T>(
         }
         val (left, right) = head.split(key)
         val keyTreap = ModifiableTreapNode(
-            key = key, priority = random.nextLong(),
+            key = key, priority = ThreadLocalRandom.current().nextLong(),
             left = null, right = null, size = 1
         )
         val curRes = merge(left, keyTreap)

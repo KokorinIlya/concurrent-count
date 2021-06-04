@@ -19,7 +19,7 @@ class PersistentTreapTest {
                 println(testNum)
             }
 
-            val treap = PersistentTreap<Int>(random = random)
+            val treap = PersistentTreap<Int>()
             val set = SequentialSet<Int>()
             testSequentialSet(
                 operationsPerTest = operationsPerTest, random = random,

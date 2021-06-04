@@ -11,7 +11,7 @@ class UniversalConstructionTreapTest {
         keysFrom: Int, keysTo: Int
     ) {
         doLinCheck(
-            setGetter = { random -> UniversalConstructionTreap(random) },
+            setGetter = { UniversalConstructionTreap() },
             countMethods = listOf(""),
             testsCount = testsCount, threadsCount = threadsCount,
             operationsPerThreadCount = operationsPerThreadCount,

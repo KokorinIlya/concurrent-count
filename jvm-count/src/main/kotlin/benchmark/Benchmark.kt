@@ -20,16 +20,22 @@ private fun doSingleOperation(
     rangeBegin: Long, rangeEnd: Long,
     insertProb: Double, deleteProb: Double, countProb: Double,
     set: CountSet<Long>
-) {
+): Int {
     val curP = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
-    when {
+    return when {
         curP < insertProb -> {
             val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
-            set.insert(curKey)
+            val res = set.insert(curKey)
+            if (res) {
+                1
+            } else {
+                0
+            }
         }
         curP < insertProb + deleteProb -> {
             val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             set.delete(curKey)
+            0
         }
         curP < insertProb + deleteProb + countProb -> {
             val a = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
@@ -40,20 +46,24 @@ private fun doSingleOperation(
                 Pair(b, a)
             }
             set.count(leftBorder, rightBorder)
+            0
         }
         else -> {
             val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             set.contains(curKey)
+            0
         }
     }
 }
+
+data class BenchmarkRunResult(val opsPerMillisecond: Double, val succOps: Int, val totalOps: Int)
 
 private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
     expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Long, rangeEnd: Long,
     setGetter: () -> CountSet<Long>
-): Double {
+): BenchmarkRunResult {
     val set = setGetter()
     var curSize = 0
     while (curSize < expectedSize) {
@@ -65,23 +75,30 @@ private fun doBenchmarkSingleRun(
     }
     val running = AtomicBoolean(true)
     val totalOps = AtomicInteger(0)
+    val totalSuccOps = AtomicInteger(0)
     val threads = (1..threadsCount).map {
         thread {
             var curThreadOps = 0
+            var curThreadSuccOps = 0
             while (running.get()) {
-                doSingleOperation(
+                curThreadSuccOps += doSingleOperation(
                     rangeBegin = rangeBegin, rangeEnd = rangeEnd,
                     insertProb = insertProb, deleteProb = deleteProb, countProb = countProb, set = set
                 )
                 curThreadOps += 1
             }
             totalOps.getAndAdd(curThreadOps)
+            totalSuccOps.getAndAdd(curThreadSuccOps)
         }
     }
     Thread.sleep(milliseconds)
     running.set(false)
     threads.forEach { it.join() }
-    return totalOps.get().toDouble() / milliseconds.toDouble()
+    return BenchmarkRunResult(
+        opsPerMillisecond = totalOps.get().toDouble() / milliseconds.toDouble(),
+        succOps = totalSuccOps.get(),
+        totalOps = totalOps.get()
+    )
 }
 
 @Suppress("SameParameterValue")
@@ -90,18 +107,23 @@ private fun doBenchmark(
     setGetter: () -> CountSet<Long>,
     expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Long, rangeEnd: Long
-): Double {
+): Pair<Double, Double> {
     assert(rangeEnd - rangeBegin >= expectedSize)
     var sumRes = 0.0
+    var totalOps = 0
+    var totalSuccOps = 0
     repeat(runsCount) {
-        sumRes += doBenchmarkSingleRun(
+        val runResult = doBenchmarkSingleRun(
             milliseconds = milliseconds, threadsCount = threadsCount,
             setGetter = setGetter, expectedSize = expectedSize,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
             rangeBegin = rangeBegin, rangeEnd = rangeEnd
         )
+        sumRes += runResult.opsPerMillisecond
+        totalOps += runResult.totalOps
+        totalSuccOps += runResult.succOps
     }
-    return sumRes / runsCount
+    return Pair(sumRes / runsCount, totalSuccOps.toDouble() / totalOps.toDouble())
 }
 
 
@@ -110,14 +132,14 @@ private fun doMultipleThreadsBenchmark(
     setGetter: () -> CountSet<Long>
 ) {
     Files.newBufferedWriter(basePath.resolve("$benchName.bench")).use {
-        for (threadsCount in 1..16) {
-            val ops = doBenchmark(
+        for (threadsCount in 1..4) {
+            val (ops, succRate) = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
                 expectedSize = expectedSize, insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
                 rangeBegin = -1_000_000_000L * expectedSize, rangeEnd = 1_000_000_000L * expectedSize,
                 setGetter = setGetter
             )
-            it.write("$threadsCount threads, $ops ops / millisecond\n")
+            it.write("$threadsCount threads, $ops ops / millisecond, $succRate successful rate\n")
         }
     }
 }

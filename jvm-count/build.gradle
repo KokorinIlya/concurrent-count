@@ -19,6 +19,11 @@ task runBenchmark(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
 }
 
+task benchTreap(type: JavaExec) {
+    main = 'benchmark.UniversalTreapBench'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation 'org.jetbrains.kotlinx:lincheck:2.9'

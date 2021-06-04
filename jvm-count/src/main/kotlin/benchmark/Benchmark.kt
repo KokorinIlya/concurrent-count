@@ -17,23 +17,23 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 private fun doSingleOperation(
-    rangeBegin: Int, rangeEnd: Int,
+    rangeBegin: Long, rangeEnd: Long,
     insertProb: Double, deleteProb: Double, countProb: Double,
-    set: CountSet<Int>
+    set: CountSet<Long>
 ) {
     val curP = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
     when {
         curP < insertProb -> {
-            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             set.insert(curKey)
         }
         curP < insertProb + deleteProb -> {
-            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             set.delete(curKey)
         }
         curP < insertProb + deleteProb + countProb -> {
-            val a = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
-            val b = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+            val a = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+            val b = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             val (leftBorder, rightBorder) = if (a < b) {
                 Pair(a, b)
             } else {
@@ -42,7 +42,7 @@ private fun doSingleOperation(
             set.count(leftBorder, rightBorder)
         }
         else -> {
-            val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
             set.contains(curKey)
         }
     }
@@ -50,14 +50,14 @@ private fun doSingleOperation(
 
 private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
-    expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
-    rangeBegin: Int, rangeEnd: Int,
-    setGetter: () -> CountSet<Int>
+    expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
+    rangeBegin: Long, rangeEnd: Long,
+    setGetter: () -> CountSet<Long>
 ): Double {
     val set = setGetter()
     var curSize = 0
     while (curSize < expectedSize) {
-        val curKey = ThreadLocalRandom.current().nextInt(rangeBegin, rangeEnd)
+        val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
         val addRes = set.insert(curKey)
         if (addRes) {
             curSize += 1
@@ -87,9 +87,9 @@ private fun doBenchmarkSingleRun(
 @Suppress("SameParameterValue")
 private fun doBenchmark(
     runsCount: Int, milliseconds: Long, threadsCount: Int,
-    setGetter: () -> CountSet<Int>,
-    expectedSize: Int, insertProb: Double, deleteProb: Double, countProb: Double,
-    rangeBegin: Int, rangeEnd: Int
+    setGetter: () -> CountSet<Long>,
+    expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
+    rangeBegin: Long, rangeEnd: Long
 ): Double {
     assert(rangeEnd - rangeBegin >= expectedSize)
     var sumRes = 0.0
@@ -106,15 +106,15 @@ private fun doBenchmark(
 
 
 private fun doMultipleThreadsBenchmark(
-    basePath: Path, benchName: String, @Suppress("SameParameterValue") expectedSize: Int,
-    setGetter: () -> CountSet<Int>
+    basePath: Path, benchName: String, @Suppress("SameParameterValue") expectedSize: Long,
+    setGetter: () -> CountSet<Long>
 ) {
     Files.newBufferedWriter(basePath.resolve("$benchName.bench")).use {
         for (threadsCount in 1..16) {
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
                 expectedSize = expectedSize, insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
-                rangeBegin = -100_000 * expectedSize, rangeEnd = 100_000 * expectedSize,
+                rangeBegin = -1_000_000_000L * expectedSize, rangeEnd = 1_000_000_000L * expectedSize,
                 setGetter = setGetter
             )
             it.write("$threadsCount threads, $ops ops / millisecond\n")
@@ -125,7 +125,7 @@ private fun doMultipleThreadsBenchmark(
 fun main() {
     val basePath = Paths.get("benchmarks")
     Files.createDirectories(basePath)
-    val expectedSize = 10_000
+    val expectedSize = 100_000L
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
         setGetter = { LockFreeSet() }

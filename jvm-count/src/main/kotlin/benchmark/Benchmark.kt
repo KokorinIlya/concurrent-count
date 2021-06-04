@@ -114,7 +114,7 @@ private fun doMultipleThreadsBenchmark(
             val ops = doBenchmark(
                 runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000,
                 expectedSize = expectedSize, insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
-                rangeBegin = 0, rangeEnd = 100 * expectedSize,
+                rangeBegin = -100_000 * expectedSize, rangeEnd = 100_000 * expectedSize,
                 setGetter = setGetter
             )
             it.write("$threadsCount threads, $ops ops / millisecond\n")
@@ -125,7 +125,7 @@ private fun doMultipleThreadsBenchmark(
 fun main() {
     val basePath = Paths.get("benchmarks")
     Files.createDirectories(basePath)
-    val expectedSize = 100_000
+    val expectedSize = 10_000
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
         setGetter = { LockFreeSet() }

@@ -149,10 +149,6 @@ fun main() {
     Files.createDirectories(basePath)
     val expectedSize = 100_000L
     doMultipleThreadsBenchmark(
-        basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
-        setGetter = { LockFreeSet() }
-    )
-    doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "lock-persistent", expectedSize = expectedSize,
         setGetter = { LockTreap(treap = PersistentTreap()) }
     )
@@ -163,5 +159,9 @@ fun main() {
     doMultipleThreadsBenchmark(
         basePath = basePath, benchName = "universal", expectedSize = expectedSize,
         setGetter = { UniversalConstructionTreap() }
+    )
+    doMultipleThreadsBenchmark(
+        basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
+        setGetter = { LockFreeSet() }
     )
 }

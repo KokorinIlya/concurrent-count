@@ -2,14 +2,8 @@
 
 package benchmark
 
-import common.CountSet
-import treap.concurrent.LockTreap
 import treap.concurrent.UniversalConstructionTreap
-import treap.modifiable.ModifiableTreap
-import treap.persistent.PersistentTreap
-import tree.LockFreeSet
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
@@ -66,6 +60,14 @@ private fun doBenchmark(
 
 
 fun main() {
+    repeat(10) {
+        for (threadsCount in 1..4) {
+            val (_, _) = doBenchmark(
+                runsCount = 1, threadsCount = threadsCount, milliseconds = 5_000
+            )
+        }
+    }
+
     val basePath = Paths.get("treap_bench")
     Files.createDirectories(basePath)
     Files.newBufferedWriter(basePath.resolve("res.bench")).use {

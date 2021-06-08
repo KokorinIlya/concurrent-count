@@ -14,13 +14,8 @@ test {
     useJUnitPlatform()
 }
 
-task runBenchmark(type: JavaExec) {
+task bench(type: JavaExec) {
     main = 'benchmark.Benchmark'
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-task benchTreap(type: JavaExec) {
-    main = 'benchmark.UniversalTreapBench'
     classpath = sourceSets.main.runtimeClasspath
 }
 

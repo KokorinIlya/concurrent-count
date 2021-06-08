@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 
+
 /**
  * Result of some operation (operation is either finished or not).
  * Each descriptor of some particular operation should contain reference to operation result.

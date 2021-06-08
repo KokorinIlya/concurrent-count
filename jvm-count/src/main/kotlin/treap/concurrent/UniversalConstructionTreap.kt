@@ -31,23 +31,6 @@ class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLineariz
         }
     }
 
-    fun myInsert(newKey: T): Pair<Boolean, Int> {
-        var cnt = 0
-        while (true) {
-            val curPair = head.get()
-            val (curHead, curVersion) = curPair
-            assert(curVersion % 2L == 0L)
-            val (newHead, res) = curHead.insert(newKey, ThreadLocalRandom.current().nextLong())
-            val newPair = Pair(newHead, curVersion + 2)
-            if (head.compareAndSet(curPair, newPair)) {
-                return Pair(res, cnt + 1)
-            } else {
-                cnt += 1
-                continue
-            }
-        }
-    }
-
     override fun insertTimestamped(key: T): TimestampLinearizedResult<Boolean> {
         val priority = ThreadLocalRandom.current().nextLong()
         return doWriteOperation { curHead -> curHead.insert(key, priority) }

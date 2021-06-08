@@ -35,7 +35,7 @@ fun <T : Comparable<T>, R> AbstractLockFreeQueue<Descriptor<T>>.traverse(
             traversalResult = deleteDescriptorProcessor(traversalResult)
         }
 
-        curQueueNode = curQueueNode.next.get()
+        curQueueNode = curQueueNode.next
     }
     return traversalResult
 }

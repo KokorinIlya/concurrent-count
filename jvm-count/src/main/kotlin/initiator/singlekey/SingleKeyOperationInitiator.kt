@@ -74,7 +74,7 @@ fun <T : Comparable<T>, R> executeSingleKeyOperation(
                 curNodeRef = curNode.content.route(descriptor.key)
             }
             else -> {
-                if (descriptor is SingleKeyWriteOperationDescriptor) { // TODO
+                if (descriptor is SingleKeyWriteOperationDescriptor) {
                     descriptor.result.tryFinish()
                 }
                 val result = descriptor.result.getResult() ?: throw AssertionError(

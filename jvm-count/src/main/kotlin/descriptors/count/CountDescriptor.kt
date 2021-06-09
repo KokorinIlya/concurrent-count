@@ -2,7 +2,12 @@ package descriptors.count
 
 import descriptors.Descriptor
 import result.CountResult
-import tree.*
+import tree.TreeNode
+import tree.KeyNode
+import tree.EmptyNode
+import tree.InnerNode
+import tree.RootNode
+import tree.InnerNodeContent
 
 class CountDescriptor<T : Comparable<T>>(
     private val leftBorder: T,
@@ -77,8 +82,8 @@ class CountDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processSingleChild(childRef: TreeNodeReference<T>): Int? {
-        return when (val curChild = childRef.get()) {
+    private fun processSingleChild(curChild: TreeNode<T>): Int? {
+        return when (curChild) {
             is KeyNode -> processKeyChild(curChild)
             is EmptyNode -> processEmptyChild(curChild)
             is InnerNode -> processInnerChild(curChild)
@@ -86,7 +91,7 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        val childRes = processSingleChild(curNode.root)
+        val childRes = processSingleChild(curNode.root.get())
         if (childRes == null) {
             assert(result.isAnswerKnown(curNode.id))
         } else {
@@ -95,8 +100,8 @@ class CountDescriptor<T : Comparable<T>>(
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
-        val leftRes = processSingleChild(curNode.left)
-        val rightRes = processSingleChild(curNode.right)
+        val leftRes = processSingleChild(curNode.left.get())
+        val rightRes = processSingleChild(curNode.right.get())
         if (leftRes == null || rightRes == null) {
             assert(result.isAnswerKnown(curNode.id))
         } else {

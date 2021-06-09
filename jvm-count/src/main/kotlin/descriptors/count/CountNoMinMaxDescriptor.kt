@@ -2,7 +2,12 @@ package descriptors.count
 
 import descriptors.Descriptor
 import result.CountResult
-import tree.*
+import tree.TreeNode
+import tree.KeyNode
+import tree.EmptyNode
+import tree.InnerNode
+import tree.RootNode
+import tree.InnerNodeContent
 
 sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
     companion object {
@@ -14,8 +19,8 @@ sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
             }
         }
 
-        fun <T: Comparable<T>> new(left: T, right: T): BothBorderCountDescriptor<T> {
-            return BothBorderCountDescriptor<T>(leftBorder = left, rightBorder = right, result = CountResult())
+        fun <T : Comparable<T>> new(left: T, right: T): BothBorderCountDescriptor<T> {
+            return BothBorderCountDescriptor(leftBorder = left, rightBorder = right, result = CountResult())
         }
     }
 
@@ -31,8 +36,8 @@ sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
 
     protected abstract fun containsKey(key: T): Boolean
 
-    fun processChild(childRef: TreeNodeReference<T>): Int? {
-        return when (val curChild = childRef.get()) {
+    fun processChild(curChild: TreeNode<T>): Int? {
+        return when (curChild) {
             is KeyNode -> {
                 assert(curChild.creationTimestamp != timestamp)
                 @Suppress("CascadeIf")
@@ -79,8 +84,8 @@ sealed class CountNoMinMaxDescriptor<T : Comparable<T>> : Descriptor<T>() {
         }
     }
 
-    fun getWholeSubtreeSize(childRef: TreeNodeReference<T>): Int? {
-        return when (val curChild = childRef.get()) {
+    protected fun getWholeSubtreeSize(curChild: TreeNode<T>): Int? {
+        return when (curChild) {
             is KeyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 1 })
             is EmptyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 0 })
             is InnerNode -> doGetWholeSubtreeSize(curChild, { lastModificationTimestamp }, { subtreeSize })
@@ -103,10 +108,10 @@ class LeftBorderCountDescriptor<T : Comparable<T>>(
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
         val curNodeRes = if (leftBorder >= curNode.rightSubtreeMin) {
-            processChild(curNode.right)
+            processChild(curNode.right.get())
         } else {
-            val leftResult = processChild(curNode.left)
-            val rightResult = getWholeSubtreeSize(curNode.right)
+            val leftResult = processChild(curNode.left.get())
+            val rightResult = getWholeSubtreeSize(curNode.right.get())
             leftResult.safePlus(rightResult)
         }
         saveNodeAnswer(curNode.id, curNodeRes)
@@ -130,10 +135,10 @@ class RightBorderCountDescriptor<T : Comparable<T>>(
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
         val curNodeRes = if (rightBorder < curNode.rightSubtreeMin) {
-            processChild(curNode.left)
+            processChild(curNode.left.get())
         } else {
-            val leftResult = getWholeSubtreeSize(curNode.left)
-            val rightResult = processChild(curNode.right)
+            val leftResult = getWholeSubtreeSize(curNode.left.get())
+            val rightResult = processChild(curNode.right.get())
             leftResult.safePlus(rightResult)
         }
         saveNodeAnswer(curNode.id, curNodeRes)
@@ -156,17 +161,17 @@ class BothBorderCountDescriptor<T : Comparable<T>>(
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        val curNodeRes = processChild(curNode.root)
+        val curNodeRes = processChild(curNode.root.get())
         saveNodeAnswer(curNode.id, curNodeRes)
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
         val curNodeRes = when {
             rightBorder < curNode.rightSubtreeMin -> {
-                processChild(curNode.left)
+                processChild(curNode.left.get())
             }
             leftBorder >= curNode.rightSubtreeMin -> {
-                processChild(curNode.right)
+                processChild(curNode.right.get())
             }
             else -> {
                 val leftDescriptor = LeftBorderCountDescriptor(
@@ -179,8 +184,8 @@ class BothBorderCountDescriptor<T : Comparable<T>>(
                     rightBorder = rightBorder,
                     ts = timestamp
                 )
-                val leftResult = leftDescriptor.processChild(curNode.left)
-                val rightResult = rightDescriptor.processChild(curNode.right)
+                val leftResult = leftDescriptor.processChild(curNode.left.get())
+                val rightResult = rightDescriptor.processChild(curNode.right.get())
                 leftResult.safePlus(rightResult)
             }
         }

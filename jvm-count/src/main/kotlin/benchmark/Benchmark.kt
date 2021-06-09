@@ -129,8 +129,10 @@ fun main(args: Array<String>) {
     val milliseconds = parsedArgs.getValue("milliseconds").toLong()
     val expectedSize = parsedArgs.getValue("expected_size").toLong()
     val runsCount = parsedArgs.getValue("runs_count").toInt()
+
     val keysFrom = parsedArgs.getValue("keys_from").toLong()
     val keysTo = parsedArgs.getValue("keys_until").toLong()
+
     val insertProb = parsedArgs.getValue("insert_prob").toDouble()
     val deleteProb = parsedArgs.getValue("delete_prob").toDouble()
     val countProb = parsedArgs.getValue("count_prob").toDouble()
@@ -146,7 +148,7 @@ fun main(args: Array<String>) {
     if (createFile == "True") {
         Files.newBufferedWriter(filePath)
     } else {
-        Files.newBufferedWriter(filePath, StandardOpenOption.APPEND, StandardOpenOption.CREATE)
+        Files.newBufferedWriter(filePath, StandardOpenOption.APPEND)
     }.use {
         val ops = doBenchmark(
             runsCount = runsCount, threadsCount = threadsCount, milliseconds = milliseconds,

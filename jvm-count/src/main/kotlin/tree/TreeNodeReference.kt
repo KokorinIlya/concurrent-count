@@ -3,14 +3,20 @@ package tree
 import allocation.IdAllocator
 import descriptors.DummyDescriptor
 import queue.NonRootLockFreeQueue
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
-    private val ref = AtomicReference(initial)
+    @Volatile
+    private var ref = initial
 
     companion object {
         private const val threshold = 1
         private const val bias = 1
+        private val refFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            TreeNodeReference::class.java,
+            TreeNode::class.java,
+            "ref"
+        )
     }
 
     private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: InnerNode<T>) {
@@ -96,7 +102,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     }
 
     fun get(): TreeNode<T> {
-        val curNode = ref.get()
+        val curNode = ref
         assert(curNode !is InnerNode || curNode.modificationsCount < threshold * curNode.content.initialSize + bias)
         return curNode
     }
@@ -130,7 +136,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             correctNode
         }
 
-        val casResult = ref.compareAndSet(curNode, modifiedNode)
+        val casResult = refFieldUpdater.compareAndSet(this, curNode, modifiedNode)
         return if (casResult) {
             modifiedNode
         } else {
@@ -183,14 +189,14 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     )
 
     fun casInsert(old: EmptyNode<T>, new: KeyNode<T>): Boolean {
-        return ref.compareAndSet(old, new)
+        return refFieldUpdater.compareAndSet(this, old, new)
     }
 
     fun casInsert(old: KeyNode<T>, new: InnerNode<T>): Boolean {
-        return ref.compareAndSet(old, new)
+        return refFieldUpdater.compareAndSet(this, old, new)
     }
 
     fun casDelete(old: KeyNode<T>, new: EmptyNode<T>): Boolean {
-        return ref.compareAndSet(old, new)
+        return refFieldUpdater.compareAndSet(this, old, new)
     }
 }

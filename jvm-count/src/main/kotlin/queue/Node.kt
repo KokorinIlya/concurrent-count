@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 class Node<T>(val data: T, @Volatile var next: Node<T>?) {
     companion object {
-        private val fieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
+        private val nextFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
             Node::class.java,
             Node::class.java,
             "next"
@@ -12,5 +12,5 @@ class Node<T>(val data: T, @Volatile var next: Node<T>?) {
     }
 
     fun casNext(expected: Node<T>?, update: Node<T>?): Boolean =
-        fieldUpdater.compareAndSet(this, expected, update)
+        nextFieldUpdater.compareAndSet(this, expected, update)
 }

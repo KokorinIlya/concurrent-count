@@ -12,7 +12,7 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQu
      * @return timestamp of the new value
      */
     fun pushAndAcquireTimestamp(value: T): Long {
-        val newTail = Node(data = value, next = null)
+        val newTail = QueueNode(data = value, next = null)
 
         while (true) {
             val curTail = tail

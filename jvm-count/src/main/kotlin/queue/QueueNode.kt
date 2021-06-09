@@ -2,15 +2,15 @@ package queue
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
-class Node<T>(val data: T, @Volatile var next: Node<T>?) {
+class QueueNode<T>(val data: T, @Volatile var next: QueueNode<T>?) {
     companion object {
         private val nextFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            Node::class.java,
-            Node::class.java,
+            QueueNode::class.java,
+            QueueNode::class.java,
             "next"
         )
     }
 
-    fun casNext(expected: Node<T>?, update: Node<T>?): Boolean =
+    fun casNext(expected: QueueNode<T>?, update: QueueNode<T>?): Boolean =
         nextFieldUpdater.compareAndSet(this, expected, update)
 }

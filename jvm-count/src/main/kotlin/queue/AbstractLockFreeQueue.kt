@@ -11,28 +11,28 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
  */
 abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
     @Volatile
-    private var head: Node<T>
+    private var head: QueueNode<T>
 
     @Volatile
-    protected var tail: Node<T>
+    protected var tail: QueueNode<T>
 
     companion object {
         val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractLockFreeQueue::class.java,
-            Node::class.java,
+            QueueNode::class.java,
             "head"
         )
 
         @Suppress("HasPlatformType")
         val tailUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractLockFreeQueue::class.java,
-            Node::class.java,
+            QueueNode::class.java,
             "tail"
         )
     }
 
     init {
-        val dummyNode = Node(data = initValue, next = null)
+        val dummyNode = QueueNode(data = initValue, next = null)
         tail = dummyNode
         head = dummyNode
     }
@@ -41,7 +41,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
      * Retrieves the first node, that corresponds to non-dummy value in the queue.
      * Can be used to perform queue traversal.
      */
-    fun getHead(): Node<T>? = head.next
+    fun getHead(): QueueNode<T>? = head.next
 
 
     fun peek(): T? {

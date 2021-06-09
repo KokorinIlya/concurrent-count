@@ -8,7 +8,7 @@ class NonRootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFre
         /*
         New node can be allocated only once
          */
-        val newTail = Node(data = value, next = null)
+        val newTail = QueueNode(data = value, next = null)
 
         while (true) {
             val curTail = tail

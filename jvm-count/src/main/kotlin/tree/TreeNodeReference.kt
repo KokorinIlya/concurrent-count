@@ -68,6 +68,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         val right = buildSubtreeFromKeys(keys, midIndex, endIndex, curOperationTimestamp, nodeIdAllocator)
         val curSubtreeSize = endIndex - startIndex
 
+        @Suppress("RemoveExplicitTypeArguments")
         val innerNodeContent = InnerNodeContent<T>(
             id = nodeIdAllocator.allocateId(),
             initialSize = curSubtreeSize,

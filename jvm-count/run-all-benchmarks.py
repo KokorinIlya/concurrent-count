@@ -38,6 +38,4 @@ for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free
             f'milliseconds:{args.milliseconds}'
         ]
         args_str = ';'.join(args_list)
-        args_str = f'--args="{args_str}"'
-        print(args_str)
-        subprocess.run(["./gradlew", "bench", args_str])
+        subprocess.run(["./gradlew", "bench", f'--args="{args_str}"'])

@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--max_threads", required=True, type=int)
 parser.add_argument("--runs_count", required=True, type=int)
 parser.add_argument("--milliseconds", required=True, type=int)
-parser.add_argument("--expected_size", required=True, type=int)
+parser.add_argument("--initial_size", required=True, type=int)
 parser.add_argument("--delete_prob", required=True, type=float)
 parser.add_argument("--insert_prob", required=True, type=float)
 parser.add_argument("--count_prob", required=True, type=float)
@@ -30,7 +30,7 @@ for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free
             f'runs_count:{args.runs_count}',
             f'keys_from:{args.keys_from}',
             f'keys_until:{args.keys_until}',
-            f'expected_size:{args.expected_size}',
+            f'initial_size:{args.initial_size}',
             f'out_dir:{args.out_dir}',
             f'insert_prob:{args.insert_prob}',
             f'delete_prob:{args.delete_prob}',

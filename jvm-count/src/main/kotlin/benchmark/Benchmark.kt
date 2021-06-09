@@ -9,7 +9,6 @@ import treap.modifiable.ModifiableTreap
 import treap.persistent.PersistentTreap
 import tree.LockFreeSet
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.ThreadLocalRandom
@@ -52,13 +51,13 @@ private fun doSingleOperation(
 
 private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
-    expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
+    initialSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Long, rangeEnd: Long,
     setGetter: () -> CountSet<Long>
 ): Double {
     val set = setGetter()
     var curSize = 0
-    while (curSize < expectedSize) {
+    while (curSize < initialSize) {
         val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
         val addRes = set.insert(curKey)
         if (addRes) {
@@ -90,15 +89,15 @@ private fun doBenchmarkSingleRun(
 private fun doBenchmark(
     runsCount: Int, milliseconds: Long, threadsCount: Int,
     setGetter: () -> CountSet<Long>,
-    expectedSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
+    initialSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
     rangeBegin: Long, rangeEnd: Long
 ): Double {
-    assert(rangeEnd - rangeBegin >= expectedSize)
+    assert(rangeEnd - rangeBegin >= initialSize)
     var sumRes = 0.0
     repeat(runsCount) {
         sumRes += doBenchmarkSingleRun(
             milliseconds = milliseconds, threadsCount = threadsCount,
-            setGetter = setGetter, expectedSize = expectedSize,
+            setGetter = setGetter, initialSize = initialSize,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
             rangeBegin = rangeBegin, rangeEnd = rangeEnd
         )
@@ -127,7 +126,7 @@ fun main(args: Array<String>) {
 
     val threadsCount = parsedArgs.getValue("threads").toInt()
     val milliseconds = parsedArgs.getValue("milliseconds").toLong()
-    val expectedSize = parsedArgs.getValue("expected_size").toLong()
+    val initialSize = parsedArgs.getValue("initial_size").toLong()
     val runsCount = parsedArgs.getValue("runs_count").toInt()
 
     val keysFrom = parsedArgs.getValue("keys_from").toLong()
@@ -152,7 +151,7 @@ fun main(args: Array<String>) {
     }.use {
         val ops = doBenchmark(
             runsCount = runsCount, threadsCount = threadsCount, milliseconds = milliseconds,
-            expectedSize = expectedSize, insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
+            initialSize = initialSize, insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
             rangeBegin = keysFrom, rangeEnd = keysTo,
             setGetter = setGetters.getValue(benchName)
         )

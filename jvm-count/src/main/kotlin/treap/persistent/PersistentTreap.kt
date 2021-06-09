@@ -1,5 +1,8 @@
 package treap.persistent
 
+import common.None
+import common.Optional
+import common.Some
 import treap.common.Treap
 import java.util.concurrent.ThreadLocalRandom
 
@@ -7,10 +10,14 @@ class PersistentTreap<T : Comparable<T>> : Treap<T>() {
     override var head: PersistentTreapNode<T>? = null
 
     private fun <R> modify(
-        modificationFun: (PersistentTreapNode<T>?) -> Pair<PersistentTreapNode<T>?, R>
+        modificationFun: (PersistentTreapNode<T>?) -> Pair<Optional<PersistentTreapNode<T>?>, R>
     ): R {
-        val (newHead, res) = modificationFun(head)
-        head = newHead
+        val prevHead = head
+        val (optHead, res) = modificationFun(prevHead)
+        head = when (optHead) {
+            is Some -> optHead.data
+            is None -> prevHead
+        }
         return res
     }
 

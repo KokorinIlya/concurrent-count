@@ -1,7 +1,6 @@
 package treap.concurrent
 
-import common.CountLinearizableSet
-import common.CountSet
+import common.*
 import result.TimestampLinearizedResult
 import treap.common.contains
 import treap.common.count
@@ -15,18 +14,23 @@ class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLineariz
     private val head = AtomicReference<Pair<PersistentTreapNode<T>?, Long>>(Pair(null, 0))
 
     private fun <R> doWriteOperation(
-        writeOperation: (PersistentTreapNode<T>?) -> Pair<PersistentTreapNode<T>?, R>
+        writeOperation: (PersistentTreapNode<T>?) -> Pair<Optional<PersistentTreapNode<T>?>, R>
     ): TimestampLinearizedResult<R> {
-        while (true) {
+        loop@ while (true) {
             val curPair = head.get()
             val (curHead, curVersion) = curPair
             assert(curVersion % 2L == 0L)
-            val (newHead, res) = writeOperation(curHead)
-            val newPair = Pair(newHead, curVersion + 2)
-            if (head.compareAndSet(curPair, newPair)) {
-                return TimestampLinearizedResult(result = res, timestamp = curVersion + 2)
-            } else {
-                continue
+            val (optHead, res) = writeOperation(curHead)
+            return when (optHead) {
+                is Some -> {
+                    val newPair = Pair(optHead.data, curVersion + 2)
+                    if (head.compareAndSet(curPair, newPair)) {
+                        TimestampLinearizedResult(result = res, timestamp = curVersion + 2)
+                    } else {
+                        continue@loop
+                    }
+                }
+                is None -> TimestampLinearizedResult(result = res, timestamp = curVersion + 1)
             }
         }
     }

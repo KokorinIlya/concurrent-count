@@ -1,6 +1,7 @@
 package result
 
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 
@@ -30,19 +31,28 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
         EXECUTED
     }
 
-    private val status: AtomicReference<Status> = AtomicReference(Status.UNDECIDED)
+    companion object {
+        private val statusUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            SingleKeyWriteOperationResult::class.java,
+            Status::class.java,
+            "status"
+        )
+    }
+
+    @Volatile
+    private var status: Status = Status.UNDECIDED
 
     override fun getResult(): Boolean? {
-        return when (status.get()) {
+        return when (status) {
             Status.DECLINED -> false
             Status.EXECUTED -> true
             else -> null
         }
     }
 
-    fun getRawStatus(): Status = status.get()
+    fun getRawStatus(): Status = status
 
-    fun decisionMade(): Boolean = status.get() != Status.UNDECIDED
+    fun decisionMade(): Boolean = status != Status.UNDECIDED
 
     fun trySetDecision(shouldBeExecuted: Boolean) {
         val newStatus = if (shouldBeExecuted) {
@@ -50,11 +60,11 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean>() {
         } else {
             Status.DECLINED
         }
-        status.compareAndSet(Status.UNDECIDED, newStatus)
+        statusUpdater.compareAndSet(this, Status.UNDECIDED, newStatus)
     }
 
     fun tryFinish() {
-        status.compareAndSet(Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
+        statusUpdater.compareAndSet(this, Status.SHOULD_BE_EXECUTED, Status.EXECUTED)
     }
 }
 

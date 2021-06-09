@@ -19,6 +19,7 @@ assert args.delete_prob + args.insert_prob + args.count_prob <= 1.
 
 for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free']:
     for threads in range(1, args.max_threads + 1):
+        print(f'Bench name = {bench_type}, threads = {threads}')
         if threads == 1:
             create_file = True
         else:
@@ -38,4 +39,4 @@ for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free
             f'milliseconds:{args.milliseconds}'
         ]
         args_str = ';'.join(args_list)
-        subprocess.run(["./gradlew", "bench", f'--args="{args_str}"'])
+        subprocess.run(['./gradlew', 'bench', f'--args="{args_str}"'])

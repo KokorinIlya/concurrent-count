@@ -1,1 +1,1 @@
-./run-all-benchmarks.py --max_threads=32 --initial_size=100000 --delete_prob=0.0 --insert_prob=1.0 --count_prob=0.0 --out_dir=insert_only_benchmarks --milliseconds=5000 --runs_count=10 --keys_from=-1000000000 --keys_until=1000000000
+./run-all-benchmarks.py --max_threads=16 --initial_size=100000 --delete_prob=0.0 --insert_prob=1.0 --count_prob=0.0 --out_dir=insert_only_benchmarks --milliseconds=5000 --runs_count=10 --keys_from=-1000000000 --keys_until=1000000000

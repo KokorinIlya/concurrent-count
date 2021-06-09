@@ -1,0 +1,2 @@
+cd ..
+./run-all-benchmarks.py --max_threads=2 --expected_size=100000 --delete_prob=0.5 --insert_prob=0.5 --count_prob=0.0 --out_dir=write_only_benchmarks --milliseconds=5000 --runs_count=1 --keys_from=0 --keys_until=200000

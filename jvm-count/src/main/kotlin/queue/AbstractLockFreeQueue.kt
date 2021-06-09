@@ -12,20 +12,24 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
     @Volatile
     private var head: Node<T>
-    private val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
-        AbstractLockFreeQueue::class.java,
-        Node::class.java,
-        "head"
-    )
 
     @Volatile
     protected var tail: Node<T>
-    protected val tailUpdater: AtomicReferenceFieldUpdater<AbstractLockFreeQueue<*>, Node<*>> =
-        AtomicReferenceFieldUpdater.newUpdater(
+
+    companion object {
+        val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            AbstractLockFreeQueue::class.java,
+            Node::class.java,
+            "head"
+        )
+
+        @Suppress("HasPlatformType")
+        val tailUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractLockFreeQueue::class.java,
             Node::class.java,
             "tail"
         )
+    }
 
     init {
         val dummyNode = Node(data = initValue, next = null)

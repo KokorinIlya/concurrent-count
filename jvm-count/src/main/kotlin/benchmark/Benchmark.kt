@@ -11,6 +11,7 @@ import tree.LockFreeSet
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -105,42 +106,54 @@ private fun doBenchmark(
     return sumRes / runsCount
 }
 
-
-private fun doMultipleThreadsBenchmark(
-    basePath: Path, benchName: String, @Suppress("SameParameterValue") expectedSize: Long,
-    setGetter: () -> CountSet<Long>
-) {
-    Files.newBufferedWriter(basePath.resolve("$benchName.bench")).use {
-        for (threadsCount in 1..16) {
-            val ops = doBenchmark(
-                runsCount = 10, threadsCount = threadsCount, milliseconds = 5_000,
-                expectedSize = expectedSize, insertProb = 0.5, deleteProb = 0.5, countProb = 0.0,
-                rangeBegin = 0, rangeEnd = 2 * expectedSize,
-                setGetter = setGetter
-            )
-            it.write("$threadsCount threads, $ops ops / millisecond\n")
-        }
-    }
+private fun parseArgs(args: String): Map<String, String> {
+    return args.split(';').map {
+        val parts = it.split(':')
+        assert(parts.size == 2)
+        Pair(parts[0], parts[1])
+    }.toMap()
 }
 
-fun main() {
-    val basePath = Paths.get("benchmarks")
+fun main(args: Array<String>) {
+    require(args.size == 1)
+    val parsedArgs = parseArgs(args[0])
+    val basePath = Paths.get(parsedArgs.getValue("out_dir"))
     Files.createDirectories(basePath)
-    val expectedSize = 100_000L
-    doMultipleThreadsBenchmark(
-        basePath = basePath, benchName = "lock-persistent", expectedSize = expectedSize,
-        setGetter = { LockTreap(treap = PersistentTreap()) }
+
+    val benchName = parsedArgs.getValue("bench_type")
+    val filePath = basePath.resolve("$benchName.bench")
+    val createFile = parsedArgs.getValue("create_file")
+    assert(createFile == "False" || createFile == "True")
+
+    val threadsCount = parsedArgs.getValue("threads").toInt()
+    val milliseconds = parsedArgs.getValue("milliseconds").toLong()
+    val expectedSize = parsedArgs.getValue("expected_size").toLong()
+    val runsCount = parsedArgs.getValue("runs_count").toInt()
+    val keysFrom = parsedArgs.getValue("keys_from").toLong()
+    val keysTo = parsedArgs.getValue("keys_until").toLong()
+    val insertProb = parsedArgs.getValue("insert_prob").toDouble()
+    val deleteProb = parsedArgs.getValue("delete_prob").toDouble()
+    val countProb = parsedArgs.getValue("count_prob").toDouble()
+    assert(insertProb + deleteProb + countProb <= 1.0)
+
+    val setGetters = mapOf(
+        "lock-persistent" to { LockTreap<Long>(treap = PersistentTreap()) },
+        "lock-modifiable" to { LockTreap<Long>(treap = ModifiableTreap()) },
+        "universal" to { UniversalConstructionTreap<Long>() },
+        "lock-free" to { LockFreeSet<Long>() }
     )
-    doMultipleThreadsBenchmark(
-        basePath = basePath, benchName = "lock-modifiable", expectedSize = expectedSize,
-        setGetter = { LockTreap(treap = ModifiableTreap()) }
-    )
-    doMultipleThreadsBenchmark(
-        basePath = basePath, benchName = "universal", expectedSize = expectedSize,
-        setGetter = { UniversalConstructionTreap() }
-    )
-    doMultipleThreadsBenchmark(
-        basePath = basePath, benchName = "lock-free", expectedSize = expectedSize,
-        setGetter = { LockFreeSet() }
-    )
+
+    if (createFile == "True") {
+        Files.newBufferedWriter(filePath)
+    } else {
+        Files.newBufferedWriter(filePath, StandardOpenOption.APPEND, StandardOpenOption.CREATE)
+    }.use {
+        val ops = doBenchmark(
+            runsCount = runsCount, threadsCount = threadsCount, milliseconds = milliseconds,
+            expectedSize = expectedSize, insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
+            rangeBegin = keysFrom, rangeEnd = keysTo,
+            setGetter = setGetters.getValue(benchName)
+        )
+        it.write("$threadsCount threads, $ops ops / millisecond\n")
+    }
 }

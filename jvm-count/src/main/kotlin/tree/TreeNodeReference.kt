@@ -103,9 +103,10 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     }
 
     fun get(): TreeNode<T> {
-        val curNode = ref
+        return ref
+        /*val curNode = ref
         assert(curNode !is InnerNode || curNode.modificationsCount < threshold * curNode.content.initialSize + bias)
-        return curNode
+        return curNode*/
     }
 
     private fun modifyNode(
@@ -173,21 +174,25 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         }
     }
 
-    fun getInsert(key: T, curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
+    fun getInsert(key: T, curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> {
+        return ref
+    } /*= getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
         maxKeyModifier = { curMaxKey -> maxOf(curMaxKey, key) },
         minKeyModifier = { curMinKey -> minOf(curMinKey, key) },
         subtreeSizeModifier = { curSubtreeSize -> curSubtreeSize + 1 }
-    )
+    )*/
 
-    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
+    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> {
+        return ref
+    } /*= getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
         maxKeyModifier = { it },
         minKeyModifier = { it },
         subtreeSizeModifier = { curSubtreeSize -> curSubtreeSize - 1 }
-    )
+    )*/
 
     fun casInsert(old: EmptyNode<T>, new: KeyNode<T>): Boolean {
         return refFieldUpdater.compareAndSet(this, old, new)

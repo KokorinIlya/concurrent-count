@@ -16,6 +16,9 @@ test {
 
 task bench(type: JavaExec) {
     main = 'benchmark.Benchmark'
+    if (project.hasProperty('args')) {
+        args project.args
+    }
     classpath = sourceSets.main.runtimeClasspath
 }
 

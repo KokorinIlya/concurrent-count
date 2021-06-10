@@ -114,6 +114,7 @@ private fun parseArgs(args: String): Map<String, String> {
 }
 
 fun main(args: Array<String>) {
+    println(Runtime.getRuntime().maxMemory())
     require(args.size == 1)
     val parsedArgs = parseArgs(args[0])
     val basePath = Paths.get(parsedArgs.getValue("out_dir"))

@@ -48,7 +48,6 @@ private fun getSequentialResults(operations: List<Operation>): List<OperationRes
 
 fun doLinCheck(
     setGetter: () -> CountLinearizableSet<Int>,
-    countMethods: List<String>,
     testsCount: Int, threadsCount: Int, operationsPerThreadCount: Int,
     insertProb: Double, deleteProb: Double, countProb: Double,
     keysFrom: Int, keysTo: Int
@@ -101,9 +100,7 @@ fun doLinCheck(
                             val l = minOf(x, y)
                             val r = maxOf(x, y)
 
-                            val methodIdx = ThreadLocalRandom.current().nextInt(0, countMethods.size)
-                            val method = countMethods[methodIdx]
-                            val result = set.countTimestamped(l, r, method)
+                            val result = set.countTimestamped(l, r)
                             TimestampedOperationWithResult(
                                 timestamp = result.timestamp,
                                 result = CountResult(res = result.result),

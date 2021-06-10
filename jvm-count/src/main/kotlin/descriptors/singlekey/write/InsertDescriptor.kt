@@ -45,6 +45,7 @@ class InsertDescriptor<T : Comparable<T>>(
                 Pair(curChild, newKeyNode)
             }
 
+            @Suppress("RemoveExplicitTypeArguments")
             val innerNodeContent = InnerNodeContent<T>(
                 queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(timestamp)),
                 id = nodeIdAllocator.allocateId(),
@@ -56,8 +57,6 @@ class InsertDescriptor<T : Comparable<T>>(
             val innerNode = InnerNode(
                 content = innerNodeContent,
                 lastModificationTimestamp = timestamp,
-                maxKey = rightChild.key,
-                minKey = leftChild.key,
                 modificationsCount = 0,
                 subtreeSize = 2
             )
@@ -75,7 +74,7 @@ class InsertDescriptor<T : Comparable<T>>(
     }
 
     override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
-        return curChildRef.getInsert(key, timestamp, nodeIdAllocator)
+        return curChildRef.getInsert(timestamp, nodeIdAllocator)
     }
 
     override fun shouldBeExecuted(keyExists: Boolean): Boolean = !keyExists

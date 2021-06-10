@@ -17,29 +17,29 @@ class SequentialSetTest {
         assertFalse(set.insertTimestamped(1).result)
         assertTrue(set.insertTimestamped(7).result)
         assertTrue(set.insertTimestamped(-1).result)
-        assertEquals(set.countMinMaxTimestamped(0, 8).result, 2)
+        assertEquals(set.countTimestamped(0, 8).result, 2)
     }
 
     @Test
     fun failedTest() {
         val lockFreeSet = LockFreeSet<Int>()
         assertTrue(lockFreeSet.insertTimestamped(71).result)
-        assertEquals(1, lockFreeSet.countMinMaxTimestamped(6, 81).result)
+        assertEquals(1, lockFreeSet.countTimestamped(6, 81).result)
         assertTrue(lockFreeSet.insertTimestamped(22).result)
-        assertEquals(0, lockFreeSet.countMinMaxTimestamped(23, 53).result)
+        assertEquals(0, lockFreeSet.countTimestamped(23, 53).result)
         assertTrue(lockFreeSet.insertTimestamped(15).result)
         assertFalse(lockFreeSet.insertTimestamped(15).result)
-        assertEquals(0, lockFreeSet.countMinMaxTimestamped(58, 63).result)
-        assertEquals(2, lockFreeSet.countMinMaxTimestamped(4, 43).result)
+        assertEquals(0, lockFreeSet.countTimestamped(58, 63).result)
+        assertEquals(2, lockFreeSet.countTimestamped(4, 43).result)
     }
 
     @Test
     fun otherFailedTest() {
         val lockFreeSet = LockFreeSet<Int>()
         assertTrue(lockFreeSet.insertTimestamped(96).result)
-        assertEquals(0, lockFreeSet.countMinMaxTimestamped(0, 66).result)
+        assertEquals(0, lockFreeSet.countTimestamped(0, 66).result)
         assertTrue(lockFreeSet.insertTimestamped(34).result)
-        assertEquals(1, lockFreeSet.countMinMaxTimestamped(22, 34).result)
+        assertEquals(1, lockFreeSet.countTimestamped(22, 34).result)
     }
 
     @Test

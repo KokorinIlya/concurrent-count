@@ -52,7 +52,7 @@ class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLineariz
     override fun containsTimestamped(key: T): TimestampLinearizedResult<Boolean> =
         doReadOperation { curHead -> curHead.contains(key) }
 
-    override fun countTimestamped(left: T, right: T, method: String): TimestampLinearizedResult<Int> =
+    override fun countTimestamped(left: T, right: T): TimestampLinearizedResult<Int> =
         doReadOperation { curHead -> curHead.count(left, right) }
 
     override fun insert(key: T): Boolean = insertTimestamped(key).result
@@ -62,5 +62,5 @@ class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLineariz
     override fun contains(key: T): Boolean = containsTimestamped(key).result
 
     override fun count(leftBorder: T, rightBorder: T): Int =
-        countTimestamped(leftBorder, rightBorder, "").result
+        countTimestamped(leftBorder, rightBorder).result
 }

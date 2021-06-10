@@ -9,103 +9,188 @@ import tree.InnerNode
 import tree.RootNode
 import tree.InnerNodeContent
 
-class CountDescriptor<T : Comparable<T>>(
-    private val leftBorder: T,
-    private val rightBorder: T,
-    val result: CountResult
-) : Descriptor<T>() {
-    override fun toString(): String {
-        return "{ContDescriptor: Left=$leftBorder, Right=$rightBorder, Timestamp=$timestamp}"
-    }
-
-    init {
-        assert(leftBorder <= rightBorder)
-    }
-
+sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
     companion object {
-        fun <T : Comparable<T>> new(leftBorder: T, rightBorder: T): CountDescriptor<T> {
-            return CountDescriptor(leftBorder, rightBorder, CountResult())
+        internal fun Int?.safePlus(b: Int?): Int? {
+            return if (this != null && b != null) {
+                this + b
+            } else {
+                null
+            }
+        }
+
+        fun <T : Comparable<T>> new(left: T, right: T): BothBorderCountDescriptor<T> {
+            return BothBorderCountDescriptor(leftBorder = left, rightBorder = right, result = CountResult())
         }
     }
 
-    enum class IntersectionResult {
-        NO_INTERSECTION,
-        NODE_INSIDE_REQUEST,
-        GO_TO_CHILDREN
-    }
-
-    fun intersectBorders(minKey: T, maxKey: T): IntersectionResult {
-        assert(minKey <= maxKey)
-        return if (minKey > rightBorder || maxKey < leftBorder) {
-            IntersectionResult.NO_INTERSECTION
-        } else if (leftBorder <= minKey && maxKey <= rightBorder) {
-            IntersectionResult.NODE_INSIDE_REQUEST
+    protected fun saveNodeAnswer(curNodeId: Long, curNodeRes: Int?) {
+        if (curNodeRes == null) {
+            assert(result.isAnswerKnown(curNodeId))
         } else {
-            IntersectionResult.GO_TO_CHILDREN
+            result.preRemoveFromNode(curNodeId, curNodeRes)
         }
     }
 
-    private fun processKeyChild(curChild: KeyNode<T>): Int? {
-        assert(curChild.creationTimestamp != timestamp)
-        @Suppress("CascadeIf")
-        return if (curChild.creationTimestamp > timestamp) {
-            null
-        } else if (curChild.key in leftBorder..rightBorder) {
-            1
-        } else {
-            0
-        }
-    }
+    abstract val result: CountResult
 
-    private fun processEmptyChild(curChild: EmptyNode<T>): Int? {
-        assert(curChild.creationTimestamp != timestamp)
-        return if (curChild.creationTimestamp > timestamp) {
-            null
-        } else {
-            0
-        }
-    }
+    protected abstract fun containsKey(key: T): Boolean
 
-    private fun processInnerChild(curChild: InnerNode<T>): Int? {
-        assert(curChild.lastModificationTimestamp != timestamp)
-        if (curChild.lastModificationTimestamp > timestamp) {
-            return null
-        }
-        return when (intersectBorders(minKey = curChild.minKey, maxKey = curChild.maxKey)) {
-            IntersectionResult.NO_INTERSECTION -> 0
-            IntersectionResult.NODE_INSIDE_REQUEST -> curChild.subtreeSize
-            IntersectionResult.GO_TO_CHILDREN -> {
-                result.preVisitNode(curChild.content.id)
-                curChild.content.queue.pushIf(this)
-                0
+    fun processChild(curChild: TreeNode<T>): Int? {
+        return when (curChild) {
+            is KeyNode -> {
+                assert(curChild.creationTimestamp != timestamp)
+                @Suppress("CascadeIf")
+                if (curChild.creationTimestamp > timestamp) {
+                    null
+                } else if (containsKey(curChild.key)) {
+                    1
+                } else {
+                    0
+                }
+            }
+            is EmptyNode -> {
+                assert(curChild.creationTimestamp != timestamp)
+                if (curChild.creationTimestamp > timestamp) {
+                    null
+                } else {
+                    0
+                }
+            }
+            is InnerNode -> {
+                assert(curChild.lastModificationTimestamp != timestamp)
+                if (curChild.lastModificationTimestamp > timestamp) {
+                    assert(!curChild.content.queue.pushIf(this))
+                    null
+                } else {
+                    result.preVisitNode(curChild.content.id)
+                    curChild.content.queue.pushIf(this)
+                    0
+                }
             }
         }
     }
 
-    private fun processSingleChild(curChild: TreeNode<T>): Int? {
-        return when (curChild) {
-            is KeyNode -> processKeyChild(curChild)
-            is EmptyNode -> processEmptyChild(curChild)
-            is InnerNode -> processInnerChild(curChild)
+    private fun <T : Comparable<T>, N : TreeNode<T>> doGetWholeSubtreeSize(
+        curChild: N,
+        timestampGetter: N.() -> Long,
+        sizeGetter: N.() -> Int
+    ): Int? {
+        assert(timestampGetter(curChild) != timestamp)
+        return if (timestampGetter(curChild) > timestamp) {
+            null
+        } else {
+            sizeGetter(curChild)
         }
+    }
+
+    protected fun getWholeSubtreeSize(curChild: TreeNode<T>): Int? {
+        return when (curChild) {
+            is KeyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 1 })
+            is EmptyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 0 })
+            is InnerNode -> doGetWholeSubtreeSize(curChild, { lastModificationTimestamp }, { subtreeSize })
+        }
+    }
+}
+
+class LeftBorderCountDescriptor<T : Comparable<T>>(
+    override val result: CountResult,
+    private val leftBorder: T,
+    ts: Long
+) : CountDescriptor<T>() {
+    init {
+        timestamp = ts
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        val childRes = processSingleChild(curNode.root.get())
-        if (childRes == null) {
-            assert(result.isAnswerKnown(curNode.id))
-        } else {
-            result.preRemoveFromNode(curNode.id, childRes)
-        }
+        throw AssertionError("Root node should be processed by descriptor with both borders")
     }
 
     override fun processInnerNode(curNode: InnerNodeContent<T>) {
-        val leftRes = processSingleChild(curNode.left.get())
-        val rightRes = processSingleChild(curNode.right.get())
-        if (leftRes == null || rightRes == null) {
-            assert(result.isAnswerKnown(curNode.id))
+        val curNodeRes = if (leftBorder >= curNode.rightSubtreeMin) {
+            processChild(curNode.right.get())
         } else {
-            result.preRemoveFromNode(curNode.id, leftRes + rightRes)
+            val leftResult = processChild(curNode.left.get())
+            val rightResult = getWholeSubtreeSize(curNode.right.get())
+            leftResult.safePlus(rightResult)
         }
+        saveNodeAnswer(curNode.id, curNodeRes)
     }
+
+    override fun containsKey(key: T): Boolean = key >= leftBorder
+}
+
+class RightBorderCountDescriptor<T : Comparable<T>>(
+    override val result: CountResult,
+    private val rightBorder: T,
+    ts: Long
+) : CountDescriptor<T>() {
+    init {
+        timestamp = ts
+    }
+
+    override fun tryProcessRootNode(curNode: RootNode<T>) {
+        throw AssertionError("Root node should be processed by descriptor with both borders")
+    }
+
+    override fun processInnerNode(curNode: InnerNodeContent<T>) {
+        val curNodeRes = if (rightBorder < curNode.rightSubtreeMin) {
+            processChild(curNode.left.get())
+        } else {
+            val leftResult = getWholeSubtreeSize(curNode.left.get())
+            val rightResult = processChild(curNode.right.get())
+            leftResult.safePlus(rightResult)
+        }
+        saveNodeAnswer(curNode.id, curNodeRes)
+    }
+
+    override fun containsKey(key: T): Boolean = key <= rightBorder
+}
+
+class BothBorderCountDescriptor<T : Comparable<T>>(
+    override val result: CountResult,
+    private val leftBorder: T,
+    private val rightBorder: T,
+    ts: Long? = null
+) : CountDescriptor<T>() {
+    init {
+        if (ts != null) {
+            timestamp = ts
+        }
+        assert(leftBorder <= rightBorder)
+    }
+
+    override fun tryProcessRootNode(curNode: RootNode<T>) {
+        val curNodeRes = processChild(curNode.root.get())
+        saveNodeAnswer(curNode.id, curNodeRes)
+    }
+
+    override fun processInnerNode(curNode: InnerNodeContent<T>) {
+        val curNodeRes = when {
+            rightBorder < curNode.rightSubtreeMin -> {
+                processChild(curNode.left.get())
+            }
+            leftBorder >= curNode.rightSubtreeMin -> {
+                processChild(curNode.right.get())
+            }
+            else -> {
+                val leftDescriptor = LeftBorderCountDescriptor(
+                    result = result,
+                    leftBorder = leftBorder,
+                    ts = timestamp
+                )
+                val rightDescriptor = RightBorderCountDescriptor(
+                    result = result,
+                    rightBorder = rightBorder,
+                    ts = timestamp
+                )
+                val leftResult = leftDescriptor.processChild(curNode.left.get())
+                val rightResult = rightDescriptor.processChild(curNode.right.get())
+                leftResult.safePlus(rightResult)
+            }
+        }
+        saveNodeAnswer(curNode.id, curNodeRes)
+    }
+
+    override fun containsKey(key: T): Boolean = key in leftBorder..rightBorder
 }

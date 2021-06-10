@@ -12,7 +12,6 @@ class MultithreadedSetTest {
     ) {
         doLinCheck(
             setGetter = { LockFreeSet() },
-            countMethods = listOf("min_max", "no_min_max"),
             testsCount = testsCount, threadsCount = threadsCount,
             operationsPerThreadCount = operationsPerThreadCount,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,

@@ -12,7 +12,6 @@ class UniversalConstructionTreapTest {
     ) {
         doLinCheck(
             setGetter = { UniversalConstructionTreap() },
-            countMethods = listOf(""),
             testsCount = testsCount, threadsCount = threadsCount,
             operationsPerThreadCount = operationsPerThreadCount,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,

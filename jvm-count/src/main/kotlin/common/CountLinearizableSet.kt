@@ -9,5 +9,5 @@ interface CountLinearizableSet<T : Comparable<T>> {
 
     fun containsTimestamped(key: T): TimestampLinearizedResult<Boolean>
 
-    fun countTimestamped(left: T, right: T, method: String): TimestampLinearizedResult<Int>
+    fun countTimestamped(left: T, right: T): TimestampLinearizedResult<Int>
 }

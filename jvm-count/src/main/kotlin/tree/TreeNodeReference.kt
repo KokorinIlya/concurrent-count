@@ -62,8 +62,6 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         }
         val midIndex = (startIndex + endIndex) / 2
         val rightSubtreeMin = keys[midIndex]
-        val minKey = keys[startIndex]
-        val maxKey = keys[endIndex - 1]
         val left = buildSubtreeFromKeys(keys, startIndex, midIndex, curOperationTimestamp, nodeIdAllocator)
         val right = buildSubtreeFromKeys(keys, midIndex, endIndex, curOperationTimestamp, nodeIdAllocator)
         val curSubtreeSize = endIndex - startIndex
@@ -81,8 +79,6 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         return InnerNode(
             content = innerNodeContent,
             lastModificationTimestamp = curOperationTimestamp,
-            maxKey = maxKey,
-            minKey = minKey,
             modificationsCount = 0,
             subtreeSize = curSubtreeSize
         )
@@ -103,19 +99,16 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     }
 
     fun get(): TreeNode<T> {
-        return ref
-        /*val curNode = ref
+        val curNode = ref
         assert(curNode !is InnerNode || curNode.modificationsCount < threshold * curNode.content.initialSize + bias)
-        return curNode*/
+        return curNode
     }
 
     private fun modifyNode(
         curNode: InnerNode<T>,
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
-        maxKeyModifier: (T) -> T,
-        minKeyModifier: (T) -> T,
-        subtreeSizeModifier: (Int) -> Int
+        subtreeSizeDelta: Int
     ): TreeNode<T> {
         assert(curNode.lastModificationTimestamp < curOperationTimestamp)
 
@@ -129,10 +122,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             InnerNode(
                 content = correctNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
-                minKey = minKeyModifier(correctNode.minKey),
-                maxKey = maxKeyModifier(correctNode.maxKey),
                 modificationsCount = 1,
-                subtreeSize = subtreeSizeModifier(correctNode.subtreeSize)
+                subtreeSize = correctNode.subtreeSize + subtreeSizeDelta
             )
         } else {
             correctNode
@@ -155,9 +146,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     private fun getWrite(
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
-        maxKeyModifier: (T) -> T,
-        minKeyModifier: (T) -> T,
-        subtreeSizeModifier: (Int) -> Int
+        subtreeSizeDelta: Int
     ): TreeNode<T> {
         val curNode = get()
         return if (curNode is InnerNode && curNode.lastModificationTimestamp < curOperationTimestamp) {
@@ -165,34 +154,24 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
                 curNode,
                 curOperationTimestamp,
                 nodeIdAllocator,
-                maxKeyModifier,
-                minKeyModifier,
-                subtreeSizeModifier
+                subtreeSizeDelta
             )
         } else {
             curNode
         }
     }
 
-    fun getInsert(key: T, curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> {
-        return ref
-    } /*= getWrite(
+    fun getInsert(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
-        maxKeyModifier = { curMaxKey -> maxOf(curMaxKey, key) },
-        minKeyModifier = { curMinKey -> minOf(curMinKey, key) },
-        subtreeSizeModifier = { curSubtreeSize -> curSubtreeSize + 1 }
-    )*/
+        subtreeSizeDelta = 1
+    )
 
-    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> {
-        return ref
-    } /*= getWrite(
+    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
-        maxKeyModifier = { it },
-        minKeyModifier = { it },
-        subtreeSizeModifier = { curSubtreeSize -> curSubtreeSize - 1 }
-    )*/
+        subtreeSizeDelta = -1
+    )
 
     fun casInsert(old: EmptyNode<T>, new: KeyNode<T>): Boolean {
         return refFieldUpdater.compareAndSet(this, old, new)

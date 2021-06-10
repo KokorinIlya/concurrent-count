@@ -71,24 +71,32 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
         }
     }
 
-    private fun <T : Comparable<T>, N : TreeNode<T>> doGetWholeSubtreeSize(
-        curChild: N,
-        timestampGetter: N.() -> Long,
-        sizeGetter: N.() -> Int
-    ): Int? {
-        assert(timestampGetter(curChild) != timestamp)
-        return if (timestampGetter(curChild) > timestamp) {
-            null
-        } else {
-            sizeGetter(curChild)
-        }
-    }
-
     protected fun getWholeSubtreeSize(curChild: TreeNode<T>): Int? {
         return when (curChild) {
-            is KeyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 1 })
-            is EmptyNode -> doGetWholeSubtreeSize(curChild, { creationTimestamp }, { 0 })
-            is InnerNode -> doGetWholeSubtreeSize(curChild, { lastModificationTimestamp }, { subtreeSize })
+            is KeyNode -> {
+                assert(curChild.creationTimestamp != timestamp)
+                if (curChild.creationTimestamp > timestamp) {
+                    null
+                } else {
+                    1
+                }
+            }
+            is EmptyNode -> {
+                assert(curChild.creationTimestamp != timestamp)
+                if (curChild.creationTimestamp > timestamp) {
+                    null
+                } else {
+                    0
+                }
+            }
+            is InnerNode -> {
+                assert(curChild.lastModificationTimestamp != timestamp)
+                if (curChild.lastModificationTimestamp > timestamp) {
+                    null
+                } else {
+                    curChild.subtreeSize
+                }
+            }
         }
     }
 }

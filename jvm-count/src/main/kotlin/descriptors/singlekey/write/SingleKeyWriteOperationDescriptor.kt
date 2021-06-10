@@ -1,8 +1,10 @@
 package descriptors.singlekey.write
 
 import allocation.IdAllocator
+import descriptors.Descriptor
+import descriptors.DummyDescriptor
 import descriptors.singlekey.SingleKeyOperationDescriptor
-import queue.traverse
+import queue.AbstractLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
 
@@ -25,33 +27,44 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         ANSWER_NOT_NEEDED
     }
 
+    private fun traverseQueue(queue: AbstractLockFreeQueue<Descriptor<T>>): QueueTraverseResult {
+        var curQueueNode = queue.getHead()
+        var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
+
+        while (curQueueNode != null) {
+            val curDescriptor = curQueueNode.data
+            assert(curDescriptor !is DummyDescriptor)
+
+            if (curDescriptor.timestamp >= timestamp) {
+                return QueueTraverseResult.ANSWER_NOT_NEEDED
+            }
+
+            if (curDescriptor is InsertDescriptor && curDescriptor.key == key) {
+                assert(
+                    traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                            traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
+                )
+                traversalResult = QueueTraverseResult.KEY_EXISTS
+            } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == key) {
+                assert(
+                    traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
+                            traversalResult == QueueTraverseResult.KEY_EXISTS
+                )
+                traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
+            }
+
+            curQueueNode = curQueueNode.next
+        }
+        return traversalResult
+    }
+
     fun checkExistenceInner(root: RootNode<T>): Boolean? {
         var curNodeRef = root.root
 
         while (true) {
             when (val curNode = curNodeRef.get()) {
                 is InnerNode -> {
-                    val traversalResult = curNode.content.queue.traverse(
-                        initialValue = QueueTraverseResult.UNABLE_TO_DETERMINE,
-                        shouldReturn = { it >= timestamp },
-                        returnValue = { QueueTraverseResult.ANSWER_NOT_NEEDED },
-                        key = key,
-                        insertDescriptorProcessor = {
-                            assert(
-                                it == QueueTraverseResult.UNABLE_TO_DETERMINE ||
-                                        it == QueueTraverseResult.KEY_NOT_EXISTS
-                            )
-                            QueueTraverseResult.KEY_EXISTS
-                        },
-                        deleteDescriptorProcessor = {
-                            assert(
-                                it == QueueTraverseResult.UNABLE_TO_DETERMINE ||
-                                        it == QueueTraverseResult.KEY_EXISTS
-                            )
-                            QueueTraverseResult.KEY_NOT_EXISTS
-                        }
-                    )
-                    when (traversalResult) {
+                    when (traverseQueue(curNode.content.queue)) {
                         QueueTraverseResult.KEY_EXISTS -> {
                             return true
                         }

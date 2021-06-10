@@ -1,26 +1,48 @@
 package initiator.singlekey
 
-import queue.traverse
+import descriptors.Descriptor
+import descriptors.DummyDescriptor
+import descriptors.singlekey.write.DeleteDescriptor
+import descriptors.singlekey.write.InsertDescriptor
+import queue.AbstractLockFreeQueue
+import queue.RootLockFreeQueue
 import tree.EmptyNode
 import tree.InnerNode
 import tree.KeyNode
 import tree.RootNode
 
+fun <T : Comparable<T>> traverseQueue(
+    queue: AbstractLockFreeQueue<Descriptor<T>>,
+    exitTimestamp: Long, key: T
+): Boolean? {
+    var curQueueNode = queue.getHead()
+    var traversalResult: Boolean? = null
+
+    while (curQueueNode != null) {
+        val curDescriptor = curQueueNode.data
+        assert(curDescriptor !is DummyDescriptor)
+
+        if (curDescriptor.timestamp >= exitTimestamp) {
+            return traversalResult
+        }
+
+        if (curDescriptor is InsertDescriptor && curDescriptor.key == key) {
+            assert(queue is RootLockFreeQueue || traversalResult == null || !traversalResult)
+            traversalResult = true
+        } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == key) {
+            assert(queue is RootLockFreeQueue || traversalResult == null || traversalResult)
+            traversalResult = false
+        }
+
+        curQueueNode = curQueueNode.next
+    }
+    return traversalResult
+}
+
 fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
     val timestamp = root.queue.getMaxTimestamp()
 
-    val rootTraversalResult = root.queue.traverse<T, Boolean?>(
-        initialValue = null,
-        shouldReturn = { it > timestamp },
-        returnValue = { it },
-        key = key,
-        insertDescriptorProcessor = {
-            true
-        },
-        deleteDescriptorProcessor = {
-            false
-        }
-    )
+    val rootTraversalResult = traverseQueue(root.queue, exitTimestamp = timestamp + 1, key = key)
 
     if (rootTraversalResult != null) {
         return rootTraversalResult
@@ -31,19 +53,9 @@ fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
     while (true) {
         when (val curNode = nodeRef.get()) {
             is InnerNode -> {
-                val curTraversalResult = curNode.content.queue.traverse<T, Boolean?>(
-                    initialValue = null,
-                    shouldReturn = { it > timestamp },
-                    returnValue = { it },
-                    key = key,
-                    insertDescriptorProcessor = {
-                        assert(it == null || !it)
-                        true
-                    },
-                    deleteDescriptorProcessor = {
-                        assert(it == null || it)
-                        false
-                    }
+                val curTraversalResult = traverseQueue(
+                    curNode.content.queue,
+                    exitTimestamp = timestamp + 1, key = key
                 )
                 if (curTraversalResult != null) {
                     return curTraversalResult

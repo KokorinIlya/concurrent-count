@@ -8,7 +8,7 @@ import tree.InnerNodeContent
 import tree.RootNode
 import tree.TreeNodeReference
 
-private fun <T : Comparable<T>> doCountNoMinMax(
+private fun <T : Comparable<T>> doCountInternal(
     result: CountResult, startRef: TreeNodeReference<T>, timestamp: Long,
     action: (InnerNodeContent<T>) -> TreeNodeReference<T>?
 ) {
@@ -31,7 +31,7 @@ private fun <T : Comparable<T>> doCountNoMinMaxRightBorder(
     startRef: TreeNodeReference<T>, rightBorder: T,
     timestamp: Long, result: CountResult
 ) {
-    doCountNoMinMax(result, startRef, timestamp) {
+    doCountInternal(result, startRef, timestamp) {
         if (rightBorder < it.rightSubtreeMin) {
             it.left
         } else {
@@ -44,7 +44,7 @@ private fun <T : Comparable<T>> doCountNoMinMaxLeftBorder(
     startRef: TreeNodeReference<T>, leftBorder: T,
     timestamp: Long, result: CountResult
 ) {
-    doCountNoMinMax(result, startRef, timestamp) {
+    doCountInternal(result, startRef, timestamp) {
         if (leftBorder >= it.rightSubtreeMin) {
             it.right
         } else {
@@ -58,7 +58,7 @@ private fun <T : Comparable<T>> doCountNoMinMaxBothBorders(
     timestamp: Long, result: CountResult
 ) {
     assert(leftBorder <= rightBorder)
-    doCountNoMinMax(result, startRef, timestamp) {
+    doCountInternal(result, startRef, timestamp) {
         when {
             rightBorder < it.rightSubtreeMin -> it.left
             leftBorder >= it.rightSubtreeMin -> it.right
@@ -71,7 +71,7 @@ private fun <T : Comparable<T>> doCountNoMinMaxBothBorders(
     }
 }
 
-fun <T : Comparable<T>> doCountNoMinMax(root: RootNode<T>, left: T, right: T): TimestampLinearizedResult<Int> {
+fun <T : Comparable<T>> doCount(root: RootNode<T>, left: T, right: T): TimestampLinearizedResult<Int> {
     require(left <= right)
     val descriptor = CountDescriptor.new(left, right)
     descriptor.result.preVisitNode(root.id)

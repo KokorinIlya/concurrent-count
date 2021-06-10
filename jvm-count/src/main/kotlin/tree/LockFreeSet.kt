@@ -9,7 +9,7 @@ import descriptors.singlekey.ExistsDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
 import initiator.singlekey.executeSingleKeyOperation
-import initiator.count.doCountNoMinMax
+import initiator.count.doCount
 import initiator.singlekey.doWaitFreeContains
 import queue.RootLockFreeQueue
 import result.TimestampLinearizedResult
@@ -41,7 +41,7 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
     }
 
     override fun countTimestamped(left: T, right: T): TimestampLinearizedResult<Int> {
-        return doCountNoMinMax(root, left, right)
+        return doCount(root, left, right)
     }
 
     fun containsWaitFree(key: T): Boolean {

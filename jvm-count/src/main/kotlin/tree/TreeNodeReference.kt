@@ -112,7 +112,6 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         }
         assert(resultSubtreeSize >= 1)
 
-
         @Suppress("RemoveExplicitTypeArguments")
         val innerNodeContent = InnerNodeContent<T>(
             id = nodeIdAllocator.allocateId(),

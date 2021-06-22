@@ -16,7 +16,7 @@ import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
-    private val root: RootNode<T>
+    val root: RootNode<T>
 
     init {
         val initDescriptor = DummyDescriptor<T>(0L)

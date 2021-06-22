@@ -17,7 +17,6 @@ fun testSequentialSet(
                 Insert
                  */
                 val x = random.nextInt(from = minKey, until = maxKey)
-
                 val result = setToTest.insert(x)
                 val expectedResult = stressSet.insert(x)
                 Assertions.assertEquals(result, expectedResult)

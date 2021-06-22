@@ -7,16 +7,22 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     @Volatile
-    private var ref = initial
+    var ref = initial
 
     companion object {
-        private const val threshold = 20
-        private const val bias = 1
+        private const val threshold = 4
+        private const val bias = 20
         private val refFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
             TreeNodeReference::class.java,
             TreeNode::class.java,
             "ref"
         )
+
+        private data class SubtreeSizeModifier<T : Comparable<T>>(val key: T, val sizeDelta: Int) {
+            init {
+                assert(sizeDelta == 1 || sizeDelta == -1)
+            }
+        }
     }
 
     private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: InnerNode<T>) {
@@ -50,9 +56,14 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         collectKeysInChildSubtree(curRight, keys)
     }
 
+    override fun toString(): String {
+        return ref.toString()
+    }
+
     private fun buildSubtreeFromKeys(
         keys: List<T>, startIndex: Int, endIndex: Int,
-        curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
+        curOperationTimestamp: Long, nodeIdAllocator: IdAllocator,
+        subtreeSizeModifier: SubtreeSizeModifier<T>?
     ): TreeNode<T> {
         if (startIndex == endIndex) {
             return EmptyNode(creationTimestamp = curOperationTimestamp, createdOnRebuild = true)
@@ -62,14 +73,50 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         }
         val midIndex = (startIndex + endIndex) / 2
         val rightSubtreeMin = keys[midIndex]
-        val left = buildSubtreeFromKeys(keys, startIndex, midIndex, curOperationTimestamp, nodeIdAllocator)
-        val right = buildSubtreeFromKeys(keys, midIndex, endIndex, curOperationTimestamp, nodeIdAllocator)
-        val curSubtreeSize = endIndex - startIndex
+
+        val baseSubtreeSize = endIndex - startIndex
+        val (left, right, resultSubtreeSize) = when {
+            subtreeSizeModifier == null -> Triple(
+                buildSubtreeFromKeys(
+                    keys, startIndex, midIndex, curOperationTimestamp,
+                    nodeIdAllocator, null
+                ),
+                buildSubtreeFromKeys(
+                    keys, midIndex, endIndex, curOperationTimestamp,
+                    nodeIdAllocator, null
+                ),
+                baseSubtreeSize
+            )
+            subtreeSizeModifier.key >= rightSubtreeMin -> Triple(
+                buildSubtreeFromKeys(
+                    keys, startIndex, midIndex, curOperationTimestamp,
+                    nodeIdAllocator, null
+                ),
+                buildSubtreeFromKeys(
+                    keys, midIndex, endIndex, curOperationTimestamp,
+                    nodeIdAllocator, subtreeSizeModifier
+                ),
+                baseSubtreeSize + subtreeSizeModifier.sizeDelta
+            )
+            else -> Triple(
+                buildSubtreeFromKeys(
+                    keys, startIndex, midIndex, curOperationTimestamp,
+                    nodeIdAllocator, subtreeSizeModifier
+                ),
+                buildSubtreeFromKeys(
+                    keys, midIndex, endIndex, curOperationTimestamp,
+                    nodeIdAllocator, null
+                ),
+                baseSubtreeSize + subtreeSizeModifier.sizeDelta
+            )
+        }
+        assert(resultSubtreeSize >= 1)
+
 
         @Suppress("RemoveExplicitTypeArguments")
         val innerNodeContent = InnerNodeContent<T>(
             id = nodeIdAllocator.allocateId(),
-            initialSize = curSubtreeSize,
+            initialSize = resultSubtreeSize,
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
             queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
@@ -80,14 +127,16 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             content = innerNodeContent,
             lastModificationTimestamp = curOperationTimestamp,
             modificationsCount = 0,
-            subtreeSize = curSubtreeSize
+            subtreeSize = resultSubtreeSize
         )
     }
 
     private fun getRebuilt(
         innerNode: InnerNode<T>,
         curOperationTimestamp: Long,
-        nodeIdAllocator: IdAllocator
+        nodeIdAllocator: IdAllocator,
+        subtreeSizeDelta: Int,
+        key: T
     ): TreeNode<T> {
         finishOperationsInSubtree(innerNode)
         val curSubtreeKeys = mutableListOf<T>()
@@ -95,7 +144,18 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         val sortedKeys = curSubtreeKeys.toList()
         assert(innerNode.subtreeSize == sortedKeys.size)
         assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
-        return buildSubtreeFromKeys(sortedKeys, 0, sortedKeys.size, curOperationTimestamp, nodeIdAllocator)
+        assert(
+            subtreeSizeDelta == 1 && !sortedKeys.contains(key) ||
+                    subtreeSizeDelta == -1 && sortedKeys.contains(key)
+        )
+        return buildSubtreeFromKeys(
+            keys = sortedKeys,
+            startIndex = 0,
+            endIndex = sortedKeys.size,
+            curOperationTimestamp = curOperationTimestamp,
+            nodeIdAllocator = nodeIdAllocator,
+            subtreeSizeModifier = SubtreeSizeModifier(key = key, sizeDelta = subtreeSizeDelta)
+        )
     }
 
     fun get(): TreeNode<T> {
@@ -108,25 +168,21 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         curNode: InnerNode<T>,
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
-        subtreeSizeDelta: Int
+        subtreeSizeDelta: Int,
+        key: T
     ): TreeNode<T> {
         assert(curNode.lastModificationTimestamp < curOperationTimestamp)
 
-        val correctNode = if (curNode.modificationsCount + 1 >= threshold * curNode.content.initialSize + bias) {
-            getRebuilt(curNode, curOperationTimestamp, nodeIdAllocator)
+        val modifiedNode = if (curNode.modificationsCount + 1 >= threshold * curNode.content.initialSize + bias) {
+            val rebuildResult = getRebuilt(curNode, curOperationTimestamp, nodeIdAllocator, subtreeSizeDelta, key)
+            rebuildResult
         } else {
-            curNode
-        }
-
-        val modifiedNode = if (correctNode is InnerNode) {
             InnerNode(
-                content = correctNode.content,
+                content = curNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
-                modificationsCount = 1,
-                subtreeSize = correctNode.subtreeSize + subtreeSizeDelta
+                modificationsCount = curNode.modificationsCount + 1,
+                subtreeSize = curNode.subtreeSize + subtreeSizeDelta
             )
-        } else {
-            correctNode
         }
 
         val casResult = refFieldUpdater.compareAndSet(this, curNode, modifiedNode)
@@ -146,7 +202,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     private fun getWrite(
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
-        subtreeSizeDelta: Int
+        subtreeSizeDelta: Int,
+        key: T
     ): TreeNode<T> {
         val curNode = get()
         return if (curNode is InnerNode && curNode.lastModificationTimestamp < curOperationTimestamp) {
@@ -154,23 +211,26 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
                 curNode,
                 curOperationTimestamp,
                 nodeIdAllocator,
-                subtreeSizeDelta
+                subtreeSizeDelta,
+                key
             )
         } else {
             curNode
         }
     }
 
-    fun getInsert(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
+    fun getInsert(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator, key: T): TreeNode<T> = getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
-        subtreeSizeDelta = 1
+        subtreeSizeDelta = 1,
+        key = key
     )
 
-    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator): TreeNode<T> = getWrite(
+    fun getDelete(curOperationTimestamp: Long, nodeIdAllocator: IdAllocator, key: T): TreeNode<T> = getWrite(
         curOperationTimestamp = curOperationTimestamp,
         nodeIdAllocator = nodeIdAllocator,
-        subtreeSizeDelta = -1
+        subtreeSizeDelta = -1,
+        key = key
     )
 
     fun casInsert(old: EmptyNode<T>, new: KeyNode<T>): Boolean {

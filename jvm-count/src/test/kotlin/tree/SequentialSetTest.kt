@@ -122,4 +122,15 @@ class SequentialSetTest {
             minKey = -10, maxKey = 10
         )
     }
+
+    /*
+    @Test
+    fun rebuildTest() {
+        doTest(
+            testsCount = 1000, operationsPerTest = 8,
+            insertProb = 1.0, deleteProb = 0.0, countProb = 0.0,
+            minKey = 0, maxKey = 20
+        )
+    }
+     */
 }

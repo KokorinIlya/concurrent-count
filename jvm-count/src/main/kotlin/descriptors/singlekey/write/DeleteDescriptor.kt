@@ -19,7 +19,7 @@ class DeleteDescriptor<T : Comparable<T>>(
     }
 
     override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
-        return curChildRef.getDelete(timestamp, nodeIdAllocator)
+        return curChildRef.getDelete(timestamp, nodeIdAllocator, key)
     }
 
     override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {

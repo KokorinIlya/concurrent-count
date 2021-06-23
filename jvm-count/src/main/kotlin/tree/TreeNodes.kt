@@ -6,8 +6,7 @@ sealed class TreeNode<T : Comparable<T>> {
 
 data class KeyNode<T : Comparable<T>>(
     val key: T,
-    val creationTimestamp: Long,
-    val createdOnRebuild: Boolean
+    val creationTimestamp: Long
 ) : TreeNode<T>() {
     override fun dumpToString(level: Int): String {
         return "-".repeat(level) + "key=$key"
@@ -15,8 +14,7 @@ data class KeyNode<T : Comparable<T>>(
 }
 
 data class EmptyNode<T : Comparable<T>>(
-    val creationTimestamp: Long,
-    val createdOnRebuild: Boolean
+    val creationTimestamp: Long
 ) : TreeNode<T>() {
     override fun dumpToString(level: Int): String {
         return "-".repeat(level) + "Empty"

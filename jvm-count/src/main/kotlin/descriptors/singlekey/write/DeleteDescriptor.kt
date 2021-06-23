@@ -19,30 +19,26 @@ class DeleteDescriptor<T : Comparable<T>>(
     }
 
     override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
-        return curChildRef.getDelete(timestamp, nodeIdAllocator, key)
+        return curChildRef.getDelete(timestamp, nodeIdAllocator, key, result)
     }
 
     override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {
-        assert(
-            curChild.creationTimestamp > timestamp ||
-                    curChild.creationTimestamp == timestamp && !curChild.createdOnRebuild
-        )
+        assert(curChild.creationTimestamp >= timestamp)
         result.tryFinish()
     }
 
     override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: KeyNode<T>) {
-        assert(curChild.creationTimestamp != timestamp || curChild.createdOnRebuild)
         if (curChild.key == key) {
             if (curChild.creationTimestamp <= timestamp) {
-                val emptyNode = EmptyNode<T>(creationTimestamp = timestamp, createdOnRebuild = false)
+                val emptyNode = EmptyNode<T>(creationTimestamp = timestamp)
                 curChildRef.casDelete(curChild, emptyNode)
                 result.tryFinish()
             } else {
                 assert(result.getResult() != null)
             }
         } else {
-            assert(curChild.creationTimestamp > timestamp)
-            assert(result.getResult() != null)
+            assert(curChild.creationTimestamp >= timestamp)
+            result.tryFinish()
         }
     }
 

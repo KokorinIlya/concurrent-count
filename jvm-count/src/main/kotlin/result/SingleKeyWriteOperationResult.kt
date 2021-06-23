@@ -33,6 +33,11 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean> {
 
     fun decisionMade(): Boolean = status != Status.UNDECIDED
 
+    fun isAcceptedForExecution(): Boolean {
+        val curStatus = status
+        return curStatus == Status.EXECUTED || curStatus == Status.SHOULD_BE_EXECUTED
+    }
+
     fun trySetDecision(shouldBeExecuted: Boolean) {
         val newStatus = if (shouldBeExecuted) {
             Status.SHOULD_BE_EXECUTED

@@ -23,7 +23,7 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
         @Suppress("RemoveExplicitTypeArguments")
         root = RootNode<T>(
             queue = RootLockFreeQueue(initDescriptor),
-            root = TreeNodeReference(EmptyNode(initDescriptor.timestamp, createdOnRebuild = false)),
+            root = TreeNodeReference(EmptyNode(initDescriptor.timestamp)),
             id = nodeIdAllocator.allocateId()
         )
     }

@@ -26,13 +26,14 @@ for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free
             args_list = [
                 f'bench_type:{bench_type}',
                 f'threads:{threads}',
-                f'key_range:{args.key_range}',
                 f'initial_size:{args.initial_size}',
                 f'insert_prob:{args.insert_prob}',
                 f'delete_prob:{args.delete_prob}',
                 f'count_prob:{args.count_prob}',
                 f'milliseconds:{args.milliseconds}'
             ]
+            if args.key_range is not None:
+                args_list.append(f'key_range:{args.key_range}')
             args_str = ';'.join(args_list)
 
             bench_res = 0.

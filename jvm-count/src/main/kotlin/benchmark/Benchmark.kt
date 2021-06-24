@@ -17,7 +17,8 @@ private fun Pair<Long, Long>?.genLongInBounds(random: ThreadLocalRandom): Long {
     return if (this == null) {
         random.nextLong()
     } else {
-        random.nextLong(first, second)
+        val (from, to) = this
+        random.nextLong(from, to)
     }
 }
 

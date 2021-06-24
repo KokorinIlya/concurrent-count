@@ -8,32 +8,37 @@ import treap.concurrent.UniversalConstructionTreap
 import treap.modifiable.ModifiableTreap
 import treap.persistent.PersistentTreap
 import tree.LockFreeSet
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
+private fun Pair<Long, Long>?.genLongInBounds(random: ThreadLocalRandom): Long {
+    return if (this == null) {
+        random.nextLong()
+    } else {
+        random.nextLong(first, second)
+    }
+}
+
 private fun doSingleOperation(
-    rangeBegin: Long, rangeEnd: Long,
-    insertProb: Double, deleteProb: Double, countProb: Double,
-    set: CountSet<Long>
+    keyRange: Pair<Long, Long>?, set: CountSet<Long>,
+    insertProb: Double, deleteProb: Double, countProb: Double
 ) {
+    val random = ThreadLocalRandom.current()
     val curP = ThreadLocalRandom.current().nextDouble(0.0, 1.0)
     when {
         curP < insertProb -> {
-            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+            val curKey = keyRange.genLongInBounds(random)
             set.insert(curKey)
         }
         curP < insertProb + deleteProb -> {
-            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+            val curKey = keyRange.genLongInBounds(random)
             set.delete(curKey)
         }
         curP < insertProb + deleteProb + countProb -> {
-            val a = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
-            val b = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+            val a = keyRange.genLongInBounds(random)
+            val b = keyRange.genLongInBounds(random)
             val (leftBorder, rightBorder) = if (a < b) {
                 Pair(a, b)
             } else {
@@ -42,7 +47,7 @@ private fun doSingleOperation(
             set.count(leftBorder, rightBorder)
         }
         else -> {
-            val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+            val curKey = keyRange.genLongInBounds(random)
             set.contains(curKey)
         }
     }
@@ -52,13 +57,14 @@ private fun doSingleOperation(
 private fun doBenchmarkSingleRun(
     threadsCount: Int, milliseconds: Long,
     initialSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
-    rangeBegin: Long, rangeEnd: Long,
+    keyRange: Pair<Long, Long>?,
     setGetter: () -> CountSet<Long>
 ): Double {
     val set = setGetter()
     var curSize = 0
     while (curSize < initialSize) {
-        val curKey = ThreadLocalRandom.current().nextLong(rangeBegin, rangeEnd)
+        val random = ThreadLocalRandom.current()
+        val curKey = keyRange.genLongInBounds(random)
         val addRes = set.insert(curKey)
         if (addRes) {
             curSize += 1
@@ -71,8 +77,8 @@ private fun doBenchmarkSingleRun(
             var curThreadOps = 0
             while (running.get()) {
                 doSingleOperation(
-                    rangeBegin = rangeBegin, rangeEnd = rangeEnd,
-                    insertProb = insertProb, deleteProb = deleteProb, countProb = countProb, set = set
+                    keyRange = keyRange, set = set,
+                    insertProb = insertProb, deleteProb = deleteProb, countProb = countProb
                 )
                 curThreadOps += 1
             }
@@ -85,26 +91,6 @@ private fun doBenchmarkSingleRun(
     return totalOps.get().toDouble() / milliseconds.toDouble()
 }
 
-@Suppress("SameParameterValue")
-private fun doBenchmark(
-    runsCount: Int, milliseconds: Long, threadsCount: Int,
-    setGetter: () -> CountSet<Long>,
-    initialSize: Long, insertProb: Double, deleteProb: Double, countProb: Double,
-    rangeBegin: Long, rangeEnd: Long
-): Double {
-    assert(rangeEnd - rangeBegin >= initialSize)
-    var sumRes = 0.0
-    repeat(runsCount) {
-        sumRes += doBenchmarkSingleRun(
-            milliseconds = milliseconds, threadsCount = threadsCount,
-            setGetter = setGetter, initialSize = initialSize,
-            insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
-            rangeBegin = rangeBegin, rangeEnd = rangeEnd
-        )
-    }
-    return sumRes / runsCount
-}
-
 private fun parseArgs(args: String): Map<String, String> {
     return args.split(';').map {
         val parts = it.split(':')
@@ -113,25 +99,28 @@ private fun parseArgs(args: String): Map<String, String> {
     }.toMap()
 }
 
+private fun parseRange(rangeDesc: String): Pair<Long, Long> {
+    val parts = rangeDesc.split("..")
+    require(parts.size == 2)
+    val from = parts[0].toLong()
+    val to = parts[1].toLong()
+    require(from < to)
+    return Pair(from, to)
+}
+
 fun main(args: Array<String>) {
-    println(Runtime.getRuntime().maxMemory())
+    println("${Runtime.getRuntime().maxMemory()} bytes of memory available")
     require(args.size == 1)
     val parsedArgs = parseArgs(args[0])
-    val basePath = Paths.get(parsedArgs.getValue("out_dir"))
-    Files.createDirectories(basePath)
 
     val benchName = parsedArgs.getValue("bench_type")
-    val filePath = basePath.resolve("$benchName.bench")
-    val createFile = parsedArgs.getValue("create_file")
-    assert(createFile == "False" || createFile == "True")
 
     val threadsCount = parsedArgs.getValue("threads").toInt()
     val milliseconds = parsedArgs.getValue("milliseconds").toLong()
     val initialSize = parsedArgs.getValue("initial_size").toLong()
-    val runsCount = parsedArgs.getValue("runs_count").toInt()
 
-    val keysFrom = parsedArgs.getValue("keys_from").toLong()
-    val keysTo = parsedArgs.getValue("keys_until").toLong()
+    val keyRange = parsedArgs["key_range"]?.let { parseRange(it) }
+    keyRange?.let { (from, to) -> require(to - from >= initialSize) }
 
     val insertProb = parsedArgs.getValue("insert_prob").toDouble()
     val deleteProb = parsedArgs.getValue("delete_prob").toDouble()
@@ -145,17 +134,11 @@ fun main(args: Array<String>) {
         "lock-free" to { LockFreeSet<Long>() }
     )
 
-    if (createFile == "True") {
-        Files.newBufferedWriter(filePath)
-    } else {
-        Files.newBufferedWriter(filePath, StandardOpenOption.APPEND)
-    }.use {
-        val ops = doBenchmark(
-            runsCount = runsCount, threadsCount = threadsCount, milliseconds = milliseconds,
-            initialSize = initialSize, insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
-            rangeBegin = keysFrom, rangeEnd = keysTo,
-            setGetter = setGetters.getValue(benchName)
-        )
-        it.write("$threadsCount threads, $ops ops / millisecond\n")
-    }
+    val ops = doBenchmarkSingleRun(
+        milliseconds = milliseconds, threadsCount = threadsCount,
+        setGetter = setGetters.getValue(benchName), initialSize = initialSize,
+        insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,
+        keyRange = keyRange
+    )
+    println(ops)
 }

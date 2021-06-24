@@ -11,8 +11,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     var ref = initial
 
     companion object {
-        private const val threshold = 4
-        private const val bias = 20
+        private const val threshold = 1
+        private const val bias = 2
         private val refFieldUpdater = AtomicReferenceFieldUpdater.newUpdater(
             TreeNodeReference::class.java,
             TreeNode::class.java,

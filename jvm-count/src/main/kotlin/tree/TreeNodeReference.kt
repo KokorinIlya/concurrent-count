@@ -2,7 +2,7 @@ package tree
 
 import allocation.IdAllocator
 import descriptors.DummyDescriptor
-import queue.NonRootLockFreeQueue
+import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 

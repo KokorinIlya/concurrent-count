@@ -1,15 +1,10 @@
-package queue
+package queue.ms
 
 import common.TimestampedValue
+import queue.common.AbstractQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
-/**
- * Base class for both root and non-root queues, since both queues must allow peek and popIf methods.
- * @param T - type of elements, stored in the queue
- * @param initValue - initial dummy value, that will be pointed at by both head and tail pointers at the beginning.
- * Such value must have timestamp, which is less, than any valid timestamp.
- */
-abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
+abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T): AbstractQueue<T> {
     @Volatile
     private var head: QueueNode<T>
 
@@ -17,6 +12,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
     protected var tail: QueueNode<T>
 
     companion object {
+        @Suppress("HasPlatformType")
         val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractLockFreeQueue::class.java,
             QueueNode::class.java,
@@ -37,14 +33,9 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
         head = dummyNode
     }
 
-    /**
-     * Retrieves the first node, that corresponds to non-dummy value in the queue.
-     * Can be used to perform queue traversal.
-     */
-    fun getHead(): QueueNode<T>? = head.next
+    override fun getTraverser(): LockFreeQueueTraverser<T> = LockFreeQueueTraverser(head.next)
 
-
-    fun peek(): T? {
+    override fun peek(): T? {
         while (true) {
             /*
             Head should be read before tail, because curHead should be situated further from the queue end, than
@@ -69,7 +60,7 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) {
         }
     }
 
-    fun popIf(timestamp: Long): Boolean {
+    override fun popIf(timestamp: Long): Boolean {
         while (true) {
             /*
             Head should be read before tail, because curHead should be situated further from the queue end, than

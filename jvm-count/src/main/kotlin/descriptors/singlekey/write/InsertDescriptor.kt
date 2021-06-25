@@ -2,7 +2,7 @@ package descriptors.singlekey.write
 
 import allocation.IdAllocator
 import descriptors.DummyDescriptor
-import queue.NonRootLockFreeQueue
+import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
 

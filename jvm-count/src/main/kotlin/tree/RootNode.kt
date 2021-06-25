@@ -1,10 +1,10 @@
 package tree
 
 import descriptors.Descriptor
-import queue.RootLockFreeQueue
+import queue.common.RootQueue
 
 class RootNode<T : Comparable<T>>(
-    val queue: RootLockFreeQueue<Descriptor<T>>,
+    val queue: RootQueue<Descriptor<T>>,
     val root: TreeNodeReference<T>,
     val id: Long
 ) {

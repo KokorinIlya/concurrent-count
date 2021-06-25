@@ -1,10 +1,10 @@
 package tree
 
 import descriptors.Descriptor
-import queue.NonRootLockFreeQueue
+import queue.common.NonRootQueue
 
 class InnerNodeContent<T : Comparable<T>>(
-    val queue: NonRootLockFreeQueue<Descriptor<T>>,
+    val queue: NonRootQueue<Descriptor<T>>,
     val left: TreeNodeReference<T>,
     val right: TreeNodeReference<T>,
     val rightSubtreeMin: T,

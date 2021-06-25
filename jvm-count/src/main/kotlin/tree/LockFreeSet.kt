@@ -11,7 +11,7 @@ import descriptors.singlekey.write.InsertDescriptor
 import initiator.singlekey.executeSingleKeyOperation
 import initiator.count.doCount
 import initiator.singlekey.doWaitFreeContains
-import queue.RootLockFreeQueue
+import queue.ms.RootLockFreeQueue
 import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {

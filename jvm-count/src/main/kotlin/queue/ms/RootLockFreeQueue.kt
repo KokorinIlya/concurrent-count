@@ -1,17 +1,11 @@
-package queue
+package queue.ms
 
 import common.TimestampedValue
+import queue.common.RootQueue
 
-/**
- * Queues for the root node. Insert to such queue should happen unconditionally and each value should acquire
- * timestamp, that indicates the moment, it was inserted in the queue.
- */
-class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQueue<T>(initValue) {
-    /**
-     * Inserts new value to the queue, augmenting new value with a monotonically increasing timestamp.
-     * @return timestamp of the new value
-     */
-    fun pushAndAcquireTimestamp(value: T): Long {
+
+class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : RootQueue<T>, AbstractLockFreeQueue<T>(initValue) {
+    override fun pushAndAcquireTimestamp(value: T): Long {
         val newTail = QueueNode(data = value, next = null)
 
         while (true) {
@@ -32,7 +26,7 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQu
         }
     }
 
-    fun getMaxTimestamp(): Long { // TODO: maybe, return curTail.data.timestamp
+    override fun getMaxTimestamp(): Long { // TODO: maybe, return curTail.data.timestamp
         val curTail = tail
         val nextTail = curTail.next
         return if (nextTail != null) {

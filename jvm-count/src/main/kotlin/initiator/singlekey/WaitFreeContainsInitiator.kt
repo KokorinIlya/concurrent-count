@@ -4,22 +4,22 @@ import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
-import queue.AbstractLockFreeQueue
-import queue.RootLockFreeQueue
+import queue.common.AbstractQueue
+import queue.common.RootQueue
 import tree.EmptyNode
 import tree.InnerNode
 import tree.KeyNode
 import tree.RootNode
 
 fun <T : Comparable<T>> traverseQueue(
-    queue: AbstractLockFreeQueue<Descriptor<T>>,
+    queue: AbstractQueue<Descriptor<T>>,
     exitTimestamp: Long, key: T
 ): Boolean? {
-    var curQueueNode = queue.getHead()
+    val queueTraverser = queue.getTraverser()
+    var curDescriptor = queueTraverser.getNext()
     var traversalResult: Boolean? = null
 
-    while (curQueueNode != null) {
-        val curDescriptor = curQueueNode.data
+    while (curDescriptor != null) {
         assert(curDescriptor !is DummyDescriptor)
 
         if (curDescriptor.timestamp >= exitTimestamp) {
@@ -27,14 +27,14 @@ fun <T : Comparable<T>> traverseQueue(
         }
 
         if (curDescriptor is InsertDescriptor && curDescriptor.key == key) {
-            assert(queue is RootLockFreeQueue || traversalResult == null || !traversalResult)
+            assert(queue is RootQueue || traversalResult == null || !traversalResult)
             traversalResult = true
         } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == key) {
-            assert(queue is RootLockFreeQueue || traversalResult == null || traversalResult)
+            assert(queue is RootQueue || traversalResult == null || traversalResult)
             traversalResult = false
         }
 
-        curQueueNode = curQueueNode.next
+        curDescriptor = queueTraverser.getNext()
     }
     return traversalResult
 }

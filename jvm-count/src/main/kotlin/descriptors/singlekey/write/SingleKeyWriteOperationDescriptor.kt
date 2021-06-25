@@ -4,7 +4,7 @@ import allocation.IdAllocator
 import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import descriptors.singlekey.SingleKeyOperationDescriptor
-import queue.AbstractLockFreeQueue
+import queue.common.AbstractQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
 
@@ -27,12 +27,12 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         ANSWER_NOT_NEEDED
     }
 
-    private fun traverseQueue(queue: AbstractLockFreeQueue<Descriptor<T>>): QueueTraverseResult {
-        var curQueueNode = queue.getHead()
+    private fun traverseQueue(queue: AbstractQueue<Descriptor<T>>): QueueTraverseResult {
+        val queueTraverser = queue.getTraverser()
+        var curDescriptor = queueTraverser.getNext()
         var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
 
-        while (curQueueNode != null) {
-            val curDescriptor = curQueueNode.data
+        while (curDescriptor != null) {
             assert(curDescriptor !is DummyDescriptor)
 
             if (curDescriptor.timestamp >= timestamp) {
@@ -53,7 +53,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                 traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
             }
 
-            curQueueNode = curQueueNode.next
+            curDescriptor = queueTraverser.getNext()
         }
         return traversalResult
     }

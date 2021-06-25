@@ -2,13 +2,10 @@ package queue
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.LongGen
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import org.junit.jupiter.api.Test
+import queue.ms.NonRootLockFreeQueue
 
 class SequentialNonRootQueue : AbstractSequentialQueue<NonRootLockFreeQueueTest.Companion.Dummy>() {
     private var maxTimestamp = 0L

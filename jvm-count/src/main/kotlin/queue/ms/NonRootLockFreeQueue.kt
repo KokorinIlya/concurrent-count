@@ -1,10 +1,11 @@
-package queue
+package queue.ms
 
 import common.TimestampedValue
+import queue.common.NonRootQueue
 
 
-class NonRootLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractLockFreeQueue<T>(initValue) {
-    fun pushIf(value: T): Boolean {
+class NonRootLockFreeQueue<T : TimestampedValue>(initValue: T) : NonRootQueue<T>, AbstractLockFreeQueue<T>(initValue) {
+    override fun pushIf(value: T): Boolean {
         /*
         New node can be allocated only once
          */

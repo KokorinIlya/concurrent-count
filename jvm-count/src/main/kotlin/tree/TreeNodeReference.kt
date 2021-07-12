@@ -1,8 +1,7 @@
 package tree
 
 import allocation.IdAllocator
-import descriptors.DummyDescriptor
-import queue.ms.NonRootLockFreeQueue
+import queue.lock.NonRootCircularBufferQueue
 import result.SingleKeyWriteOperationResult
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
@@ -96,7 +95,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             initialSize = endIndex - startIndex,
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
-            queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+            //queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+            queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp - 1),
             rightSubtreeMin = rightSubtreeMin
         )
 

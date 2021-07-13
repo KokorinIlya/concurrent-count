@@ -111,7 +111,6 @@ private fun parseRange(rangeDesc: String): Pair<Long, Long> {
 
 fun main(args: Array<String>) {
     println("${Runtime.getRuntime().maxMemory()} bytes of memory available")
-    println("Java version: ${Runtime.version()}")
     require(args.size == 1)
     val parsedArgs = parseArgs(args[0])
 

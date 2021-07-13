@@ -23,8 +23,8 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
         val initDescriptor = DummyDescriptor<T>(0L)
         @Suppress("RemoveExplicitTypeArguments")
         root = RootNode<T>(
-            // queue = RootLockFreeQueue(initDescriptor),
-            queue = RootCircularBufferQueue(bufferSize = 1),
+            queue = RootLockFreeQueue(initDescriptor),
+            // queue = RootCircularBufferQueue(bufferSize = 1),
             root = TreeNodeReference(EmptyNode(initDescriptor.timestamp)),
             id = nodeIdAllocator.allocateId()
         )

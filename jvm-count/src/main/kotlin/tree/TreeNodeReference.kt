@@ -97,8 +97,8 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             initialSize = endIndex - startIndex,
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
-            //queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
-            queue = NonRootCircularBufferQueue(bufferSize = 1, creationTimestamp = curOperationTimestamp - 1),
+            queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+            // queue = NonRootCircularBufferQueue(bufferSize = 1, creationTimestamp = curOperationTimestamp - 1),
             rightSubtreeMin = rightSubtreeMin
         )
 

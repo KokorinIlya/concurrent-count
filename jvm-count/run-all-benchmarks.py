@@ -18,7 +18,7 @@ args = parser.parse_args()
 assert args.delete_prob + args.insert_prob + args.count_prob <= 1.
 os.makedirs(args.out_dir, exist_ok=True)
 
-for bench_type in ['universal', 'lock-free']: # 'lock-persistent', 'lock-modifiable'
+for bench_type in ['lock-persistent', 'lock-modifiable', 'universal', 'lock-free']:
     with open(f'{args.out_dir}/{bench_type}.bench', 'w') as out_file:
         for threads in range(1, args.max_threads + 1):
             print(f'Bench name = {bench_type}, threads = {threads}')

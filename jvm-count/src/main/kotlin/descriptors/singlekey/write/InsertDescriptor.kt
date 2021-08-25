@@ -44,7 +44,7 @@ class InsertDescriptor<T : Comparable<T>>(
                 @Suppress("RemoveExplicitTypeArguments")
                 val innerNodeContent = InnerNodeContent<T>(
                     queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(timestamp)),
-                    // queue = NonRootCircularBufferQueue(bufferSize = 1, creationTimestamp = timestamp),
+                    // queue = NonRootCircularBufferQueue(creationTimestamp = timestamp),
                     id = nodeIdAllocator.allocateId(),
                     initialSize = 2,
                     left = TreeNodeReference(leftChild),

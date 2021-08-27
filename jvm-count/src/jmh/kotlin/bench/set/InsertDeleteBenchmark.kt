@@ -5,13 +5,15 @@ import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
-open class ContainsBenchmark {
+open class InsertDeleteBenchmark {
     @State(Scope.Benchmark)
     open class BenchmarkState {
         var set: LockFreeSet<Long>? = null
 
         companion object {
             const val START_SIZE: Int = 1_000_000
+            const val LEFT_BORDER = -START_SIZE.toLong()
+            const val RIGHT_BORDER = START_SIZE.toLong()
         }
 
         @Setup(Level.Iteration)
@@ -19,7 +21,7 @@ open class ContainsBenchmark {
             val newSet = LockFreeSet<Long>()
             var size = 0
             while (size < START_SIZE) {
-                val x = ThreadLocalRandom.current().nextLong()
+                val x = ThreadLocalRandom.current().nextLong(LEFT_BORDER, RIGHT_BORDER)
                 val insertResult = newSet.insertTimestamped(x).result
                 if (insertResult) {
                     size += 1
@@ -35,8 +37,12 @@ open class ContainsBenchmark {
     @Threads(1)
     @Fork(2)
     fun benchmark1Thread(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            state.set!!.insertTimestamped(key).result
+        } else {
+            state.set!!.deleteTimestamped(key).result
+        }
     }
 
     @Benchmark
@@ -45,8 +51,12 @@ open class ContainsBenchmark {
     @Threads(4)
     @Fork(2)
     fun benchmark4Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            state.set!!.insertTimestamped(key).result
+        } else {
+            state.set!!.deleteTimestamped(key).result
+        }
     }
 
     @Benchmark
@@ -55,8 +65,12 @@ open class ContainsBenchmark {
     @Threads(8)
     @Fork(2)
     fun benchmark8Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            state.set!!.insertTimestamped(key).result
+        } else {
+            state.set!!.deleteTimestamped(key).result
+        }
     }
 
     @Benchmark
@@ -65,7 +79,11 @@ open class ContainsBenchmark {
     @Threads(16)
     @Fork(2)
     fun benchmark16Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            state.set!!.insertTimestamped(key).result
+        } else {
+            state.set!!.deleteTimestamped(key).result
+        }
     }
 }

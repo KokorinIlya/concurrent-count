@@ -1,8 +1,6 @@
 package bench.set
 
 import org.openjdk.jmh.annotations.*
-import treap.persistent.PersistentTreap
-import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 

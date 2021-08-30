@@ -1,38 +1,40 @@
 package bench.set
 
 import org.openjdk.jmh.annotations.*
+import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Fork(2)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(3)
+@State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
 open class SuccessfulInsertBenchmark {
-    @Benchmark
-    @Threads(1)
-    fun benchmark1Thread(state: ContainsBenchmark.BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.insertTimestamped(x).result
+    var set: LockFreeSet<Long>? = null
+
+    @Param("1000000")
+    var size = 0;
+
+    @Setup(Level.Iteration)
+    fun init() {
+        val newSet = LockFreeSet<Long>()
+        var s = 0
+        while (s < size) {
+            val x = ThreadLocalRandom.current().nextLong()
+            val insertResult = newSet.insertTimestamped(x).result
+            if (insertResult) {
+                s += 1
+            }
+        }
+        set = newSet
     }
 
     @Benchmark
-    @Threads(4)
-    fun benchmark4Threads(state: ContainsBenchmark.BenchmarkState): Boolean {
+    fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.insertTimestamped(x).result
-    }
-
-    @Benchmark
-    @Threads(8)
-    fun benchmark8Threads(state: ContainsBenchmark.BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.insertTimestamped(x).result
-    }
-
-    @Benchmark
-    @Threads(16)
-    fun benchmark16Threads(state: ContainsBenchmark.BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.insertTimestamped(x).result
+        // TODO: Is it really always successful? Why?
+        return set!!.insertTimestamped(x).result
     }
 }

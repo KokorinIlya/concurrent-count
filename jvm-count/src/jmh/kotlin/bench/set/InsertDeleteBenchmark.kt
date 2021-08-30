@@ -5,6 +5,9 @@ import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
+@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
+@Fork(2)
 open class InsertDeleteBenchmark {
     @State(Scope.Benchmark)
     open class BenchmarkState {
@@ -32,10 +35,7 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
     @Threads(1)
-    @Fork(2)
     fun benchmark1Thread(state: BenchmarkState): Boolean {
         val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
         return if (ThreadLocalRandom.current().nextBoolean()) {
@@ -46,10 +46,7 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
     @Threads(4)
-    @Fork(2)
     fun benchmark4Threads(state: BenchmarkState): Boolean {
         val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
         return if (ThreadLocalRandom.current().nextBoolean()) {
@@ -60,10 +57,7 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
     @Threads(8)
-    @Fork(2)
     fun benchmark8Threads(state: BenchmarkState): Boolean {
         val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
         return if (ThreadLocalRandom.current().nextBoolean()) {
@@ -74,10 +68,7 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-    @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
     @Threads(16)
-    @Fork(2)
     fun benchmark16Threads(state: BenchmarkState): Boolean {
         val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
         return if (ThreadLocalRandom.current().nextBoolean()) {

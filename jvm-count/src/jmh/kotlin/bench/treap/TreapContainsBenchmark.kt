@@ -1,6 +1,7 @@
-package bench.set
+package bench.treap
 
 import org.openjdk.jmh.annotations.*
+import treap.modifiable.ModifiableTreap
 import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
@@ -8,10 +9,10 @@ import java.util.concurrent.TimeUnit
 @Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
 @Fork(2)
-open class ContainsBenchmark {
+open class TreapContainsBenchmark {
     @State(Scope.Benchmark)
     open class BenchmarkState {
-        var set: LockFreeSet<Long>? = null
+        var set: ModifiableTreap<Long>? = null
 
         companion object {
             const val START_SIZE: Int = 1_000_000
@@ -19,11 +20,11 @@ open class ContainsBenchmark {
 
         @Setup(Level.Iteration)
         fun init() {
-            val newSet = LockFreeSet<Long>()
+            val newSet = ModifiableTreap<Long>()
             var size = 0
             while (size < START_SIZE) {
                 val x = ThreadLocalRandom.current().nextLong()
-                val insertResult = newSet.insertTimestamped(x).result
+                val insertResult = newSet.insert(x)
                 if (insertResult) {
                     size += 1
                 }
@@ -36,27 +37,6 @@ open class ContainsBenchmark {
     @Threads(1)
     fun benchmark1Thread(state: BenchmarkState): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
-
-    @Benchmark
-    @Threads(4)
-    fun benchmark4Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
-
-    @Benchmark
-    @Threads(8)
-    fun benchmark8Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
-
-    @Benchmark
-    @Threads(16)
-    fun benchmark16Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        return state.set!!.contains(x)
     }
 }

@@ -15,11 +15,12 @@ open class InsertDeleteBenchmark {
     var set: LockFreeSet<Long>? = null
 
     @Param("1000000")
-    var size = 0;
+    var size = 0
 
-    var leftBorder = 0L;
-    var rightBorder = 0L;
+    var leftBorder = 0L
+    var rightBorder = 0L
 
+    @Suppress("DuplicatedCode")
     @Setup(Level.Trial)
     fun init() {
         val newSet = LockFreeSet<Long>()
@@ -28,7 +29,7 @@ open class InsertDeleteBenchmark {
         rightBorder = +size.toLong();
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
-            val insertResult = newSet.insertTimestamped(x).result
+            val insertResult = newSet.insert(x)
             if (insertResult) {
                 s += 1
             }
@@ -40,10 +41,9 @@ open class InsertDeleteBenchmark {
     fun test(): Boolean {
         val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
         return if (ThreadLocalRandom.current().nextBoolean()) {
-            set!!.insertTimestamped(key).result
+            set!!.insert(key)
         } else {
-            set!!.deleteTimestamped(key).result
+            set!!.delete(key)
         }
     }
-
 }

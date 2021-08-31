@@ -15,15 +15,16 @@ open class SuccessfulInsertBenchmark {
     var set: LockFreeSet<Long>? = null
 
     @Param("1000000")
-    var size = 0;
+    var size = 0
 
+    @Suppress("DuplicatedCode")
     @Setup(Level.Iteration)
     fun init() {
         val newSet = LockFreeSet<Long>()
         var s = 0
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong()
-            val insertResult = newSet.insertTimestamped(x).result
+            val insertResult = newSet.insert(x)
             if (insertResult) {
                 s += 1
             }
@@ -35,6 +36,6 @@ open class SuccessfulInsertBenchmark {
     fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
         // TODO: Is it really always successful? Why?
-        return set!!.insertTimestamped(x).result
+        return set!!.insert(x)
     }
 }

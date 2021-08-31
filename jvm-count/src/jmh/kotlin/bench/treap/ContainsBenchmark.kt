@@ -1,6 +1,7 @@
 package bench.treap
 
 import org.openjdk.jmh.annotations.*
+import treap.concurrent.LockTreap
 import treap.modifiable.ModifiableTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
@@ -11,15 +12,16 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-open class TreapContainsBenchmark {
-    var set: ModifiableTreap<Long>? = null
+open class ContainsBenchmark {
+    var set: LockTreap<Long>? = null
 
     @Param("1000000")
-    var size = 0;
+    var size = 0
 
+    @Suppress("DuplicatedCode")
     @Setup(Level.Trial)
     fun init() {
-        val newSet = ModifiableTreap<Long>()
+        val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong()

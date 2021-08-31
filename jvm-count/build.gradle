@@ -29,18 +29,6 @@ tasks.withType(Test) {
     enableAssertions = true
 }
 
-task bench(type: JavaExec) {
-    main = 'benchmark.Benchmark'
-    if (project.hasProperty('args')) {
-        args project.args
-    }
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-tasks.withType(JavaExec) {
-    enableAssertions = false
-}
-
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-reflect:1.4.10'
     implementation "org.jetbrains.kotlin:kotlin-stdlib"

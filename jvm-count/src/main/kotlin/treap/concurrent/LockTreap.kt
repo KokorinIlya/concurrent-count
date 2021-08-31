@@ -2,10 +2,8 @@ package treap.concurrent
 
 import common.CountSet
 import treap.common.Treap
-import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
-import kotlin.concurrent.withLock
 import kotlin.concurrent.write
 
 class LockTreap<T : Comparable<T>>(private val treap: Treap<T>) : CountSet<T> {

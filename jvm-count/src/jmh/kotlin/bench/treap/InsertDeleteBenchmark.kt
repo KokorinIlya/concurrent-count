@@ -3,16 +3,16 @@ package bench.treap
 import org.openjdk.jmh.annotations.*
 import treap.concurrent.LockTreap
 import treap.modifiable.ModifiableTreap
-import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
+@Suppress("unused")
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Fork(3)
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
-@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class InsertDeleteBenchmark {
 
     var set: LockTreap<Long>? = null
@@ -20,16 +20,16 @@ open class InsertDeleteBenchmark {
     @Param("1000000")
     var size = 0
 
-    var leftBorder = 0L
-    var rightBorder = 0L
+    private var leftBorder = 0L
+    private var rightBorder = 0L
 
     @Suppress("DuplicatedCode")
     @Setup(Level.Trial)
     fun init() {
         val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0
-        leftBorder = -size.toLong();
-        rightBorder = +size.toLong();
+        leftBorder = -size.toLong()
+        rightBorder = +size.toLong()
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
             val insertResult = newSet.insert(x)

@@ -5,12 +5,13 @@ import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
+@Suppress("unused")
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Fork(3)
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
-@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class ContainsBenchmark {
 
     var set: LockFreeSet<Long>? = null

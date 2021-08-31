@@ -5,76 +5,45 @@ import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Fork(2)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(3)
+@State(Scope.Benchmark)
+@BenchmarkMode(Mode.Throughput)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
 open class InsertDeleteBenchmark {
-    @State(Scope.Benchmark)
-    open class BenchmarkState {
-        var set: LockFreeSet<Long>? = null
+    var set: LockFreeSet<Long>? = null
 
-        companion object {
-            const val START_SIZE: Int = 1_000_000
-            const val LEFT_BORDER = -START_SIZE.toLong()
-            const val RIGHT_BORDER = START_SIZE.toLong()
-        }
+    @Param("1000000")
+    var size = 0;
 
-        @Setup(Level.Iteration)
-        fun init() {
-            val newSet = LockFreeSet<Long>()
-            var size = 0
-            while (size < START_SIZE) {
-                val x = ThreadLocalRandom.current().nextLong(LEFT_BORDER, RIGHT_BORDER)
-                val insertResult = newSet.insertTimestamped(x).result
-                if (insertResult) {
-                    size += 1
-                }
+    var leftBorder = 0L;
+    var rightBorder = 0L;
+
+    @Setup(Level.Trial)
+    fun init() {
+        val newSet = LockFreeSet<Long>()
+        var s = 0
+        leftBorder = -size.toLong();
+        rightBorder = +size.toLong();
+        while (s < size) {
+            val x = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
+            val insertResult = newSet.insertTimestamped(x).result
+            if (insertResult) {
+                s += 1
             }
-            set = newSet
         }
+        set = newSet
     }
 
     @Benchmark
-    @Threads(1)
-    fun benchmark1Thread(state: BenchmarkState): Boolean {
-        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
+    fun test(): Boolean {
+        val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
         return if (ThreadLocalRandom.current().nextBoolean()) {
-            state.set!!.insertTimestamped(key).result
+            set!!.insertTimestamped(key).result
         } else {
-            state.set!!.deleteTimestamped(key).result
+            set!!.deleteTimestamped(key).result
         }
     }
 
-    @Benchmark
-    @Threads(4)
-    fun benchmark4Threads(state: BenchmarkState): Boolean {
-        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
-        return if (ThreadLocalRandom.current().nextBoolean()) {
-            state.set!!.insertTimestamped(key).result
-        } else {
-            state.set!!.deleteTimestamped(key).result
-        }
-    }
-
-    @Benchmark
-    @Threads(8)
-    fun benchmark8Threads(state: BenchmarkState): Boolean {
-        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
-        return if (ThreadLocalRandom.current().nextBoolean()) {
-            state.set!!.insertTimestamped(key).result
-        } else {
-            state.set!!.deleteTimestamped(key).result
-        }
-    }
-
-    @Benchmark
-    @Threads(16)
-    fun benchmark16Threads(state: BenchmarkState): Boolean {
-        val key = ThreadLocalRandom.current().nextLong(BenchmarkState.LEFT_BORDER, BenchmarkState.RIGHT_BORDER)
-        return if (ThreadLocalRandom.current().nextBoolean()) {
-            state.set!!.insertTimestamped(key).result
-        } else {
-            state.set!!.deleteTimestamped(key).result
-        }
-    }
 }

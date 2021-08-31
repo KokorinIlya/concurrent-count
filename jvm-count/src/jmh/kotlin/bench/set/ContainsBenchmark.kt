@@ -5,58 +5,37 @@ import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
-@Warmup(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Measurement(iterations = 10, time = 10, timeUnit = TimeUnit.SECONDS)
-@Fork(2)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Fork(3)
+@State(Scope.Benchmark)
+@BenchmarkMode(Mode.Throughput)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
 open class ContainsBenchmark {
-    @State(Scope.Benchmark)
-    open class BenchmarkState {
-        var set: LockFreeSet<Long>? = null
 
-        companion object {
-            const val START_SIZE: Int = 1_000_000
-        }
+    var set: LockFreeSet<Long>? = null
 
-        @Setup(Level.Iteration)
-        fun init() {
-            val newSet = LockFreeSet<Long>()
-            var size = 0
-            while (size < START_SIZE) {
-                val x = ThreadLocalRandom.current().nextLong()
-                val insertResult = newSet.insertTimestamped(x).result
-                if (insertResult) {
-                    size += 1
-                }
+    @Param("1000000")
+    var size = 0;
+
+    @Setup(Level.Trial)
+    fun init() {
+        val newSet = LockFreeSet<Long>()
+        var s = 0
+        while (s < size) {
+            val x = ThreadLocalRandom.current().nextLong()
+            val insertResult = newSet.insertTimestamped(x).result
+            if (insertResult) {
+                s += 1
             }
-            set = newSet
         }
+        set = newSet
     }
 
     @Benchmark
-    @Threads(1)
-    fun benchmark1Thread(state: BenchmarkState): Boolean {
+    fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
+        return set!!.containsWaitFree(x)
     }
 
-    @Benchmark
-    @Threads(4)
-    fun benchmark4Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
-
-    @Benchmark
-    @Threads(8)
-    fun benchmark8Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
-
-    @Benchmark
-    @Threads(16)
-    fun benchmark16Threads(state: BenchmarkState): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return state.set!!.containsWaitFree(x)
-    }
 }

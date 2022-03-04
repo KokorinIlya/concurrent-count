@@ -1,12 +1,12 @@
-package treap.concurrent
+package rivals.treap.concurrent
 
 import common.*
 import result.TimestampLinearizedResult
-import treap.common.contains
-import treap.common.count
-import treap.persistent.PersistentTreapNode
-import treap.persistent.delete
-import treap.persistent.insert
+import rivals.treap.common.contains
+import rivals.treap.common.count
+import rivals.treap.persistent.PersistentTreapNode
+import rivals.treap.persistent.delete
+import rivals.treap.persistent.insert
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
 

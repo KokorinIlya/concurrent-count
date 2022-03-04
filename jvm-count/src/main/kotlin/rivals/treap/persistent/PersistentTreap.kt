@@ -1,9 +1,9 @@
-package treap.persistent
+package rivals.treap.persistent
 
 import common.None
 import common.Optional
 import common.Some
-import treap.common.Treap
+import rivals.treap.common.Treap
 import java.util.concurrent.ThreadLocalRandom
 
 class PersistentTreap<T : Comparable<T>> : Treap<T>() {

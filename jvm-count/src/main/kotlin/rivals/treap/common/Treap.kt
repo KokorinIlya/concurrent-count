@@ -1,4 +1,4 @@
-package treap.common
+package rivals.treap.common
 
 import common.CountSet
 

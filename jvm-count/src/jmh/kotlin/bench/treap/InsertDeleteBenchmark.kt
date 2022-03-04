@@ -1,8 +1,8 @@
 package bench.treap
 
 import org.openjdk.jmh.annotations.*
-import treap.concurrent.LockTreap
-import treap.modifiable.ModifiableTreap
+import rivals.treap.concurrent.LockTreap
+import rivals.treap.modifiable.ModifiableTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 

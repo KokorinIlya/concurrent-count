@@ -5,10 +5,9 @@ import queue.common.RootQueue
 import kotlin.concurrent.withLock
 
 class RootCircularBufferQueue<T : TimestampedValue>(bufferSize: Int = 32) :
-    AbstractCircularBufferQueue<T>(bufferSize),
-    RootQueue<T> {
+    AbstractCircularBufferQueue<T>(bufferSize), RootQueue<T> {
 
-    override fun pushAndAcquireTimestamp(value: T): Long {
+    override fun pushAndAcquireTimestamp(value: T): Long = lock.withLock {
         assert(head in 0..tail)
         val curMaxTimestamp = getMaxTimestamp()
         value.timestamp = curMaxTimestamp + 1
@@ -17,7 +16,7 @@ class RootCircularBufferQueue<T : TimestampedValue>(bufferSize: Int = 32) :
         return value.timestamp
     }
 
-    override fun getMaxTimestamp(): Long  {
+    override fun getMaxTimestamp(): Long = lock.withLock {
         assert(head in 0..tail)
         return if (tail == 0) {
             0L

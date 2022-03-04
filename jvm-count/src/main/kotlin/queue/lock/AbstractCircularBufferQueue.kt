@@ -8,7 +8,7 @@ import kotlin.concurrent.withLock
 
 abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int) : AbstractQueue<T> {
     protected val buffer = MutableList<T?>(bufferSize) { null }
-    // protected val lock = ReentrantLock()
+    protected val lock = ReentrantLock()
     protected var head = 0
     protected var tail = 0
 
@@ -16,7 +16,7 @@ abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int
         return CircularBufferQueueTraverser(head, tail, buffer)
     }
 
-    override fun peek(): T? {
+    override fun peek(): T? = lock.withLock {
         assert(head in 0..tail)
         return if (head == tail) {
             null
@@ -25,7 +25,7 @@ abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int
         }
     }
 
-    override fun popIf(timestamp: Long): Boolean {
+    override fun popIf(timestamp: Long): Boolean = lock.withLock {
         assert(head in 0..tail)
         return when {
             head == tail -> false

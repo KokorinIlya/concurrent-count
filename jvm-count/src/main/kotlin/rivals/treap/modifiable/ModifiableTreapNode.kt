@@ -1,7 +1,7 @@
-package treap.modifiable
+package rivals.treap.modifiable
 
-import treap.common.TreapNode
-import treap.common.getSize
+import rivals.treap.common.TreapNode
+import rivals.treap.common.getSize
 
 class ModifiableTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,

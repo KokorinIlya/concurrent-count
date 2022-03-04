@@ -1,7 +1,7 @@
-package treap.concurrent
+package rivals.treap.concurrent
 
 import common.CountSet
-import treap.common.Treap
+import rivals.treap.common.Treap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write

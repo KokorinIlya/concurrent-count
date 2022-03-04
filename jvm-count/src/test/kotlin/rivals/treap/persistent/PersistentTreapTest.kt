@@ -1,11 +1,11 @@
-package treap.modifiable
+package rivals.treap.persistent
 
 import common.testSequentialSet
 import org.junit.jupiter.api.Test
 import common.SequentialSet
 import kotlin.random.Random
 
-class ModifiableTreapTest {
+class PersistentTreapTest {
     @Suppress("SameParameterValue")
     private fun doTest(
         testsCount: Int, operationsPerTest: Int,
@@ -19,7 +19,7 @@ class ModifiableTreapTest {
                 println(testNum)
             }
 
-            val treap = ModifiableTreap<Int>()
+            val treap = PersistentTreap<Int>()
             val set = SequentialSet<Int>()
             testSequentialSet(
                 operationsPerTest = operationsPerTest, random = random,

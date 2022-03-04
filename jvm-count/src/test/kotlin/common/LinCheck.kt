@@ -3,7 +3,7 @@ package common
 import logging.QueueLogger
 import org.junit.jupiter.api.Assertions
 import org.opentest4j.AssertionFailedError
-import treap.persistent.PersistentTreap
+import rivals.treap.persistent.PersistentTreap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.concurrent.thread

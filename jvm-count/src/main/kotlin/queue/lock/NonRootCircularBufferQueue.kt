@@ -8,7 +8,7 @@ class NonRootCircularBufferQueue<T : TimestampedValue>(
     bufferSize: Int = 32,
     private val creationTimestamp: Long
 ) : AbstractCircularBufferQueue<T>(bufferSize), NonRootQueue<T> {
-    override fun pushIf(value: T): Boolean {
+    override fun pushIf(value: T): Boolean = lock.withLock {
         assert(head in 0..tail)
         return if (value.timestamp <= creationTimestamp) {
             false

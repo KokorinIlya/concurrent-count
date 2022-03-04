@@ -1,8 +1,7 @@
-package bench.treap
+package bench.universal
 
 import org.openjdk.jmh.annotations.*
-import rivals.treap.concurrent.LockTreap
-import rivals.treap.modifiable.ModifiableTreap
+import rivals.treap.concurrent.UniversalConstructionTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
@@ -14,7 +13,8 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class ContainsBenchmark {
-    var set: LockTreap<Long>? = null
+
+    var set: UniversalConstructionTreap<Long>? = null
 
     @Param("1000000")
     var size = 0
@@ -22,7 +22,7 @@ open class ContainsBenchmark {
     @Suppress("DuplicatedCode")
     @Setup(Level.Trial)
     fun init() {
-        val newSet = LockTreap<Long>(treap = ModifiableTreap())
+        val newSet = UniversalConstructionTreap<Long>()
         var s = 0
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong()

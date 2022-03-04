@@ -1,8 +1,7 @@
-package bench.treap
+package bench.universal
 
 import org.openjdk.jmh.annotations.*
-import rivals.treap.concurrent.LockTreap
-import rivals.treap.modifiable.ModifiableTreap
+import rivals.treap.concurrent.UniversalConstructionTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
@@ -13,19 +12,24 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-open class ContainsBenchmark {
-    var set: LockTreap<Long>? = null
+open class InsertDeleteBenchmark {
+    var set: UniversalConstructionTreap<Long>? = null
 
     @Param("1000000")
     var size = 0
 
+    private var leftBorder = 0L
+    private var rightBorder = 0L
+
     @Suppress("DuplicatedCode")
     @Setup(Level.Trial)
     fun init() {
-        val newSet = LockTreap<Long>(treap = ModifiableTreap())
+        val newSet = UniversalConstructionTreap<Long>()
         var s = 0
+        leftBorder = -size.toLong()
+        rightBorder = +size.toLong()
         while (s < size) {
-            val x = ThreadLocalRandom.current().nextLong()
+            val x = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
             val insertResult = newSet.insert(x)
             if (insertResult) {
                 s += 1
@@ -36,7 +40,11 @@ open class ContainsBenchmark {
 
     @Benchmark
     fun test(): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        return set!!.contains(x)
+        val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            set!!.insert(key)
+        } else {
+            set!!.delete(key)
+        }
     }
 }

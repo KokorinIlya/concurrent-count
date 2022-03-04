@@ -98,7 +98,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             left = TreeNodeReference(left),
             right = TreeNodeReference(right),
             queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
-            // queue = NonRootCircularBufferQueue(bufferSize = 1, creationTimestamp = curOperationTimestamp - 1),
+            //queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp - 1),
             rightSubtreeMin = rightSubtreeMin
         )
 
@@ -168,7 +168,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             val correctlySizedNode = InnerNode(
                 content = curNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
-                modificationsCount = /*curNode.modificationsCount +*/ 1,
+                modificationsCount = /* curNode.modificationsCount */ + 1,
                 subtreeSize = curNode.subtreeSize + subtreeSizeDelta
             )
             Pair(correctlySizedNode, false)

@@ -11,7 +11,6 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : RootQueue<T>, Abst
         while (true) {
             val curTail = tail
 
-
             val maxTimestamp = curTail.data.timestamp
             val newTimestamp = maxTimestamp + 1
             value.timestamp = newTimestamp

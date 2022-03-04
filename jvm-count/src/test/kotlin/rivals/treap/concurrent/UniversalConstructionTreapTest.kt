@@ -1,4 +1,4 @@
-package treap.concurrent
+package rivals.treap.concurrent
 
 import common.doLinCheck
 import org.junit.jupiter.api.Test

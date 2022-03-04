@@ -1,11 +1,11 @@
-package treap.persistent
+package rivals.treap.persistent
 
 import common.None
 import common.Optional
 import common.Some
-import treap.common.TreapNode
-import treap.common.contains
-import treap.common.getSize
+import rivals.treap.common.TreapNode
+import rivals.treap.common.contains
+import rivals.treap.common.getSize
 
 class PersistentTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,

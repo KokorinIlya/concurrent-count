@@ -1,6 +1,6 @@
-package treap.modifiable
+package rivals.treap.modifiable
 
-import treap.common.Treap
+import rivals.treap.common.Treap
 import java.util.concurrent.ThreadLocalRandom
 
 class ModifiableTreap<T : Comparable<T>> : Treap<T>() {

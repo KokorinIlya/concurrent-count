@@ -20,7 +20,7 @@ open class ContainsBenchmark {
     var size = 0
 
     @Suppress("DuplicatedCode")
-    @Setup(Level.Trial)
+    @Setup(Level.Iteration)
     fun init() {
         val newSet = UniversalConstructionTreap<Long>()
         var s = 0

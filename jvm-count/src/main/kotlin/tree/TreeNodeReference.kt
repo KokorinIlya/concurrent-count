@@ -168,7 +168,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             val correctlySizedNode = InnerNode(
                 content = curNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
-                modificationsCount = /* curNode.modificationsCount */ + 1,
+                modificationsCount = /*curNode.modificationsCount*/ + 1,
                 subtreeSize = curNode.subtreeSize + subtreeSizeDelta
             )
             Pair(correctlySizedNode, false)

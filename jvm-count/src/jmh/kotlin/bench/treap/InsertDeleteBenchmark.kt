@@ -24,7 +24,7 @@ open class InsertDeleteBenchmark {
     private var rightBorder = 0L
 
     @Suppress("DuplicatedCode")
-    @Setup(Level.Trial)
+    @Setup(Level.Iteration)
     fun init() {
         val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0

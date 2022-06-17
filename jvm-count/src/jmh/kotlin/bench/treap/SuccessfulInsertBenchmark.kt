@@ -20,7 +20,7 @@ open class SuccessfulInsertBenchmark {
     var size = 0
 
     @Suppress("DuplicatedCode")
-    @Setup(Level.Trial)
+    @Setup(Level.Iteration)
     fun init() {
         val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0

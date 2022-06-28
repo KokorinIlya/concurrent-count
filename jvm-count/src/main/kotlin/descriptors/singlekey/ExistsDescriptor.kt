@@ -14,15 +14,17 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processInnerChild(curChild: InnerNode<T>) {
+    private fun processInnerChild(curChild: TreeNode<T>) {
+        lazyAssert { curChild.isInnerNode() }
         lazyAssert { curChild.lastModificationTimestamp != timestamp }
-        val pushRes = curChild.content.queue.pushIf(this)
+        val pushRes = curChild.content!!.queue.pushIf(this)
         if (curChild.lastModificationTimestamp > timestamp) {
             lazyAssert { !pushRes }
         }
     }
 
-    private fun processEmptyChild(curChild: EmptyNode<T>) {
+    private fun processEmptyChild(curChild: TreeNode<T>) {
+        lazyAssert { curChild.isEmptyNode() }
         lazyAssert { curChild.creationTimestamp != timestamp }
         if (curChild.creationTimestamp > timestamp) {
             lazyAssert { result.getResult() != null }
@@ -31,7 +33,8 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processKeyChild(curChild: KeyNode<T>) {
+    private fun processKeyChild(curChild: TreeNode<T>) {
+        lazyAssert { curChild.isKeyNode() }
         lazyAssert { curChild.creationTimestamp != timestamp }
         if (curChild.creationTimestamp > timestamp) {
             lazyAssert { result.getResult() != null }
@@ -41,10 +44,12 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     override fun processChild(curChildRef: TreeNodeReference<T>) {
-        when (val curChild = curChildRef.get()) {
-            is EmptyNode -> processEmptyChild(curChild)
-            is KeyNode -> processKeyChild(curChild)
-            is InnerNode -> processInnerChild(curChild)
+        val curChild = curChildRef.get()
+        when (curChild.nodeType) {
+            1 -> processEmptyChild(curChild) // EmptyNode
+            0 -> processKeyChild(curChild) // KeyNode
+            2 -> processInnerChild(curChild) // InnerNode
+            else -> throw AssertionError("Illegal node type")
         }
     }
 

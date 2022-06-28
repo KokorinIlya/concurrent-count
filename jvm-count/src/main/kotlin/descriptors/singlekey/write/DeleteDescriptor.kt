@@ -2,8 +2,6 @@ package descriptors.singlekey.write
 
 import allocation.IdAllocator
 import result.SingleKeyWriteOperationResult
-import tree.EmptyNode
-import tree.KeyNode
 import tree.TreeNode
 import tree.TreeNodeReference
 import common.lazyAssert
@@ -23,15 +21,17 @@ class DeleteDescriptor<T : Comparable<T>>(
         return curChildRef.getDelete(timestamp, nodeIdAllocator, key, result)
     }
 
-    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {
+    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
+        lazyAssert { curChild.isEmptyNode() }
         lazyAssert { curChild.creationTimestamp >= timestamp }
         result.tryFinish()
     }
 
-    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: KeyNode<T>) {
+    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
+        lazyAssert { curChild.isKeyNode() }
         if (curChild.key == key) {
             if (curChild.creationTimestamp <= timestamp) {
-                val emptyNode = EmptyNode<T>(creationTimestamp = timestamp)
+                val emptyNode = TreeNode.makeEmptyNode<T>(creationTimestamp = timestamp)
                 curChildRef.casDelete(curChild, emptyNode)
                 result.tryFinish()
             } else {

@@ -3,7 +3,6 @@ package initiator.singlekey
 import descriptors.singlekey.SingleKeyOperationDescriptor
 import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import result.TimestampLinearizedResult
-import tree.InnerNode
 import tree.RootNode
 import common.lazyAssert
 
@@ -43,12 +42,14 @@ fun <T : Comparable<T>, R> executeSingleKeyOperation(
             return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
         }
 
-        when (val curNode = curNodeRef.get()) {
-            is InnerNode -> {
-                curNode.content.executeUntilTimestamp(timestamp)
+        val curNode = curNodeRef.get()
+        when (curNode.nodeType) {
+            2 -> { // InnerNode
+                curNode.content!!.executeUntilTimestamp(timestamp)
                 curNodeRef = curNode.content.route(descriptor.key)
             }
             else -> {
+                lazyAssert { curNode.nodeType == 0 || curNode.nodeType == 1 }
                 if (descriptor is SingleKeyWriteOperationDescriptor) {
                     descriptor.result.tryFinish()
                 }

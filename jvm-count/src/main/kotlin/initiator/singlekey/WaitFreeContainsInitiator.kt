@@ -6,11 +6,7 @@ import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
 import queue.common.AbstractQueue
 import queue.common.RootQueue
-import tree.EmptyNode
-import tree.InnerNode
-import tree.KeyNode
 import tree.RootNode
-import common.lazyAssert
 import common.lazyAssert
 
 fun <T : Comparable<T>> traverseQueue(
@@ -53,10 +49,11 @@ fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
     var nodeRef = root.root
 
     while (true) {
-        when (val curNode = nodeRef.get()) {
-            is InnerNode -> {
+        val curNode = nodeRef.get()
+        when (curNode.nodeType) {
+            2 -> { // InnerNode
                 val curTraversalResult = traverseQueue(
-                    curNode.content.queue,
+                    curNode.content!!.queue,
                     exitTimestamp = timestamp + 1, key = key
                 )
                 if (curTraversalResult != null) {
@@ -64,12 +61,13 @@ fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
                 }
                 nodeRef = curNode.content.route(key)
             }
-            is EmptyNode -> {
+            1 -> { // EmptyNode
                 return false
             }
-            is KeyNode -> {
+            0 -> { // KeyNode
                 return curNode.key == key
             }
+            else -> throw AssertionError("Illegal node type")
         }
     }
 }

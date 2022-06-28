@@ -3,7 +3,6 @@ package initiator.count
 import descriptors.count.CountDescriptor
 import result.CountResult
 import result.TimestampLinearizedResult
-import tree.InnerNode
 import tree.InnerNodeContent
 import tree.RootNode
 import tree.TreeNodeReference
@@ -15,13 +14,15 @@ private fun <T : Comparable<T>> doCountInternal(
 ) {
     var curRef = startRef
     while (result.getResult() == null) {
-        when (val curNode = curRef.get()) {
-            is InnerNode -> {
-                curNode.content.executeUntilTimestamp(timestamp)
+        val curNode = curRef.get()
+        when (curNode.nodeType) {
+            2 -> { // InnerNode
+                curNode.content!!.executeUntilTimestamp(timestamp)
                 val nextRef = action(curNode.content) ?: return
                 curRef = nextRef
             }
             else -> {
+                lazyAssert { curNode.nodeType == 0 || curNode.nodeType == 1 }
                 return
             }
         }

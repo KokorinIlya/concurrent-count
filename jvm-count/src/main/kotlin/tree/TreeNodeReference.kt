@@ -22,16 +22,18 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         )
     }
 
-    private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: InnerNode<T>) {
-        innerNode.content.executeUntilTimestamp(null)
+    private fun <T : Comparable<T>> finishOperationsInSubtree(innerNode: TreeNode<T>) {
+        lazyAssert { innerNode.isInnerNode() }
+
+        innerNode.content!!.executeUntilTimestamp(null)
         val left = innerNode.content.left.get()
         val right = innerNode.content.right.get()
 
-        if (left is InnerNode) {
+        if (left.isInnerNode()) {
             finishOperationsInSubtree(left)
         }
 
-        if (right is InnerNode) {
+        if (right.isInnerNode()) {
             finishOperationsInSubtree(right)
         }
     }
@@ -40,32 +42,36 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         child: TreeNode<T>, keys: MutableList<T>,
         isInsert: Boolean, key: T
     ) {
-        when (child) {
-            is KeyNode -> {
+        when (child.nodeType) {
+            0 -> { // KeyNod
+                val curKey = child.key!!
                 if (isInsert) {
-                    if (keys.isNotEmpty() && keys.last() < key && key < child.key ||
-                        keys.isEmpty() && key < child.key
+                    if (keys.isNotEmpty() && keys.last() < key && key < curKey ||
+                        keys.isEmpty() && key < curKey
                     ) {
                         keys.add(key)
                     }
-                    keys.add(child.key)
+                    keys.add(curKey)
                 } else {
                     if (child.key != key) {
-                        keys.add(child.key)
+                        keys.add(curKey)
                     }
                 }
             }
-            is InnerNode -> collectKeysInSubtree(child, keys, isInsert, key)
-            is EmptyNode -> {
+            2 -> collectKeysInSubtree(child, keys, isInsert, key) // InnerNode
+            1 -> { // EmptyNode
             }
+            else -> throw AssertionError("Illegal node type")
         }
     }
 
     private fun <T : Comparable<T>> collectKeysInSubtree(
-        root: InnerNode<T>, keys: MutableList<T>,
+        root: TreeNode<T>, keys: MutableList<T>,
         isInsert: Boolean, key: T
     ) {
-        val curLeft = root.content.left.get()
+        lazyAssert { root.isInnerNode() }
+
+        val curLeft = root.content!!.left.get()
         val curRight = root.content.right.get()
 
         collectKeysInChildSubtree(curLeft, keys, isInsert, key)
@@ -81,10 +87,10 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         curOperationTimestamp: Long, nodeIdAllocator: IdAllocator
     ): TreeNode<T> {
         if (startIndex == endIndex) {
-            return EmptyNode(creationTimestamp = curOperationTimestamp)
+            return TreeNode.makeEmptyNode(creationTimestamp = curOperationTimestamp)
         }
         if (startIndex + 1 == endIndex) {
-            return KeyNode(key = keys[startIndex], creationTimestamp = curOperationTimestamp)
+            return TreeNode.makeKeyNode(key = keys[startIndex], creationTimestamp = curOperationTimestamp)
         }
         val midIndex = (startIndex + endIndex) / 2
         val rightSubtreeMin = keys[midIndex]
@@ -103,7 +109,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             rightSubtreeMin = rightSubtreeMin
         )
 
-        return InnerNode(
+        return TreeNode.makeInnerNode(
             content = innerNodeContent,
             lastModificationTimestamp = curOperationTimestamp,
             modificationsCount = 0,
@@ -112,12 +118,14 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     }
 
     private fun getRebuilt(
-        innerNode: InnerNode<T>,
+        innerNode: TreeNode<T>,
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
         isInsert: Boolean,
         key: T
     ): TreeNode<T> {
+        lazyAssert { innerNode.isInnerNode() }
+
         finishOperationsInSubtree(innerNode)
         val curSubtreeKeys = mutableListOf<T>()
         collectKeysInSubtree(innerNode, curSubtreeKeys, isInsert, key)
@@ -148,32 +156,33 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     fun get(): TreeNode<T> {
         val curNode = ref
         lazyAssert {
-            curNode !is InnerNode ||
-                    curNode.modificationsCount < threshold * curNode.content.initialSize + bias
+            !curNode.isInnerNode() ||
+                    curNode.modificationsCount < threshold * curNode.content!!.initialSize + bias
         }
         return curNode
     }
 
     private fun modifyNode(
-        curNode: InnerNode<T>,
+        curNode: TreeNode<T>,
         curOperationTimestamp: Long,
         nodeIdAllocator: IdAllocator,
         subtreeSizeDelta: Int,
         key: T,
         result: SingleKeyWriteOperationResult
     ): TreeNode<T> {
+        lazyAssert { curNode.isInnerNode() }
         lazyAssert { result.isAcceptedForExecution() }
         lazyAssert { curNode.lastModificationTimestamp < curOperationTimestamp }
 
         val (modifiedNode, rebuildExecuted) = if (
-            curNode.modificationsCount + 1 >= threshold * curNode.content.initialSize + bias
+            curNode.modificationsCount + 1 >= threshold * curNode.content!!.initialSize + bias
         ) {
             lazyAssert { subtreeSizeDelta == 1 || subtreeSizeDelta == -1 }
             val isInsert = subtreeSizeDelta == 1
             val rebuildResult = getRebuilt(curNode, curOperationTimestamp, nodeIdAllocator, isInsert, key)
             Pair(rebuildResult, true)
         } else {
-            val correctlySizedNode = InnerNode(
+            val correctlySizedNode = TreeNode.makeInnerNode(
                 content = curNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
                 modificationsCount = /*curNode.modificationsCount*/ +1,
@@ -191,9 +200,9 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         } else {
             val newNode = get()
             lazyAssert {
-                newNode is InnerNode && newNode.lastModificationTimestamp >= curOperationTimestamp ||
-                        newNode is KeyNode && newNode.creationTimestamp >= curOperationTimestamp ||
-                        newNode is EmptyNode && newNode.creationTimestamp >= curOperationTimestamp
+                newNode.isInnerNode() && newNode.lastModificationTimestamp >= curOperationTimestamp ||
+                        newNode.isKeyNode() && newNode.creationTimestamp >= curOperationTimestamp ||
+                        newNode.isEmptyNode() && newNode.creationTimestamp >= curOperationTimestamp
             }
             newNode
         }
@@ -207,7 +216,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         result: SingleKeyWriteOperationResult
     ): TreeNode<T> {
         val curNode = get()
-        return if (curNode is InnerNode && curNode.lastModificationTimestamp < curOperationTimestamp) {
+        return if (curNode.isInnerNode() && curNode.lastModificationTimestamp < curOperationTimestamp) {
             modifyNode(
                 curNode,
                 curOperationTimestamp,
@@ -243,15 +252,16 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         result = result
     )
 
-    fun casInsert(old: EmptyNode<T>, new: KeyNode<T>): Boolean {
+    fun casInsert(old: TreeNode<T>, new: TreeNode<T>): Boolean {
+        lazyAssert {
+            old.isEmptyNode() && new.isKeyNode() ||
+                    old.isKeyNode() && new.isInnerNode()
+        }
         return refFieldUpdater.compareAndSet(this, old, new)
     }
 
-    fun casInsert(old: KeyNode<T>, new: InnerNode<T>): Boolean {
-        return refFieldUpdater.compareAndSet(this, old, new)
-    }
-
-    fun casDelete(old: KeyNode<T>, new: EmptyNode<T>): Boolean {
+    fun casDelete(old: TreeNode<T>, new: TreeNode<T>): Boolean {
+        lazyAssert { old.isKeyNode() && new.isEmptyNode() }
         return refFieldUpdater.compareAndSet(this, old, new)
     }
 }

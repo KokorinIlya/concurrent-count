@@ -25,7 +25,7 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
         root = RootNode<T>(
             queue = RootLockFreeQueue(initDescriptor),
             // queue = RootCircularBufferQueue(),
-            root = TreeNodeReference(EmptyNode(initDescriptor.timestamp)),
+            root = TreeNodeReference(TreeNode.makeEmptyNode<T>(initDescriptor.timestamp)),
             id = nodeIdAllocator.allocateId()
         )
     }

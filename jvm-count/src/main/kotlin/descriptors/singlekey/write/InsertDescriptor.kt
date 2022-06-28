@@ -19,9 +19,10 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {
+    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
+        lazyAssert { curChild.isEmptyNode() }
         if (curChild.creationTimestamp <= timestamp) {
-            val insertedNode = KeyNode(key = key, creationTimestamp = timestamp)
+            val insertedNode = TreeNode.makeKeyNode(key = key, creationTimestamp = timestamp)
             curChildRef.casInsert(curChild, insertedNode)
             result.tryFinish()
         } else {
@@ -29,14 +30,15 @@ class InsertDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: KeyNode<T>) {
+    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
+        lazyAssert { curChild.isKeyNode() }
         lazyAssert { curChild.key != key || curChild.creationTimestamp >= timestamp }
         when {
             curChild.creationTimestamp < timestamp -> {
                 lazyAssert { curChild.key != key }
 
-                val newKeyNode = KeyNode(key = key, creationTimestamp = timestamp)
-                val (leftChild, rightChild) = if (key < curChild.key) {
+                val newKeyNode = TreeNode.makeKeyNode(key = key, creationTimestamp = timestamp)
+                val (leftChild, rightChild) = if (key < curChild.key!!) {
                     Pair(newKeyNode, curChild)
                 } else {
                     Pair(curChild, newKeyNode)
@@ -50,9 +52,9 @@ class InsertDescriptor<T : Comparable<T>>(
                     initialSize = 2,
                     left = TreeNodeReference(leftChild),
                     right = TreeNodeReference(rightChild),
-                    rightSubtreeMin = rightChild.key
+                    rightSubtreeMin = rightChild.key!!
                 )
-                val innerNode = InnerNode(
+                val innerNode = TreeNode.makeInnerNode(
                     content = innerNodeContent,
                     lastModificationTimestamp = timestamp,
                     modificationsCount = 0,

@@ -3,9 +3,6 @@ package descriptors.count
 import descriptors.Descriptor
 import result.CountResult
 import tree.TreeNode
-import tree.KeyNode
-import tree.EmptyNode
-import tree.InnerNode
 import tree.RootNode
 import tree.InnerNodeContent
 import common.lazyAssert
@@ -38,19 +35,19 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
     protected abstract fun containsKey(key: T): Boolean
 
     fun processChild(curChild: TreeNode<T>): Int? {
-        return when (curChild) {
-            is KeyNode -> {
+        return when (curChild.nodeType) {
+            0 -> { // KeyNode
                 lazyAssert { curChild.creationTimestamp != timestamp }
                 @Suppress("CascadeIf")
                 if (curChild.creationTimestamp > timestamp) {
                     null
-                } else if (containsKey(curChild.key)) {
+                } else if (containsKey(curChild.key!!)) {
                     1
                 } else {
                     0
                 }
             }
-            is EmptyNode -> {
+            1 -> { // EmptyNode
                 lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
@@ -58,23 +55,25 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     0
                 }
             }
-            is InnerNode -> {
+            2 -> { // InnerNode
+                val curContent = curChild.content!!
                 lazyAssert { curChild.lastModificationTimestamp != timestamp }
                 if (curChild.lastModificationTimestamp > timestamp) {
-                    lazyAssert { !curChild.content.queue.pushIf(this) }
+                    lazyAssert { !curContent.queue.pushIf(this) }
                     null
                 } else {
-                    result.preVisitNode(curChild.content.id)
-                    curChild.content.queue.pushIf(this)
+                    result.preVisitNode(curContent.id)
+                    curContent.queue.pushIf(this)
                     0
                 }
             }
+            else -> throw AssertionError("Illegal node type")
         }
     }
 
     protected fun getWholeSubtreeSize(curChild: TreeNode<T>): Int? {
-        return when (curChild) {
-            is KeyNode -> {
+        return when (curChild.nodeType) {
+            0 -> { // KeyNode
                 lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
@@ -82,7 +81,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     1
                 }
             }
-            is EmptyNode -> {
+            1 -> { // EmptyNode
                 lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
@@ -90,7 +89,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     0
                 }
             }
-            is InnerNode -> {
+            2 -> { // InnerNode
                 lazyAssert { curChild.lastModificationTimestamp != timestamp }
                 if (curChild.lastModificationTimestamp > timestamp) {
                     null
@@ -98,6 +97,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     curChild.subtreeSize
                 }
             }
+            else -> throw AssertionError("Illegal node type")
         }
     }
 }

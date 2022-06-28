@@ -5,6 +5,7 @@ import queue.common.AbstractQueue
 import queue.common.QueueTraverser
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import common.lazyAssert
 
 abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int) : AbstractQueue<T> {
     protected val buffer = MutableList<T?>(bufferSize) { null }
@@ -17,7 +18,7 @@ abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int
     }
 
     override fun peek(): T? = lock.withLock {
-        assert(head in 0..tail)
+        lazyAssert { head in 0..tail }
         return if (head == tail) {
             null
         } else {
@@ -26,7 +27,7 @@ abstract class AbstractCircularBufferQueue<T : TimestampedValue>(bufferSize: Int
     }
 
     override fun popIf(timestamp: Long): Boolean = lock.withLock {
-        assert(head in 0..tail)
+        lazyAssert { head in 0..tail }
         return when {
             head == tail -> false
             buffer[head % buffer.size]!!.timestamp == timestamp -> {

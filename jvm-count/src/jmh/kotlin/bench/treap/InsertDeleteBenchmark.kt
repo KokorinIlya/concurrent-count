@@ -1,5 +1,6 @@
 package bench.treap
 
+import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.LockTreap
 import rivals.treap.modifiable.ModifiableTreap
@@ -26,6 +27,7 @@ open class InsertDeleteBenchmark {
     @Suppress("DuplicatedCode")
     @Setup(Level.Iteration)
     fun init() {
+        lazyAssert { false }
         val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0
         leftBorder = -size.toLong()

@@ -2,7 +2,7 @@ package queue.ms
 
 import common.TimestampedValue
 import queue.common.RootQueue
-
+import common.lazyAssert
 
 class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : RootQueue<T>, AbstractLockFreeQueue<T>(initValue) {
     override fun pushAndAcquireTimestamp(value: T): Long {
@@ -29,7 +29,7 @@ class RootLockFreeQueue<T : TimestampedValue>(initValue: T) : RootQueue<T>, Abst
         val curTail = tail
         val nextTail = curTail.next
         return if (nextTail != null) {
-            assert(nextTail.data.timestamp == curTail.data.timestamp + 1)
+            lazyAssert { nextTail.data.timestamp == curTail.data.timestamp + 1 }
             nextTail.data.timestamp
         } else {
             curTail.data.timestamp

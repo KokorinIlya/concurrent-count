@@ -7,6 +7,7 @@ import tree.InnerNode
 import tree.InnerNodeContent
 import tree.RootNode
 import tree.TreeNodeReference
+import common.lazyAssert
 
 private fun <T : Comparable<T>> doCountInternal(
     result: CountResult, startRef: TreeNodeReference<T>, timestamp: Long,
@@ -57,7 +58,7 @@ private fun <T : Comparable<T>> doCountNoMinMaxBothBorders(
     startRef: TreeNodeReference<T>, leftBorder: T, rightBorder: T,
     timestamp: Long, result: CountResult
 ) {
-    assert(leftBorder <= rightBorder)
+    lazyAssert { leftBorder <= rightBorder }
     doCountInternal(result, startRef, timestamp) {
         when {
             rightBorder < it.rightSubtreeMin -> it.left
@@ -76,7 +77,7 @@ fun <T : Comparable<T>> doCount(root: RootNode<T>, left: T, right: T): Timestamp
     val descriptor = CountDescriptor.new(left, right)
     descriptor.result.preVisitNode(root.id)
     val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-    assert(descriptor.timestamp == timestamp)
+    lazyAssert { descriptor.timestamp == timestamp }
 
     root.executeUntilTimestamp(timestamp)
     doCountNoMinMaxBothBorders(root.root, left, right, timestamp, descriptor.result)

@@ -2,6 +2,7 @@ package rivals.treap.modifiable
 
 import rivals.treap.common.TreapNode
 import rivals.treap.common.getSize
+import common.lazyAssert
 
 class ModifiableTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,
@@ -19,11 +20,11 @@ class ModifiableTreapNode<T : Comparable<T>>(
             val newLeft = curNode.left!!
             curNode.size -= 1
             if (newLeft.left == null) {
-                assert(newLeft.key == keyToDelete)
+                lazyAssert { newLeft.key == keyToDelete }
                 curNode.left = newLeft.right
                 return
             } else {
-                assert(newLeft.key > keyToDelete)
+                lazyAssert { newLeft.key > keyToDelete }
                 curNode = newLeft
             }
         }
@@ -37,7 +38,7 @@ class ModifiableTreapNode<T : Comparable<T>>(
 
     @Suppress("unused")
     fun assertSize() {
-        assert(calcRealSize() == size)
+        lazyAssert { calcRealSize() == size }
     }
 }
 

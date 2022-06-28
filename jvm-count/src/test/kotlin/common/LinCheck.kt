@@ -7,6 +7,7 @@ import rivals.treap.persistent.PersistentTreap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.concurrent.thread
+import common.lazyAssert
 
 sealed class Operation
 
@@ -18,7 +19,7 @@ data class ExistsOperation(val x: Int) : Operation()
 
 data class CountOperation(val left: Int, val right: Int) : Operation() {
     init {
-        assert(left <= right)
+        lazyAssert { left <= right }
     }
 }
 
@@ -122,7 +123,7 @@ fun doLinCheck(
                     }
                 }
                 val insertResult = operationsPerThread.putIfAbsent(threadIndex, currentThreadOperations)
-                assert(insertResult == null)
+                lazyAssert { insertResult == null }
             }
         }.forEach { it.join() }
 

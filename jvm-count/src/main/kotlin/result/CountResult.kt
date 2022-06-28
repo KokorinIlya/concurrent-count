@@ -2,6 +2,7 @@ package result
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
+import common.lazyAssert
 
 class CountResult : OperationResult<Int> {
     /*
@@ -26,7 +27,9 @@ class CountResult : OperationResult<Int> {
     }
 
     fun preRemoveFromNode(nodeId: Long, nodeAnswer: Int) {
-        assert(visitedLock.readLock().withLock { visitedNodes.contains(nodeId) })
+        lazyAssert {
+            visitedLock.readLock().withLock { visitedNodes.contains(nodeId) }
+        }
         answerLock.writeLock().withLock {
             answerNodes.putIfAbsent(nodeId, nodeAnswer)
         }
@@ -35,7 +38,7 @@ class CountResult : OperationResult<Int> {
     override fun getResult(): Int? {
         val totalNodesWithKnownAnswer = answerLock.readLock().withLock { answerNodes.size }
         val totalVisitedNodes = visitedLock.readLock().withLock { visitedNodes.size }
-        assert(totalNodesWithKnownAnswer <= totalVisitedNodes)
+        lazyAssert { totalNodesWithKnownAnswer <= totalVisitedNodes }
         return if (totalNodesWithKnownAnswer == totalVisitedNodes) {
             /*
             Traversing hash map is safe, since new descriptors cannot be added to the map

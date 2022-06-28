@@ -5,6 +5,7 @@ import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import result.TimestampLinearizedResult
 import tree.InnerNode
 import tree.RootNode
+import common.lazyAssert
 
 private fun <T : Comparable<T>> checkParallel(
     root: RootNode<T>,
@@ -22,12 +23,12 @@ fun <T : Comparable<T>, R> executeSingleKeyOperation(
     descriptor: SingleKeyOperationDescriptor<T, R>
 ): TimestampLinearizedResult<R> {
     val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
-    assert(descriptor.timestamp == timestamp)
+    lazyAssert { descriptor.timestamp == timestamp }
 
     if (descriptor is SingleKeyWriteOperationDescriptor) {
         val keyExists = checkParallel(root, descriptor)
         if (keyExists == null) {
-            assert(descriptor.result.decisionMade())
+            lazyAssert { descriptor.result.decisionMade() }
         } else {
             descriptor.setDecision(keyExists)
         }

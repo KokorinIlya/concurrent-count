@@ -1,5 +1,6 @@
 package bench.set
 
+import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
@@ -22,6 +23,7 @@ open class ContainsBenchmark {
     @Suppress("DuplicatedCode")
     @Setup(Level.Iteration)
     fun init() {
+        lazyAssert { false }
         val newSet = LockFreeSet<Long>()
         var s = 0
         while (s < size) {

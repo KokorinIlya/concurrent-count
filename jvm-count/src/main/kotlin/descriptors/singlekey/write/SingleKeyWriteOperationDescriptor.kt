@@ -7,16 +7,17 @@ import descriptors.singlekey.SingleKeyOperationDescriptor
 import queue.common.AbstractQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
+import common.lazyAssert
 
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>() {
     abstract override val result: SingleKeyWriteOperationResult
     protected abstract val nodeIdAllocator: IdAllocator
 
     private fun processInnerChild(curChild: InnerNode<T>) {
-        assert(curChild.lastModificationTimestamp >= timestamp)
+        lazyAssert { curChild.lastModificationTimestamp >= timestamp }
         val pushRes = curChild.content.queue.pushIf(this)
         if (curChild.lastModificationTimestamp > timestamp) {
-            assert(!pushRes)
+            lazyAssert { !pushRes }
         }
     }
 
@@ -33,23 +34,23 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
 
         while (curDescriptor != null) {
-            assert(curDescriptor !is DummyDescriptor)
+            lazyAssert { curDescriptor !is DummyDescriptor }
 
             if (curDescriptor.timestamp >= timestamp) {
                 return QueueTraverseResult.ANSWER_NOT_NEEDED
             }
 
             if (curDescriptor is InsertDescriptor && curDescriptor.key == key) {
-                assert(
+                lazyAssert {
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_NOT_EXISTS
-                )
+                }
                 traversalResult = QueueTraverseResult.KEY_EXISTS
             } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == key) {
-                assert(
+                lazyAssert {
                     traversalResult == QueueTraverseResult.UNABLE_TO_DETERMINE ||
                             traversalResult == QueueTraverseResult.KEY_EXISTS
-                )
+                }
                 traversalResult = QueueTraverseResult.KEY_NOT_EXISTS
             }
 
@@ -72,7 +73,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                             return false
                         }
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> {
-                            assert(result.decisionMade())
+                            lazyAssert { result.decisionMade() }
                             return null
                         }
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
@@ -113,7 +114,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
             SingleKeyWriteOperationResult.Status.UNDECIDED -> {
                 val keyExists = checkExistenceInner(curNode)
                 if (keyExists == null) {
-                    assert(result.decisionMade())
+                    lazyAssert { result.decisionMade() }
                     return
                 } else {
                     shouldBeExecuted(keyExists)

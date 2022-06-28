@@ -4,6 +4,7 @@ import common.DefinedBorder
 import common.InfBorder
 import common.RequestBorder
 import kotlin.math.max
+import common.lazyAssert
 
 abstract class TreapNode<T : Comparable<T>> {
     abstract val left: TreapNode<T>?
@@ -36,10 +37,10 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
     leftBorder: T, rightBorder: T,
     minPossibleKey: RequestBorder<T>, maxPossibleKey: RequestBorder<T>
 ): Int {
-    assert(
+    lazyAssert {
         minPossibleKey !is DefinedBorder || maxPossibleKey !is DefinedBorder ||
                 minPossibleKey.border < maxPossibleKey.border
-    )
+    }
     return if (this == null) {
         0
     } else if (minPossibleKey is DefinedBorder && minPossibleKey.border >= leftBorder &&
@@ -59,7 +60,7 @@ fun <T : Comparable<T>> TreapNode<T>?.doCount(
 }
 
 fun <T : Comparable<T>> TreapNode<T>?.count(leftBorder: T, rightBorder: T): Int {
-    assert(leftBorder <= rightBorder)
+    lazyAssert { leftBorder <= rightBorder }
     return doCount(leftBorder, rightBorder, InfBorder, InfBorder)
 }
 

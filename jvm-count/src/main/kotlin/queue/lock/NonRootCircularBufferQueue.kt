@@ -3,13 +3,14 @@ package queue.lock
 import common.TimestampedValue
 import queue.common.NonRootQueue
 import kotlin.concurrent.withLock
+import common.lazyAssert
 
 class NonRootCircularBufferQueue<T : TimestampedValue>(
     bufferSize: Int = 32,
     private val creationTimestamp: Long
 ) : AbstractCircularBufferQueue<T>(bufferSize), NonRootQueue<T> {
     override fun pushIf(value: T): Boolean = lock.withLock {
-        assert(head in 0..tail)
+        lazyAssert { head in 0..tail }
         return if (value.timestamp <= creationTimestamp) {
             false
         } else if (tail == 0) {

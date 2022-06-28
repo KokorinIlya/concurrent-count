@@ -6,6 +6,7 @@ import queue.lock.NonRootCircularBufferQueue
 import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
+import common.lazyAssert
 
 class InsertDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -24,15 +25,15 @@ class InsertDescriptor<T : Comparable<T>>(
             curChildRef.casInsert(curChild, insertedNode)
             result.tryFinish()
         } else {
-            assert(result.getResult() != null)
+            lazyAssert { result.getResult() != null }
         }
     }
 
     override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: KeyNode<T>) {
-        assert(curChild.key != key || curChild.creationTimestamp >= timestamp)
+        lazyAssert { curChild.key != key || curChild.creationTimestamp >= timestamp }
         when {
             curChild.creationTimestamp < timestamp -> {
-                assert(curChild.key != key)
+                lazyAssert { curChild.key != key }
 
                 val newKeyNode = KeyNode(key = key, creationTimestamp = timestamp)
                 val (leftChild, rightChild) = if (key < curChild.key) {
@@ -61,10 +62,10 @@ class InsertDescriptor<T : Comparable<T>>(
                 result.tryFinish()
             }
             curChild.creationTimestamp > timestamp -> {
-                assert(result.getResult() != null)
+                lazyAssert { result.getResult() != null }
             }
             curChild.creationTimestamp == timestamp -> {
-                assert(curChild.key == key)
+                lazyAssert  { curChild.key == key }
                 result.tryFinish()
             }
         }

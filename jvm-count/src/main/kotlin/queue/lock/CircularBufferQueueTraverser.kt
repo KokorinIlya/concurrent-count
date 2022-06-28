@@ -1,6 +1,7 @@
 package queue.lock
 
 import common.TimestampedValue
+import common.lazyAssert
 import queue.common.QueueTraverser
 
 class CircularBufferQueueTraverser<T : TimestampedValue>(
@@ -8,7 +9,7 @@ class CircularBufferQueueTraverser<T : TimestampedValue>(
     private val buffer: MutableList<T?>
 ) : QueueTraverser<T> {
     init {
-        assert(head in 0..tail)
+        lazyAssert { head in 0..tail }
     }
 
     private var idx = head

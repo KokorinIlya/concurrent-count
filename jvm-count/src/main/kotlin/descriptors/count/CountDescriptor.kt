@@ -8,6 +8,7 @@ import tree.EmptyNode
 import tree.InnerNode
 import tree.RootNode
 import tree.InnerNodeContent
+import common.lazyAssert
 
 sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
     companion object {
@@ -26,7 +27,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
 
     protected fun saveNodeAnswer(curNodeId: Long, curNodeRes: Int?) {
         if (curNodeRes == null) {
-            assert(result.isAnswerKnown(curNodeId))
+            lazyAssert { result.isAnswerKnown(curNodeId) }
         } else {
             result.preRemoveFromNode(curNodeId, curNodeRes)
         }
@@ -39,7 +40,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
     fun processChild(curChild: TreeNode<T>): Int? {
         return when (curChild) {
             is KeyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
+                lazyAssert { curChild.creationTimestamp != timestamp }
                 @Suppress("CascadeIf")
                 if (curChild.creationTimestamp > timestamp) {
                     null
@@ -50,7 +51,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                 }
             }
             is EmptyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
+                lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
                 } else {
@@ -58,9 +59,9 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                 }
             }
             is InnerNode -> {
-                assert(curChild.lastModificationTimestamp != timestamp)
+                lazyAssert { curChild.lastModificationTimestamp != timestamp }
                 if (curChild.lastModificationTimestamp > timestamp) {
-                    assert(!curChild.content.queue.pushIf(this))
+                    lazyAssert { !curChild.content.queue.pushIf(this) }
                     null
                 } else {
                     result.preVisitNode(curChild.content.id)
@@ -74,7 +75,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
     protected fun getWholeSubtreeSize(curChild: TreeNode<T>): Int? {
         return when (curChild) {
             is KeyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
+                lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
                 } else {
@@ -82,7 +83,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                 }
             }
             is EmptyNode -> {
-                assert(curChild.creationTimestamp != timestamp)
+                lazyAssert { curChild.creationTimestamp != timestamp }
                 if (curChild.creationTimestamp > timestamp) {
                     null
                 } else {
@@ -90,7 +91,7 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                 }
             }
             is InnerNode -> {
-                assert(curChild.lastModificationTimestamp != timestamp)
+                lazyAssert { curChild.lastModificationTimestamp != timestamp }
                 if (curChild.lastModificationTimestamp > timestamp) {
                     null
                 } else {
@@ -165,7 +166,7 @@ class BothBorderCountDescriptor<T : Comparable<T>>(
         if (ts != null) {
             timestamp = ts
         }
-        assert(leftBorder <= rightBorder)
+        lazyAssert { leftBorder <= rightBorder }
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {

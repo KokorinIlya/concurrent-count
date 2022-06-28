@@ -6,6 +6,7 @@ import queue.lock.NonRootCircularBufferQueue
 import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import common.lazyAssert
 
 class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
     @Volatile
@@ -128,9 +129,13 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         }
 
         val sortedKeys = curSubtreeKeys.toList()
-        assert(innerNode.subtreeSize + (if (isInsert) 1 else -1) == sortedKeys.size)
-        assert(sortedKeys.zipWithNext { cur, next -> cur < next }.all { it })
-        assert(isInsert && sortedKeys.contains(key) || !isInsert && !sortedKeys.contains(key))
+        lazyAssert { innerNode.subtreeSize + (if (isInsert) 1 else -1) == sortedKeys.size }
+        lazyAssert {
+            sortedKeys
+                .zipWithNext { cur, next -> cur < next }
+                .all { it }
+        }
+        lazyAssert { isInsert && sortedKeys.contains(key) || !isInsert && !sortedKeys.contains(key) }
         return buildSubtreeFromKeys(
             keys = sortedKeys,
             startIndex = 0,
@@ -142,7 +147,10 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
 
     fun get(): TreeNode<T> {
         val curNode = ref
-        assert(curNode !is InnerNode || curNode.modificationsCount < threshold * curNode.content.initialSize + bias)
+        lazyAssert {
+            curNode !is InnerNode ||
+                    curNode.modificationsCount < threshold * curNode.content.initialSize + bias
+        }
         return curNode
     }
 
@@ -154,13 +162,13 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
         key: T,
         result: SingleKeyWriteOperationResult
     ): TreeNode<T> {
-        assert(result.isAcceptedForExecution())
-        assert(curNode.lastModificationTimestamp < curOperationTimestamp)
+        lazyAssert { result.isAcceptedForExecution() }
+        lazyAssert { curNode.lastModificationTimestamp < curOperationTimestamp }
 
         val (modifiedNode, rebuildExecuted) = if (
             curNode.modificationsCount + 1 >= threshold * curNode.content.initialSize + bias
         ) {
-            assert(subtreeSizeDelta == 1 || subtreeSizeDelta == -1)
+            lazyAssert { subtreeSizeDelta == 1 || subtreeSizeDelta == -1 }
             val isInsert = subtreeSizeDelta == 1
             val rebuildResult = getRebuilt(curNode, curOperationTimestamp, nodeIdAllocator, isInsert, key)
             Pair(rebuildResult, true)
@@ -168,7 +176,7 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             val correctlySizedNode = InnerNode(
                 content = curNode.content,
                 lastModificationTimestamp = curOperationTimestamp,
-                modificationsCount = /*curNode.modificationsCount*/ + 1,
+                modificationsCount = /*curNode.modificationsCount*/ +1,
                 subtreeSize = curNode.subtreeSize + subtreeSizeDelta
             )
             Pair(correctlySizedNode, false)
@@ -182,11 +190,11 @@ class TreeNodeReference<T : Comparable<T>>(initial: TreeNode<T>) {
             modifiedNode
         } else {
             val newNode = get()
-            assert(
+            lazyAssert {
                 newNode is InnerNode && newNode.lastModificationTimestamp >= curOperationTimestamp ||
                         newNode is KeyNode && newNode.creationTimestamp >= curOperationTimestamp ||
                         newNode is EmptyNode && newNode.creationTimestamp >= curOperationTimestamp
-            )
+            }
             newNode
         }
     }

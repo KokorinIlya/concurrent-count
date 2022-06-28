@@ -6,6 +6,7 @@ import tree.EmptyNode
 import tree.KeyNode
 import tree.TreeNode
 import tree.TreeNodeReference
+import common.lazyAssert
 
 class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -23,7 +24,7 @@ class DeleteDescriptor<T : Comparable<T>>(
     }
 
     override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: EmptyNode<T>) {
-        assert(curChild.creationTimestamp >= timestamp)
+        lazyAssert { curChild.creationTimestamp >= timestamp }
         result.tryFinish()
     }
 
@@ -34,10 +35,10 @@ class DeleteDescriptor<T : Comparable<T>>(
                 curChildRef.casDelete(curChild, emptyNode)
                 result.tryFinish()
             } else {
-                assert(result.getResult() != null)
+                lazyAssert { result.getResult() != null }
             }
         } else {
-            assert(curChild.creationTimestamp >= timestamp)
+            lazyAssert { curChild.creationTimestamp >= timestamp }
             result.tryFinish()
         }
     }

@@ -3,8 +3,9 @@ package queue.ms
 import common.TimestampedValue
 import queue.common.AbstractQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import common.lazyAssert
 
-abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T): AbstractQueue<T> {
+abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) : AbstractQueue<T> {
     @Volatile
     private var head: QueueNode<T>
 
@@ -43,14 +44,14 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T): Abstra
              */
             val curHead = head
             val curTail = tail
-            assert(curTail.data.timestamp >= curHead.data.timestamp)
+            lazyAssert { curTail.data.timestamp >= curHead.data.timestamp }
             val nextHead = curHead.next
             return if (curHead === curTail) {
-                assert(curTail.data.timestamp == curHead.data.timestamp)
+                lazyAssert { curTail.data.timestamp == curHead.data.timestamp }
                 if (nextHead === null) {
                     null
                 } else {
-                    assert(nextHead === curTail.next)
+                    lazyAssert { nextHead === curTail.next }
                     tailUpdater.compareAndSet(this, curTail, nextHead)
                     continue
                 }
@@ -68,20 +69,20 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T): Abstra
              */
             val curHead = head
             val curTail = tail
-            assert(curTail.data.timestamp >= curHead.data.timestamp)
+            lazyAssert { curTail.data.timestamp >= curHead.data.timestamp }
             val nextHead = curHead.next
             if (curHead === curTail) {
-                assert(curTail.data.timestamp == curHead.data.timestamp)
+                lazyAssert { curTail.data.timestamp == curHead.data.timestamp }
                 if (nextHead === null) {
                     return false
                 } else {
-                    assert(nextHead === curTail.next)
+                    lazyAssert { nextHead === curTail.next }
                     tailUpdater.compareAndSet(this, curTail, nextHead)
                     continue
                 }
             } else {
-                assert(nextHead!!.data.timestamp >= timestamp)
-                return if (nextHead.data.timestamp > timestamp) {
+                lazyAssert { nextHead!!.data.timestamp >= timestamp }
+                return if (nextHead!!.data.timestamp > timestamp) {
                     false
                 } else {
                     headUpdater.compareAndSet(this, curHead, nextHead)

@@ -9,6 +9,7 @@ import rivals.treap.persistent.delete
 import rivals.treap.persistent.insert
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReference
+import common.lazyAssert
 
 class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
     private val head = AtomicReference<Pair<PersistentTreapNode<T>?, Long>>(Pair(null, 0))
@@ -19,7 +20,7 @@ class UniversalConstructionTreap<T : Comparable<T>> : CountSet<T>, CountLineariz
         loop@ while (true) {
             val curPair = head.get()
             val (curHead, curVersion) = curPair
-            assert(curVersion % 2L == 0L)
+            lazyAssert { curVersion % 2L == 0L }
             val (optHead, res) = writeOperation(curHead)
             return when (optHead) {
                 is Some -> {

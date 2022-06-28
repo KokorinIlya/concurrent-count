@@ -10,6 +10,8 @@ import tree.EmptyNode
 import tree.InnerNode
 import tree.KeyNode
 import tree.RootNode
+import common.lazyAssert
+import common.lazyAssert
 
 fun <T : Comparable<T>> traverseQueue(
     queue: AbstractQueue<Descriptor<T>>,
@@ -20,17 +22,17 @@ fun <T : Comparable<T>> traverseQueue(
     var traversalResult: Boolean? = null
 
     while (curDescriptor != null) {
-        assert(curDescriptor !is DummyDescriptor)
+        lazyAssert { curDescriptor !is DummyDescriptor }
 
         if (curDescriptor.timestamp >= exitTimestamp) {
             return traversalResult
         }
 
         if (curDescriptor is InsertDescriptor && curDescriptor.key == key) {
-            assert(queue is RootQueue || traversalResult == null || !traversalResult)
+            lazyAssert { queue is RootQueue || traversalResult == null || !traversalResult!! }
             traversalResult = true
         } else if (curDescriptor is DeleteDescriptor && curDescriptor.key == key) {
-            assert(queue is RootQueue || traversalResult == null || traversalResult)
+            lazyAssert { queue is RootQueue || traversalResult == null || traversalResult!! }
             traversalResult = false
         }
 

@@ -6,6 +6,7 @@ import common.Some
 import rivals.treap.common.TreapNode
 import rivals.treap.common.contains
 import rivals.treap.common.getSize
+import common.lazyAssert
 
 class PersistentTreapNode<T : Comparable<T>>(
     override val key: T, override val priority: Long,
@@ -23,10 +24,10 @@ class PersistentTreapNode<T : Comparable<T>>(
 
     fun removeLeftmost(keyToDelete: T): PersistentTreapNode<T>? {
         return if (left == null) {
-            assert(key == keyToDelete)
+            lazyAssert { key == keyToDelete }
             right
         } else {
-            assert(key > keyToDelete)
+            lazyAssert { key > keyToDelete }
             doCopy(newLeft = left.removeLeftmost(keyToDelete))
         }
     }

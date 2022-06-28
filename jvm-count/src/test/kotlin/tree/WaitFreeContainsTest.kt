@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.*
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+import common.lazyAssert
 
 class WaitFreeContainsTest {
     @Suppress("SameParameterValue")
@@ -56,7 +57,7 @@ class WaitFreeContainsTest {
     }
 
     private fun bordersToGen(leftBorder: Int, rightBorder: Int): () -> Int {
-        assert(leftBorder < rightBorder)
+        lazyAssert { leftBorder < rightBorder }
         return { ThreadLocalRandom.current().nextInt(leftBorder, rightBorder) }
     }
 

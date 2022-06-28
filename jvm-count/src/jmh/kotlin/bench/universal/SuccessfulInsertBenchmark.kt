@@ -1,5 +1,6 @@
 package bench.universal
 
+import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.UniversalConstructionTreap
 import java.util.concurrent.ThreadLocalRandom
@@ -21,6 +22,7 @@ open class SuccessfulInsertBenchmark {
     @Suppress("DuplicatedCode")
     @Setup(Level.Iteration)
     fun init() {
+        lazyAssert { false }
         val newSet = UniversalConstructionTreap<Long>()
         var s = 0
         while (s < size) {

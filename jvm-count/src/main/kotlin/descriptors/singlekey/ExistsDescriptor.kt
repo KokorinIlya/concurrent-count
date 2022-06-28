@@ -2,6 +2,7 @@ package descriptors.singlekey
 
 import result.ExistResult
 import tree.*
+import common.lazyAssert
 
 class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -14,26 +15,26 @@ class ExistsDescriptor<T : Comparable<T>>(
     }
 
     private fun processInnerChild(curChild: InnerNode<T>) {
-        assert(curChild.lastModificationTimestamp != timestamp)
+        lazyAssert { curChild.lastModificationTimestamp != timestamp }
         val pushRes = curChild.content.queue.pushIf(this)
         if (curChild.lastModificationTimestamp > timestamp) {
-            assert(!pushRes)
+            lazyAssert { !pushRes }
         }
     }
 
     private fun processEmptyChild(curChild: EmptyNode<T>) {
-        assert(curChild.creationTimestamp != timestamp)
+        lazyAssert { curChild.creationTimestamp != timestamp }
         if (curChild.creationTimestamp > timestamp) {
-            assert(result.getResult() != null)
+            lazyAssert { result.getResult() != null }
         } else {
             result.trySetResult(false)
         }
     }
 
     private fun processKeyChild(curChild: KeyNode<T>) {
-        assert(curChild.creationTimestamp != timestamp)
+        lazyAssert { curChild.creationTimestamp != timestamp }
         if (curChild.creationTimestamp > timestamp) {
-            assert(result.getResult() != null)
+            lazyAssert { result.getResult() != null }
         } else {
             result.trySetResult(curChild.key == key)
         }

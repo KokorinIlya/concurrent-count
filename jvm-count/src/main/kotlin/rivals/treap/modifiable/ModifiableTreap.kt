@@ -2,6 +2,7 @@ package rivals.treap.modifiable
 
 import rivals.treap.common.Treap
 import java.util.concurrent.ThreadLocalRandom
+import common.lazyAssert
 
 class ModifiableTreap<T : Comparable<T>> : Treap<T>() {
     override var head: ModifiableTreapNode<T>? = null
@@ -26,10 +27,10 @@ class ModifiableTreap<T : Comparable<T>> : Treap<T>() {
         }
         val (splitLeft, splitRight) = head.split(key)
         head = if (splitRight!!.key == key) {
-            assert(splitRight.left == null)
+            lazyAssert { splitRight.left == null }
             merge(splitLeft, splitRight.right)
         } else {
-            assert(splitRight.left != null)
+            lazyAssert { splitRight.left != null }
             splitRight.removeLeftmost(key)
             merge(splitLeft, splitRight)
         }

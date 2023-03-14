@@ -6,21 +6,21 @@ import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
 import queue.common.AbstractQueue
 import queue.common.RootQueue
-import tree.RootNode
 import common.lazyAssert
+import tree.*
 
 fun <T : Comparable<T>> traverseQueue(
     queue: AbstractQueue<Descriptor<T>>,
     exitTimestamp: Long, key: T
 ): Boolean? {
-    val queueTraverser = queue.getTraverser()
-    var curDescriptor = queueTraverser.getNext()
+    val queueTraverser = queue.getTraverser() ?: return null
     var traversalResult: Boolean? = null
 
-    while (curDescriptor != null) {
+    while (true) {
+        val curDescriptor = queueTraverser.getNext()
         lazyAssert { curDescriptor !is DummyDescriptor }
 
-        if (curDescriptor.timestamp >= exitTimestamp) {
+        if (curDescriptor == null || curDescriptor.timestamp >= exitTimestamp) {
             return traversalResult
         }
 
@@ -31,43 +31,19 @@ fun <T : Comparable<T>> traverseQueue(
             lazyAssert { queue is RootQueue || traversalResult == null || traversalResult!! }
             traversalResult = false
         }
-
-        curDescriptor = queueTraverser.getNext()
     }
-    return traversalResult
 }
 
 fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
     val timestamp = root.queue.getMaxTimestamp()
-
-    val rootTraversalResult = traverseQueue(root.queue, exitTimestamp = timestamp + 1, key = key)
-
-    if (rootTraversalResult != null) {
-        return rootTraversalResult
-    }
-
-    var nodeRef = root.root
+    var node: ParentNode<T> = root
 
     while (true) {
-        val curNode = nodeRef.get()
-        when (curNode.nodeType) {
-            2 -> { // InnerNode
-                val curTraversalResult = traverseQueue(
-                    curNode.content!!.queue,
-                    exitTimestamp = timestamp + 1, key = key
-                )
-                if (curTraversalResult != null) {
-                    return curTraversalResult
-                }
-                nodeRef = curNode.content.route(key)
-            }
-            1 -> { // EmptyNode
-                return false
-            }
-            0 -> { // KeyNode
-                return curNode.key == key
-            }
-            else -> throw AssertionError("Illegal node type")
+        traverseQueue(node.queue, exitTimestamp = timestamp + 1, key = key)?.let { return it }
+        when (val child = node.route(key)) {
+            is InnerNode -> node = child
+            is EmptyNode -> return false
+            is KeyNode -> return child.key == key
         }
     }
 }

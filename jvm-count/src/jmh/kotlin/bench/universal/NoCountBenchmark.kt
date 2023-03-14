@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-open class ContainsBenchmark {
+open class NoCountBenchmark {
     lateinit var set: UniversalConstructionTreap<Long>
 
     @Param("1000000")
@@ -36,8 +36,21 @@ open class ContainsBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test() {
         val x = ThreadLocalRandom.current().nextLong()
-        return set.contains(x)
+        when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
+            INSERT -> set.insert(x)
+            DELETE -> set.delete(x)
+            CONTAINS -> set.contains(x)
+            else -> throw AssertionError("Unknown operation")
+        }
+    }
+
+    companion object {
+        const val INSERT = 0
+        const val DELETE = 1
+        const val CONTAINS = 2
+
+        const val OPERATIONS = 3
     }
 }

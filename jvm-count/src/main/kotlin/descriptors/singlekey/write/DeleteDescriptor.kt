@@ -2,9 +2,8 @@ package descriptors.singlekey.write
 
 import allocation.IdAllocator
 import result.SingleKeyWriteOperationResult
-import tree.TreeNode
-import tree.TreeNodeReference
 import common.lazyAssert
+import tree.*
 
 class DeleteDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -17,28 +16,26 @@ class DeleteDescriptor<T : Comparable<T>>(
         }
     }
 
-    override fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T> {
-        return curChildRef.getDelete(timestamp, nodeIdAllocator, key, result)
+    override fun modifyChild(curNode: ParentNode<T>, child: TreeNode<T>): TreeNode<T> {
+        return modifyDelete(curNode, child, timestamp, nodeIdAllocator, key, result)
     }
 
-    override fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
-        lazyAssert { curChild.isEmptyNode() }
-        lazyAssert { curChild.creationTimestamp >= timestamp }
+    override fun processEmptyChild(curNode: ParentNode<T>, child: EmptyNode<T>) {
+        lazyAssert { child.creationTimestamp >= timestamp }
         result.tryFinish()
     }
 
-    override fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>) {
-        lazyAssert { curChild.isKeyNode() }
-        if (curChild.key == key) {
-            if (curChild.creationTimestamp <= timestamp) {
-                val emptyNode = TreeNode.makeEmptyNode<T>(creationTimestamp = timestamp)
-                curChildRef.casDelete(curChild, emptyNode)
+    override fun processKeyChild(curNode: ParentNode<T>, child: KeyNode<T>) {
+        if (child.key == key) {
+            if (child.creationTimestamp <= timestamp) {
+                val emptyNode = EmptyNode(tree = child.tree, creationTimestamp = timestamp)
+                curNode.casChild(child, emptyNode)
                 result.tryFinish()
             } else {
                 lazyAssert { result.getResult() != null }
             }
         } else {
-            lazyAssert { curChild.creationTimestamp >= timestamp }
+            lazyAssert { child.creationTimestamp >= timestamp }
             result.tryFinish()
         }
     }

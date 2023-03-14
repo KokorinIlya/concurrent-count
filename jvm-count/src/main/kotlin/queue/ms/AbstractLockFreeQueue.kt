@@ -34,7 +34,9 @@ abstract class AbstractLockFreeQueue<T : TimestampedValue>(initValue: T) : Abstr
         head = dummyNode
     }
 
-    override fun getTraverser(): LockFreeQueueTraverser<T> = LockFreeQueueTraverser(head.next)
+    override fun getTraverser(): LockFreeQueueTraverser<T>? = head.next?.let { next ->
+        LockFreeQueueTraverser(next)
+    }
 
     override fun peek(): T? {
         while (true) {

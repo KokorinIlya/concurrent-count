@@ -1,6 +1,6 @@
 package descriptors
 
-import tree.InnerNodeContent
+import tree.InnerNode
 import tree.RootNode
 
 class DummyDescriptor<T : Comparable<T>>(private val ts: Long) : Descriptor<T>() {
@@ -14,7 +14,7 @@ class DummyDescriptor<T : Comparable<T>>(private val ts: Long) : Descriptor<T>()
         throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 
-    override fun processInnerNode(curNode: InnerNodeContent<T>) {
+    override fun processInnerNode(curNode: InnerNode<T>) {
         throw UnsupportedOperationException("Dummy descriptor doesn't support node processing operations")
     }
 }

@@ -5,6 +5,7 @@ import org.openjdk.jmh.annotations.*
 import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 @Suppress("unused")
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
@@ -14,8 +15,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class ContainsBenchmark {
-
-    var set: LockFreeSet<Long>? = null
+    lateinit var set: LockFreeSet<Long>
 
     @Param("1000000")
     var size = 0
@@ -24,7 +24,9 @@ open class ContainsBenchmark {
     @Setup(Level.Iteration)
     fun init() {
         lazyAssert { false }
-        val newSet = LockFreeSet<Long>()
+        val newSet = LockFreeSet<Long>() { a, b ->
+            max(a + 1, a / 2 + b / 2)
+        }
         var s = 0
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong()
@@ -39,6 +41,6 @@ open class ContainsBenchmark {
     @Benchmark
     fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
-        return set!!.containsWaitFree(x)
+        return set.containsWaitFree(x)
     }
 }

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class SuccessfulInsertBenchmark {
-    var set: UniversalConstructionTreap<Long>? = null
+    lateinit var set: UniversalConstructionTreap<Long>
 
     @Param("1000000")
     var size = 0
@@ -39,6 +39,6 @@ open class SuccessfulInsertBenchmark {
     fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
         // TODO: Is it really always successful? Why?
-        return set!!.insert(x)
+        return set.insert(x)
     }
 }

@@ -1,8 +1,9 @@
-package bench.universal
+package bench.treap
 
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
-import rivals.treap.concurrent.UniversalConstructionTreap
+import rivals.treap.concurrent.LockTreap
+import rivals.treap.modifiable.ModifiableTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
 
@@ -13,8 +14,8 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-open class ContainsBenchmark {
-    lateinit var set: UniversalConstructionTreap<Long>
+open class NoCountBenchmark {
+    lateinit var set: LockTreap<Long>
 
     @Param("1000000")
     var size = 0
@@ -23,7 +24,7 @@ open class ContainsBenchmark {
     @Setup(Level.Iteration)
     fun init() {
         lazyAssert { false }
-        val newSet = UniversalConstructionTreap<Long>()
+        val newSet = LockTreap<Long>(treap = ModifiableTreap())
         var s = 0
         while (s < size) {
             val x = ThreadLocalRandom.current().nextLong()
@@ -36,8 +37,21 @@ open class ContainsBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test() {
         val x = ThreadLocalRandom.current().nextLong()
-        return set.contains(x)
+        when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
+            INSERT -> set.insert(x)
+            DELETE -> set.delete(x)
+            CONTAINS -> set.contains(x)
+            else -> throw AssertionError("Unknown operation")
+        }
+    }
+
+    companion object {
+        const val INSERT = 0
+        const val DELETE = 1
+        const val CONTAINS = 2
+
+        const val OPERATIONS = 3
     }
 }

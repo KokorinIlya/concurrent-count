@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class InsertDeleteBenchmark {
-    var set: UniversalConstructionTreap<Long>? = null
+    lateinit var set: UniversalConstructionTreap<Long>
 
     @Param("1000000")
     var size = 0
@@ -44,9 +44,9 @@ open class InsertDeleteBenchmark {
     fun test(): Boolean {
         val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
         return if (ThreadLocalRandom.current().nextBoolean()) {
-            set!!.insert(key)
+            set.insert(key)
         } else {
-            set!!.delete(key)
+            set.delete(key)
         }
     }
 }

@@ -5,6 +5,7 @@ import org.openjdk.jmh.annotations.*
 import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 @Suppress("unused")
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
@@ -14,7 +15,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class InsertDeleteBenchmark {
-    var set: LockFreeSet<Long>? = null
+    lateinit var set: LockFreeSet<Long>
 
     @Param("1000000")
     var size = 0
@@ -26,7 +27,9 @@ open class InsertDeleteBenchmark {
     @Setup(Level.Iteration)
     fun init() {
         lazyAssert { false }
-        val newSet = LockFreeSet<Long>()
+        val newSet = LockFreeSet<Long>() { a, b ->
+            max(a + 1, a / 2 + b / 2)
+        }
         var s = 0
         leftBorder = -size.toLong()
         rightBorder = +size.toLong()
@@ -44,9 +47,9 @@ open class InsertDeleteBenchmark {
     fun test(): Boolean {
         val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
         return if (ThreadLocalRandom.current().nextBoolean()) {
-            set!!.insert(key)
+            set.insert(key)
         } else {
-            set!!.delete(key)
+            set.delete(key)
         }
     }
 }

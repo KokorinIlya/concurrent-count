@@ -5,6 +5,7 @@ import descriptors.singlekey.write.SingleKeyWriteOperationDescriptor
 import result.TimestampLinearizedResult
 import tree.RootNode
 import common.lazyAssert
+import tree.InnerNode
 
 private fun <T : Comparable<T>> checkParallel(
     root: RootNode<T>,
@@ -16,7 +17,6 @@ private fun <T : Comparable<T>> checkParallel(
     )
     return rootTraversalResult ?: descriptor.checkExistenceInner(root)
 }
-
 fun <T : Comparable<T>, R> executeSingleKeyOperation(
     root: RootNode<T>,
     descriptor: SingleKeyOperationDescriptor<T, R>
@@ -35,21 +35,20 @@ fun <T : Comparable<T>, R> executeSingleKeyOperation(
 
     root.executeUntilTimestamp(timestamp)
 
-    var curNodeRef = root.root
+    var curNode = root.root
     while (true) {
         val curResult = descriptor.result.getResult()
         if (curResult != null) {
             return TimestampLinearizedResult(result = curResult, timestamp = descriptor.timestamp)
         }
 
-        val curNode = curNodeRef.get()
-        when (curNode.nodeType) {
-            2 -> { // InnerNode
-                curNode.content!!.executeUntilTimestamp(timestamp)
-                curNodeRef = curNode.content.route(descriptor.key)
+        when (curNode) {
+            is InnerNode -> {
+                curNode.executeUntilTimestamp(timestamp)
+                curNode = curNode.route(descriptor.key)
             }
+
             else -> {
-                lazyAssert { curNode.nodeType == 0 || curNode.nodeType == 1 }
                 if (descriptor is SingleKeyWriteOperationDescriptor) {
                     descriptor.result.tryFinish()
                 }

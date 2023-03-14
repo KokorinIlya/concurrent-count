@@ -12,9 +12,9 @@ abstract class SingleKeyOperationDescriptor<T : Comparable<T>, R> : Descriptor<T
         return "{${javaClass.simpleName}: key=$key, timestamp=$timestamp}"
     }
 
-    protected abstract fun processChild(curChildRef: TreeNodeReference<T>)
+    protected abstract fun processChild(curNode: ParentNode<T>, child: TreeNode<T>)
 
-    override fun processInnerNode(curNode: InnerNodeContent<T>) {
-        processChild(curNode.route(key))
+    override fun processInnerNode(curNode: InnerNode<T>) {
+        processChild(curNode, curNode.route(key))
     }
 }

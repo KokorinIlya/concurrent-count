@@ -1,7 +1,7 @@
 package descriptors
 
 import common.TimestampedValue
-import tree.InnerNodeContent
+import tree.InnerNode
 import tree.RootNode
 
 /**
@@ -25,5 +25,5 @@ abstract class Descriptor<T : Comparable<T>> : TimestampedValue {
 
     abstract fun tryProcessRootNode(curNode: RootNode<T>)
 
-    abstract fun processInnerNode(curNode: InnerNodeContent<T>)
+    abstract fun processInnerNode(curNode: InnerNode<T>)
 }

@@ -3,37 +3,33 @@ package initiator.count
 import descriptors.count.CountDescriptor
 import result.CountResult
 import result.TimestampLinearizedResult
-import tree.InnerNodeContent
 import tree.RootNode
-import tree.TreeNodeReference
 import common.lazyAssert
+import tree.InnerNode
+import tree.TreeNode
 
 private fun <T : Comparable<T>> doCountInternal(
-    result: CountResult, startRef: TreeNodeReference<T>, timestamp: Long,
-    action: (InnerNodeContent<T>) -> TreeNodeReference<T>?
+    result: CountResult, startNode: TreeNode<T>, timestamp: Long,
+    action: (InnerNode<T>) -> TreeNode<T>?
 ) {
-    var curRef = startRef
+    var curNode = startNode
     while (result.getResult() == null) {
-        val curNode = curRef.get()
-        when (curNode.nodeType) {
-            2 -> { // InnerNode
-                curNode.content!!.executeUntilTimestamp(timestamp)
-                val nextRef = action(curNode.content) ?: return
-                curRef = nextRef
+        when (curNode) {
+            is InnerNode -> {
+                curNode.executeUntilTimestamp(timestamp)
+                val nextNode = action(curNode) ?: return
+                curNode = nextNode
             }
-            else -> {
-                lazyAssert { curNode.nodeType == 0 || curNode.nodeType == 1 }
-                return
-            }
+            else -> return
         }
     }
 }
 
 private fun <T : Comparable<T>> doCountNoMinMaxRightBorder(
-    startRef: TreeNodeReference<T>, rightBorder: T,
+    start: TreeNode<T>, rightBorder: T,
     timestamp: Long, result: CountResult
 ) {
-    doCountInternal(result, startRef, timestamp) {
+    doCountInternal(result, start, timestamp) {
         if (rightBorder < it.rightSubtreeMin) {
             it.left
         } else {
@@ -43,10 +39,10 @@ private fun <T : Comparable<T>> doCountNoMinMaxRightBorder(
 }
 
 private fun <T : Comparable<T>> doCountNoMinMaxLeftBorder(
-    startRef: TreeNodeReference<T>, leftBorder: T,
+    startNode: TreeNode<T>, leftBorder: T,
     timestamp: Long, result: CountResult
 ) {
-    doCountInternal(result, startRef, timestamp) {
+    doCountInternal(result, startNode, timestamp) {
         if (leftBorder >= it.rightSubtreeMin) {
             it.right
         } else {
@@ -56,11 +52,11 @@ private fun <T : Comparable<T>> doCountNoMinMaxLeftBorder(
 }
 
 private fun <T : Comparable<T>> doCountNoMinMaxBothBorders(
-    startRef: TreeNodeReference<T>, leftBorder: T, rightBorder: T,
+    startNode: TreeNode<T>, leftBorder: T, rightBorder: T,
     timestamp: Long, result: CountResult
 ) {
     lazyAssert { leftBorder <= rightBorder }
-    doCountInternal(result, startRef, timestamp) {
+    doCountInternal(result, startNode, timestamp) {
         when {
             rightBorder < it.rightSubtreeMin -> it.left
             leftBorder >= it.rightSubtreeMin -> it.right

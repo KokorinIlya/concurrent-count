@@ -14,46 +14,42 @@ class ExistsDescriptor<T : Comparable<T>>(
         }
     }
 
-    private fun processInnerChild(curChild: TreeNode<T>) {
-        lazyAssert { curChild.isInnerNode() }
-        lazyAssert { curChild.lastModificationTimestamp != timestamp }
-        val pushRes = curChild.content!!.queue.pushIf(this)
-        if (curChild.lastModificationTimestamp > timestamp) {
+    private fun processInnerChild(child: InnerNode<T>) {
+        val content = child.content
+        lazyAssert { content.lastModificationTimestamp != timestamp }
+        val pushRes = child.queue.pushIf(this)
+        if (content.lastModificationTimestamp > timestamp) {
             lazyAssert { !pushRes }
         }
     }
 
-    private fun processEmptyChild(curChild: TreeNode<T>) {
-        lazyAssert { curChild.isEmptyNode() }
-        lazyAssert { curChild.creationTimestamp != timestamp }
-        if (curChild.creationTimestamp > timestamp) {
+    private fun processEmptyChild(child: EmptyNode<T>) {
+        lazyAssert { child.creationTimestamp != timestamp }
+        if (child.creationTimestamp > timestamp) {
             lazyAssert { result.getResult() != null }
         } else {
             result.trySetResult(false)
         }
     }
 
-    private fun processKeyChild(curChild: TreeNode<T>) {
-        lazyAssert { curChild.isKeyNode() }
-        lazyAssert { curChild.creationTimestamp != timestamp }
-        if (curChild.creationTimestamp > timestamp) {
+    private fun processKeyChild(child: KeyNode<T>) {
+        lazyAssert { child.creationTimestamp != timestamp }
+        if (child.creationTimestamp > timestamp) {
             lazyAssert { result.getResult() != null }
         } else {
-            result.trySetResult(curChild.key == key)
+            result.trySetResult(child.key == key)
         }
     }
 
-    override fun processChild(curChildRef: TreeNodeReference<T>) {
-        val curChild = curChildRef.get()
-        when (curChild.nodeType) {
-            1 -> processEmptyChild(curChild) // EmptyNode
-            0 -> processKeyChild(curChild) // KeyNode
-            2 -> processInnerChild(curChild) // InnerNode
-            else -> throw AssertionError("Illegal node type")
+    override fun processChild(curNode: ParentNode<T>, child: TreeNode<T>) {
+        when (child) {
+            is EmptyNode -> processEmptyChild(child)
+            is KeyNode -> processKeyChild(child)
+            is InnerNode -> processInnerChild(child)
         }
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        processChild(curNode.root)
+        processChild(curNode, curNode.root)
     }
 }

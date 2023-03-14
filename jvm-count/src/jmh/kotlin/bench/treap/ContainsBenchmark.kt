@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class ContainsBenchmark {
-    var set: LockTreap<Long>? = null
+    lateinit var set: LockTreap<Long>
 
     @Param("1000000")
     var size = 0
@@ -39,6 +39,6 @@ open class ContainsBenchmark {
     @Benchmark
     fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
-        return set!!.contains(x)
+        return set.contains(x)
     }
 }

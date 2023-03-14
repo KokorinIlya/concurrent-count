@@ -13,11 +13,11 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     abstract override val result: SingleKeyWriteOperationResult
     protected abstract val nodeIdAllocator: IdAllocator
 
-    private fun processInnerChild(curChild: TreeNode<T>) {
-        lazyAssert { curChild.isInnerNode() }
-        lazyAssert { curChild.lastModificationTimestamp >= timestamp }
-        val pushRes = curChild.content!!.queue.pushIf(this)
-        if (curChild.lastModificationTimestamp > timestamp) {
+    private fun processInnerChild(child: InnerNode<T>) {
+        val content = child.content
+        lazyAssert { content.lastModificationTimestamp >= timestamp }
+        val pushRes = child.queue.pushIf(this)
+        if (content.lastModificationTimestamp > timestamp) {
             lazyAssert { !pushRes }
         }
     }
@@ -30,9 +30,9 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     }
 
     private fun traverseQueue(queue: AbstractQueue<Descriptor<T>>): QueueTraverseResult {
-        val queueTraverser = queue.getTraverser()
-        var curDescriptor = queueTraverser.getNext()
         var traversalResult = QueueTraverseResult.UNABLE_TO_DETERMINE
+        val queueTraverser = queue.getTraverser() ?: return traversalResult
+        var curDescriptor = queueTraverser.getNext()
 
         while (curDescriptor != null) {
             lazyAssert { curDescriptor !is DummyDescriptor }
@@ -61,13 +61,12 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     }
 
     fun checkExistenceInner(root: RootNode<T>): Boolean? {
-        var curNodeRef = root.root
+        var curNode = root.root
 
         while (true) {
-            val curNode = curNodeRef.get()
-            when (curNode.nodeType) {
-                2 -> { // InnerNode
-                    when (traverseQueue(curNode.content!!.queue)) {
+            when (curNode) {
+                is InnerNode -> {
+                    when (traverseQueue(curNode.queue)) {
                         QueueTraverseResult.KEY_EXISTS -> {
                             return true
                         }
@@ -79,17 +78,16 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                             return null
                         }
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
-                            curNodeRef = curNode.content.route(key)
+                            curNode = curNode.route(key)
                         }
                     }
                 }
-                0 -> { // KeyNode
+                is KeyNode -> {
                     return curNode.key == key
                 }
-                1 -> { // EmptyNode
+                is EmptyNode -> {
                     return false
                 }
-                else -> throw AssertionError("Illegal node type")
             }
         }
     }
@@ -103,7 +101,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
 
     private fun execute(root: RootNode<T>) {
         result.trySetDecision(true)
-        processChild(root.root)
+        processChild(root, root.root)
     }
 
     private fun decline() {
@@ -112,7 +110,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     }
 
     override fun tryProcessRootNode(curNode: RootNode<T>) {
-        val opShouldBeExecuted = when (result.getRawStatus()) {
+        val opShouldBeExecuted = when (result.status) {
             SingleKeyWriteOperationResult.Status.EXECUTED -> return
             SingleKeyWriteOperationResult.Status.UNDECIDED -> {
                 val keyExists = checkExistenceInner(curNode)
@@ -133,19 +131,17 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
         }
     }
 
-    protected abstract fun refGet(curChildRef: TreeNodeReference<T>): TreeNode<T>
+    protected abstract fun processEmptyChild(curNode: ParentNode<T>, child: EmptyNode<T>)
 
-    protected abstract fun processEmptyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>)
+    protected abstract fun processKeyChild(curNode: ParentNode<T>, child: KeyNode<T>)
 
-    protected abstract fun processKeyChild(curChildRef: TreeNodeReference<T>, curChild: TreeNode<T>)
+    protected abstract fun modifyChild(curNode: ParentNode<T>, child: TreeNode<T>): TreeNode<T>
 
-    override fun processChild(curChildRef: TreeNodeReference<T>) {
-        val curChild = refGet(curChildRef)
-        when (curChild.nodeType) {
-            1 -> processEmptyChild(curChildRef, curChild) // EmptyNode
-            0 -> processKeyChild(curChildRef, curChild) // KeyNode
-            2 -> processInnerChild(curChild) // InnerNode
-            else -> throw AssertionError("Illegal node type")
+    override fun processChild(curNode: ParentNode<T>, child: TreeNode<T>) {
+        when (val modifiedChild = modifyChild(curNode, child)) {
+            is EmptyNode -> processEmptyChild(curNode, modifiedChild)
+            is KeyNode -> processKeyChild(curNode, modifiedChild)
+            is InnerNode -> processInnerChild(modifiedChild)
         }
     }
 }

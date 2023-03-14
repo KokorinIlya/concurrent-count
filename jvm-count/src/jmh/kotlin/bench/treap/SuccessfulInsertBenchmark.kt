@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 open class SuccessfulInsertBenchmark {
-    var set: LockTreap<Long>? = null
+    lateinit var set: LockTreap<Long>
 
     @Param("1000000")
     var size = 0
@@ -40,6 +40,6 @@ open class SuccessfulInsertBenchmark {
     fun test(): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
         // TODO: Always successful? Really? Why?
-        return set!!.insert(x)
+        return set.insert(x)
     }
 }

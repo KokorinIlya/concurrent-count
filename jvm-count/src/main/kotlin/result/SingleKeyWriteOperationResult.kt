@@ -19,7 +19,8 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean> {
     }
 
     @Volatile
-    private var status: Status = Status.UNDECIDED
+    var status: Status = Status.UNDECIDED
+        private set
 
     override fun getResult(): Boolean? {
         return when (status) {
@@ -28,8 +29,6 @@ class SingleKeyWriteOperationResult : OperationResult<Boolean> {
             else -> null
         }
     }
-
-    fun getRawStatus(): Status = status
 
     fun decisionMade(): Boolean = status != Status.UNDECIDED
 

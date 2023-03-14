@@ -25,7 +25,7 @@ test {
     useJUnitPlatform()
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     enableAssertions = true
 }
 

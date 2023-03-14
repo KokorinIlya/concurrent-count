@@ -5,6 +5,8 @@ import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.UniversalConstructionTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
+import kotlin.math.min
 
 @Suppress("unused")
 @Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
@@ -13,7 +15,7 @@ import java.util.concurrent.TimeUnit
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-open class ContainsBenchmark {
+open class FullBenchmark {
     lateinit var set: UniversalConstructionTreap<Long>
 
     @Param("1000000")
@@ -36,8 +38,26 @@ open class ContainsBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test() {
         val x = ThreadLocalRandom.current().nextLong()
-        return set.contains(x)
+        when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
+            INSERT -> set.insert(x)
+            DELETE -> set.delete(x)
+            CONTAINS -> set.contains(x)
+            COUNT -> {
+                val y = ThreadLocalRandom.current().nextLong()
+                set.count(min(x, y), max(x, y))
+            }
+            else -> throw AssertionError("Unknown operation")
+        }
+    }
+
+    companion object {
+        const val INSERT = 0
+        const val DELETE = 1
+        const val CONTAINS = 2
+        const val COUNT = 3
+
+        const val OPERATIONS = 4
     }
 }

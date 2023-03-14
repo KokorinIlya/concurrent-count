@@ -1,65 +1,98 @@
 package tree
 
-class TreeNode<T : Comparable<T>> private constructor(
-    val key: T?,
-    val creationTimestamp: Long,
-    val content: InnerNodeContent<T>?,
-    val subtreeSize: Int,
-    val lastModificationTimestamp: Long,
-    val modificationsCount: Int,
-    val nodeType: Int // 0 - KeyNode, 1 - EmptyNode, 2 - InnerNode
-) {
-    fun isKeyNode(): Boolean = nodeType == 0
+import descriptors.Descriptor
+import queue.common.NonRootQueue
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
-    fun isEmptyNode(): Boolean = nodeType == 1
+sealed class TreeNode<T : Comparable<T>> {
+    abstract val tree: LockFreeSet<T>
+    abstract fun dumpToString(level: Int): String
+}
 
-    fun isInnerNode(): Boolean = nodeType == 2
+data class KeyNode<T : Comparable<T>>(
+    override val tree: LockFreeSet<T>,
+    val key: T,
+    val creationTimestamp: Long
+) : TreeNode<T>() {
+    override fun dumpToString(level: Int): String {
+        return "-".repeat(level) + "key=$key"
+    }
+}
 
+data class EmptyNode<T : Comparable<T>>(
+    override val tree: LockFreeSet<T>,
+    val creationTimestamp: Long
+) : TreeNode<T>() {
+    override fun dumpToString(level: Int): String {
+        return "-".repeat(level) + "Empty"
+    }
+}
+
+data class InnerNode<T : Comparable<T>>(
+    override val tree: LockFreeSet<T>,
+    @Volatile var left: TreeNode<T>,
+    @Volatile var right: TreeNode<T>,
+    @Volatile var content: InnerNodeContent<T>,
+    override val queue: NonRootQueue<Descriptor<T>>,
+    val rightSubtreeMin: T,
+    val id: Long,
+    val initialSize: Int,
+) : TreeNode<T>(), ParentNode<T> {
     companion object {
-        fun <T : Comparable<T>> makeKeyNode(key: T, creationTimestamp: Long) = TreeNode(
-            key = key,
-            creationTimestamp = creationTimestamp,
-            content = null,
-            subtreeSize = 0,
-            lastModificationTimestamp = 0,
-            modificationsCount = 0,
-            nodeType = 0
+        private val leftUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            InnerNode::class.java,
+            TreeNode::class.java,
+            "left"
         )
-
-        fun <T : Comparable<T>> makeEmptyNode(creationTimestamp: Long) = TreeNode<T>(
-            key = null,
-            creationTimestamp = creationTimestamp,
-            content = null,
-            subtreeSize = 0,
-            lastModificationTimestamp = 0,
-            modificationsCount = 0,
-            nodeType = 1
+        private val rightUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            InnerNode::class.java,
+            TreeNode::class.java,
+            "right"
         )
-
-        fun <T : Comparable<T>> makeInnerNode(
-            content: InnerNodeContent<T>,
-            subtreeSize: Int,
-            lastModificationTimestamp: Long,
-            modificationsCount: Int
-        ) = TreeNode(
-            key = null,
-            creationTimestamp = 0,
-            content = content,
-            subtreeSize = subtreeSize,
-            lastModificationTimestamp = lastModificationTimestamp,
-            modificationsCount = modificationsCount,
-            nodeType = 2
+        private val contentUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            InnerNode::class.java,
+            InnerNodeContent::class.java,
+            "content"
         )
     }
 
-    fun dumpToString(level: Int): String {
-        return when (nodeType) {
-            0 -> "-".repeat(level) + "key=$key"
-            1 -> "-".repeat(level) + "Empty"
-            2 -> "-".repeat(level) + "Inner: size=$subtreeSize\n" +
-                    "${content!!.left.ref.dumpToString(level + 1)}\n" +
-                    content.right.ref.dumpToString(level + 1)
-            else -> throw AssertionError("Illegal node type")
+    fun executeUntilTimestamp(timestamp: Long?) {
+        while (true) {
+            val curDescriptor = queue.peek() ?: return
+            if (timestamp != null && curDescriptor.timestamp > timestamp) {
+                return
+            }
+            curDescriptor.processInnerNode(this)
+            queue.popIf(curDescriptor.timestamp)
         }
+    }
+
+    override fun route(x: T): TreeNode<T> {
+        return if (x < rightSubtreeMin) {
+            left
+        } else {
+            right
+        }
+    }
+
+    override fun casChild(old: TreeNode<T>, new: TreeNode<T>): Boolean {
+        val updater = if (old === left) {
+            leftUpdater
+        } else if (old === right) {
+            rightUpdater
+        } else {
+            return false
+        }
+        return updater.compareAndSet(this, old, new)
+    }
+
+    fun casContent(old: InnerNodeContent<T>, new: InnerNodeContent<T>): Boolean {
+        return contentUpdater.compareAndSet(this, old, new)
+    }
+
+    override fun dumpToString(level: Int): String {
+        return "-".repeat(level) + "Inner id${id}: size=${content.subtreeSize}\n" +
+                "${left.dumpToString(level + 1)}\n" +
+                right.dumpToString(level + 1)
     }
 }

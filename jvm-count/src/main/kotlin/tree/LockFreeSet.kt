@@ -11,11 +11,10 @@ import descriptors.singlekey.write.InsertDescriptor
 import initiator.singlekey.executeSingleKeyOperation
 import initiator.count.doCount
 import initiator.singlekey.doWaitFreeContains
-import queue.lock.RootCircularBufferQueue
 import queue.ms.RootLockFreeQueue
 import result.TimestampLinearizedResult
 
-class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
+class LockFreeSet<T : Comparable<T>>(val average: (T, T) -> T = { _, x -> x }) : CountSet<T>, CountLinearizableSet<T> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
     val root: RootNode<T>
 
@@ -25,7 +24,7 @@ class LockFreeSet<T : Comparable<T>> : CountSet<T>, CountLinearizableSet<T> {
         root = RootNode<T>(
             queue = RootLockFreeQueue(initDescriptor),
             // queue = RootCircularBufferQueue(),
-            root = TreeNodeReference(TreeNode.makeEmptyNode<T>(initDescriptor.timestamp)),
+            root = EmptyNode(tree = this, creationTimestamp = initDescriptor.timestamp),
             id = nodeIdAllocator.allocateId()
         )
     }

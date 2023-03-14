@@ -3,7 +3,7 @@ package tree
 import allocation.IdAllocator
 import common.lazyAssert
 import descriptors.DummyDescriptor
-import queue.ms.NonRootLockFreeQueue
+import queue.array.NonRootArrayQueue
 import result.SingleKeyWriteOperationResult
 
 private const val THRESHOLD = 4
@@ -98,8 +98,9 @@ private fun <T : Comparable<T>> buildSubtreeFromKeys(
         initialSize = subtreeSize,
         left = left,
         right = right,
-        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+//        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
 //        queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp - 1),
+        queue = NonRootArrayQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
         rightSubtreeMin = rightSubtreeMin,
     )
 }

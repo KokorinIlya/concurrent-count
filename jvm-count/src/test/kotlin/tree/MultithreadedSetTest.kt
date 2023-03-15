@@ -130,4 +130,18 @@ class MultithreadedSetTest {
             keysTo = 10_000
         )
     }
+
+    @Test
+    fun stressManyTestsManyThreadsSmallKeyInsertDelete() {
+        doTest(
+            testsCount = 10_000,
+            threadsCount = 32,
+            operationsPerThreadCount = 1000,
+            insertProb = 0.5,
+            deleteProb = 0.5,
+            countProb = 0.0,
+            keysFrom = 0,
+            keysTo = 10
+        )
+    }
 }

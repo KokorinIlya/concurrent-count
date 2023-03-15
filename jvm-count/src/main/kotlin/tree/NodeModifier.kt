@@ -33,18 +33,16 @@ private fun <T : Comparable<T>> collectKeysInChildSubtree(
         is KeyNode -> {
             val curKey = child.key
             if (isInsert) {
-                if (keys.isNotEmpty() && keys.last() < key && key < curKey ||
-                    keys.isEmpty() && key < curKey
-                ) {
+                lazyAssert { key != curKey }
+                if (key < curKey && (keys.isEmpty() || keys.last() < key)) {
                     keys.add(key)
                 }
                 keys.add(curKey)
-            } else {
-                if (child.key != key) {
-                    keys.add(curKey)
-                }
+            } else if (child.key != key) {
+                keys.add(curKey)
             }
         }
+
         is InnerNode -> collectKeysInSubtree(child, keys, isInsert, key)
         is EmptyNode -> {
         }
@@ -100,7 +98,7 @@ private fun <T : Comparable<T>> buildSubtreeFromKeys(
         right = right,
 //        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
 //        queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp - 1),
-        queue = NonRootArrayQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
+        queue = NonRootArrayQueue(initValue = DummyDescriptor(curOperationTimestamp)),
         rightSubtreeMin = rightSubtreeMin,
     )
 }
@@ -116,10 +114,7 @@ private fun <T : Comparable<T>> getRebuilt(
     finishOperationsInSubtree(innerNode)
     val curSubtreeKeys = mutableListOf<T>()
     collectKeysInSubtree(innerNode, curSubtreeKeys, isInsert, key)
-    if (isInsert &&
-        (curSubtreeKeys.isNotEmpty() && curSubtreeKeys.last() < key ||
-                curSubtreeKeys.isEmpty())
-    ) {
+    if (isInsert && (curSubtreeKeys.isEmpty() || curSubtreeKeys.last() < key)) {
         curSubtreeKeys.add(key)
     }
 
@@ -130,7 +125,7 @@ private fun <T : Comparable<T>> getRebuilt(
             .zipWithNext { cur, next -> cur < next }
             .all { it }
     }
-    lazyAssert { isInsert && sortedKeys.contains(key) || !isInsert && !sortedKeys.contains(key) }
+    lazyAssert { isInsert == sortedKeys.contains(key) }
     return buildSubtreeFromKeys(
         tree = innerNode.tree,
         keys = sortedKeys,
@@ -163,32 +158,27 @@ private fun <T : Comparable<T>> modifyNode(
 
         if (casResult) {
             result.tryFinish()
-
             rebuildResult
         } else {
+            // TODO: Maybe result.tryFinish()?
             val newNode = parent.route(key)
             lazyAssert {
                 newNode is InnerNode && newNode.content.lastModificationTimestamp >= curOperationTimestamp ||
                         newNode is KeyNode && newNode.creationTimestamp >= curOperationTimestamp ||
                         newNode is EmptyNode && newNode.creationTimestamp >= curOperationTimestamp
             }
-
             newNode
         }
     } else {
         val modifiedContent = InnerNodeContent<T>(
             lastModificationTimestamp = curOperationTimestamp,
-//            modificationsCount = content.modificationsCount + 1,
-            modificationsCount = 0, // Rebuilds disabled
+            modificationsCount = content.modificationsCount + 1,
+//            modificationsCount = 0, // Rebuilds disabled
             subtreeSize = content.subtreeSize + subtreeSizeDelta,
         )
 
         val casResult = curNode.casContent(content, modifiedContent)
-
-        if (!casResult) {
-            lazyAssert { curNode.content.lastModificationTimestamp >= curOperationTimestamp }
-        }
-
+        lazyAssert { casResult || curNode.content.lastModificationTimestamp >= curOperationTimestamp }
         curNode
     }
 }

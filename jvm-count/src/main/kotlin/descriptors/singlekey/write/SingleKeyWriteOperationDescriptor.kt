@@ -14,6 +14,7 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
     protected abstract val nodeIdAllocator: IdAllocator
 
     private fun processInnerChild(child: InnerNode<T>) {
+//        Thread.sleep(1) // for fail rebuilds with timestamp - 1
         val content = child.content
         lazyAssert { content.lastModificationTimestamp >= timestamp }
         val pushRes = child.queue.pushIf(this)

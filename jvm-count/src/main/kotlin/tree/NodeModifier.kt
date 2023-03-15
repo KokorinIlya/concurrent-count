@@ -96,8 +96,8 @@ private fun <T : Comparable<T>> buildSubtreeFromKeys(
         initialSize = subtreeSize,
         left = left,
         right = right,
-//        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp - 1)),
-//        queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp - 1),
+//        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp)),
+//        queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp),
         queue = NonRootArrayQueue(initValue = DummyDescriptor(curOperationTimestamp)),
         rightSubtreeMin = rightSubtreeMin,
     )

@@ -1,10 +1,10 @@
 package tree
 
 import descriptors.Descriptor
-import queue.common.AbstractQueue
+import queue.common.QueueTraverser
 
 interface ParentNode<T : Comparable<T>> {
-    val queue: AbstractQueue<Descriptor<T>>
+    fun getTraverser(): QueueTraverser<Descriptor<T>>?
 
     fun route(x: T): TreeNode<T>
 

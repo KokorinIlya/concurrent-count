@@ -35,15 +35,18 @@ fun <T : Comparable<T>> traverseQueue(
 }
 
 fun <T : Comparable<T>> doWaitFreeContains(root: RootNode<T>, key: T): Boolean {
-    val timestamp = root.queue.getMaxTimestamp()
-    var node: ParentNode<T> = root
+    val timestamp = root.getMaxTimestamp()
+    var node: TreeNode<T> = root.root
 
     while (true) {
-        traverseQueue(node.queue, exitTimestamp = timestamp + 1, key = key)?.let { return it }
-        when (val child = node.route(key)) {
-            is InnerNode -> node = child
+        when (node) {
+            is InnerNode -> {
+                traverseQueue(node.queue, exitTimestamp = timestamp + 1, key = key)?.let { return it }
+                node = node.route(key)
+            }
+
             is EmptyNode -> return false
-            is KeyNode -> return child.key == key
+            is KeyNode -> return node.key == key
         }
     }
 }

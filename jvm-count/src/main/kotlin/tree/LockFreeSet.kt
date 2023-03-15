@@ -11,7 +11,6 @@ import descriptors.singlekey.write.InsertDescriptor
 import initiator.singlekey.executeSingleKeyOperation
 import initiator.count.doCount
 import initiator.singlekey.doWaitFreeContains
-import queue.ms.RootLockFreeQueue
 import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>>(val average: (T, T) -> T = { _, x -> x }) : CountSet<T>, CountLinearizableSet<T> {
@@ -22,8 +21,6 @@ class LockFreeSet<T : Comparable<T>>(val average: (T, T) -> T = { _, x -> x }) :
         val initDescriptor = DummyDescriptor<T>(0L)
         @Suppress("RemoveExplicitTypeArguments")
         root = RootNode<T>(
-            queue = RootLockFreeQueue(initDescriptor),
-            // queue = RootCircularBufferQueue(),
             root = EmptyNode(tree = this, creationTimestamp = initDescriptor.timestamp),
             id = nodeIdAllocator.allocateId()
         )

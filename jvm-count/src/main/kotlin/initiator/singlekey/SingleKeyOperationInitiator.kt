@@ -11,17 +11,13 @@ private fun <T : Comparable<T>> checkParallel(
     root: RootNode<T>,
     descriptor: SingleKeyWriteOperationDescriptor<T>
 ): Boolean? {
-    val rootTraversalResult = traverseQueue(
-        root.queue,
-        exitTimestamp = descriptor.timestamp, key = descriptor.key
-    )
-    return rootTraversalResult ?: descriptor.checkExistenceInner(root)
+    return descriptor.checkExistenceInner(root)
 }
 fun <T : Comparable<T>, R> executeSingleKeyOperation(
     root: RootNode<T>,
     descriptor: SingleKeyOperationDescriptor<T, R>
 ): TimestampLinearizedResult<R> {
-    val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
+    val timestamp = root.pushAndAcquireTimestamp(descriptor)
     lazyAssert { descriptor.timestamp == timestamp }
 
     if (descriptor is SingleKeyWriteOperationDescriptor) {
@@ -32,8 +28,6 @@ fun <T : Comparable<T>, R> executeSingleKeyOperation(
             descriptor.setDecision(keyExists)
         }
     }
-
-    root.executeUntilTimestamp(timestamp)
 
     var curNode = root.root
     while (true) {

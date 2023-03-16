@@ -3,27 +3,23 @@ package tree
 import common.lazyAssert
 import descriptors.Descriptor
 import queue.common.QueueTraverser
+import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicReferenceArray
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.locks.ReentrantLock
 
 class RootNode<T : Comparable<T>>(
     @Volatile var root: TreeNode<T>,
-    val id: Long
+    val id: Long,
+    fcSize: Int = 32,
 ) : ParentNode<T> {
-    /*
-    Long - next timestamp
-    Descriptor - descriptor with correct timestamp
-     */
     @Volatile
-    private var state: Any = 1L
+    private var nextTimestamp: Long = 1L
+
+    private val fcLock = ReentrantLock()
+    private val fcArray = AtomicReferenceArray<Descriptor<T>?>(fcSize)
 
     private companion object {
-        @Suppress("HasPlatformType")
-        val stateUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            RootNode::class.java,
-            Any::class.java,
-            "state"
-        )
-
         @Suppress("HasPlatformType")
         val rootUpdater = AtomicReferenceFieldUpdater.newUpdater(
             RootNode::class.java,
@@ -33,35 +29,46 @@ class RootNode<T : Comparable<T>>(
     }
 
     fun pushAndAcquireTimestamp(descriptor: Descriptor<T>): Long {
+        var fcIndex = -1
         while (true) {
-            when (val curState = state) {
-                is Long -> {
-                    descriptor.timestamp = curState
-                    if (stateUpdater.compareAndSet(this, curState, descriptor)) {
-                        descriptor.tryProcessRootNode(this)
-                        stateUpdater.compareAndSet(this, descriptor, curState + 1)
-                        return curState
+            if (fcLock.tryLock()) {
+                try {
+                    if (fcIndex == -1) {
+                        processDescriptor(descriptor)
                     }
+
+                    for (i in 0 until fcArray.length()) {
+                        fcArray.get(i)?.let { otherDescriptor ->
+                            processDescriptor(otherDescriptor)
+                            lazyAssert { fcArray.get(i) == otherDescriptor }
+                            fcArray.set(i, null)
+                        }
+                    }
+                } finally {
+                    fcLock.unlock()
                 }
 
-                is Descriptor<*> -> {
-                    @Suppress("UNCHECKED_CAST")
-                    curState as Descriptor<T>
-                    lazyAssert { curState.timestamp != 0L }
-                    curState.tryProcessRootNode(this)
-                    stateUpdater.compareAndSet(this, curState, curState.timestamp + 1)
+                lazyAssert { descriptor.timestamp != 0L }
+                return descriptor.timestamp
+            } else if (fcIndex == -1) {
+                val index = ThreadLocalRandom.current().nextInt(fcArray.length())
+                if (fcArray.compareAndSet(index, null, descriptor)) {
+                    fcIndex = index
                 }
-
-                else -> throw AssertionError("Incorrect state type: ${curState::class.java}")
+            } else if (fcArray.get(fcIndex) != descriptor) {
+                lazyAssert { descriptor.timestamp != 0L }
+                return descriptor.timestamp
             }
         }
     }
 
-    fun getMaxTimestamp(): Long = when (val curState = state) {
-        is Long -> curState
-        is Descriptor<*> -> curState.timestamp
-        else -> throw AssertionError("Incorrect state type: ${curState::class.java}")
+    private fun processDescriptor(descriptor: Descriptor<T>) {
+        descriptor.timestamp = nextTimestamp
+        nextTimestamp++
+        descriptor.tryProcessRootNode(this)
     }
+
+    fun getMaxTimestamp(): Long = nextTimestamp
 
     override fun getTraverser(): QueueTraverser<Descriptor<T>>? {
         return null

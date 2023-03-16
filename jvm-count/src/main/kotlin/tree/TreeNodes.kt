@@ -2,7 +2,6 @@ package tree
 
 import descriptors.Descriptor
 import queue.common.NonRootQueue
-import queue.common.QueueTraverser
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 sealed class TreeNode<T : Comparable<T>> {
@@ -34,7 +33,7 @@ data class InnerNode<T : Comparable<T>>(
     @Volatile var left: TreeNode<T>,
     @Volatile var right: TreeNode<T>,
     @Volatile var content: InnerNodeContent<T>,
-    val queue: NonRootQueue<Descriptor<T>>,
+    override val queue: NonRootQueue<Descriptor<T>>,
     val rightSubtreeMin: T,
     val id: Long,
     val initialSize: Int,
@@ -66,10 +65,6 @@ data class InnerNode<T : Comparable<T>>(
             curDescriptor.processInnerNode(this)
             queue.popIf(curDescriptor.timestamp)
         }
-    }
-
-    override fun getTraverser(): QueueTraverser<Descriptor<T>>? {
-        return queue.getTraverser()
     }
 
     override fun route(x: T): TreeNode<T> {

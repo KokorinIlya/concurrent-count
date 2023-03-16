@@ -73,9 +73,10 @@ fun <T : Comparable<T>> doCount(root: RootNode<T>, left: T, right: T): Timestamp
     require(left <= right)
     val descriptor = CountDescriptor.new(left, right)
     descriptor.result.preVisitNode(root.id)
-    val timestamp = root.pushAndAcquireTimestamp(descriptor)
+    val timestamp = root.queue.pushAndAcquireTimestamp(descriptor)
     lazyAssert { descriptor.timestamp == timestamp }
 
+    root.executeUntilTimestamp(timestamp)
     doCountNoMinMaxBothBorders(root.root, left, right, timestamp, descriptor.result)
 
     val result = descriptor.result.getResult() ?: throw AssertionError(

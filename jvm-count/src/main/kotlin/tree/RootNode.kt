@@ -59,6 +59,8 @@ class RootNode<T : Comparable<T>>(
                 lazyAssert { descriptor.timestamp != 0L }
                 return descriptor.timestamp
             }
+
+            Thread.yield()
         }
     }
 

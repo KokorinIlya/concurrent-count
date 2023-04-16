@@ -3,7 +3,6 @@ package queue.fc.ms
 import common.TimestampedValue
 import common.lazyAssert
 import queue.common.RootQueue
-import queue.ms.AbstractLockFreeQueue
 import queue.ms.QueueNode
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -12,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock
 class RootFcMichaelScottQueue<T : TimestampedValue>(
     initValue: T,
     fcSize: Int = 32,
-) : RootQueue<T>, AbstractLockFreeQueue<T>(initValue) {
+) : RootQueue<T>, AbstractFcMichaelScottQueue<T>(initValue) {
     private val fcLock = ReentrantLock()
     private val fcArray = AtomicReferenceArray<T?>(fcSize)
 
@@ -52,16 +51,7 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
         }
     }
 
-    override fun getMaxTimestamp(): Long { // TODO: maybe, return curTail.data.timestamp
-        val curTail = tail
-        val nextTail = curTail.next
-        return if (nextTail != null) {
-            lazyAssert { nextTail.data.timestamp == curTail.data.timestamp + 1 }
-            nextTail.data.timestamp
-        } else {
-            curTail.data.timestamp
-        }
-    }
+    override fun getMaxTimestamp(): Long = tail.data.timestamp
 
     private fun pushWithLock(value: T): Long {
         lazyAssert { fcLock.isHeldByCurrentThread }
@@ -74,7 +64,7 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
         value.timestamp = newTimestamp
 
         tail.next = newTail
-        tailUpdater.compareAndSet(this, curTail, newTail)
+        tail = newTail
         return newTimestamp
     }
 }

@@ -1,12 +1,12 @@
 package initiator.singlekey
 
+import common.lazyAssert
 import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
 import descriptors.singlekey.write.InsertDescriptor
 import queue.common.AbstractQueue
 import queue.common.RootQueue
-import common.lazyAssert
 import tree.*
 
 fun <T : Comparable<T>> traverseQueue(

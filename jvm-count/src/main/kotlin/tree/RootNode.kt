@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 class RootNode<T : Comparable<T>>(
     override val queue: RootQueue<Descriptor<T>>,
     @Volatile var root: TreeNode<T>,
-    val id: Long
+    val id: Long,
 ) : ParentNode<T> {
     companion object {
         private val rootUpdater = AtomicReferenceFieldUpdater.newUpdater(

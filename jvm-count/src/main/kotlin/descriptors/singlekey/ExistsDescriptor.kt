@@ -1,8 +1,8 @@
 package descriptors.singlekey
 
+import common.lazyAssert
 import result.ExistResult
 import tree.*
-import common.lazyAssert
 
 class ExistsDescriptor<T : Comparable<T>>(
     override val key: T,
@@ -46,6 +46,7 @@ class ExistsDescriptor<T : Comparable<T>>(
             is EmptyNode -> processEmptyChild(child)
             is KeyNode -> processKeyChild(child)
             is InnerNode -> processInnerChild(child)
+            else -> throw AssertionError("Unknown node type: $child")
         }
     }
 

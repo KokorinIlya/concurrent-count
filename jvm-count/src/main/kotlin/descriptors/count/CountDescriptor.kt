@@ -1,8 +1,8 @@
 package descriptors.count
 
+import common.lazyAssert
 import descriptors.Descriptor
 import result.CountResult
-import common.lazyAssert
 import tree.*
 
 sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
@@ -66,6 +66,8 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     0
                 }
             }
+
+            else -> throw AssertionError("Unknown node type: $child")
         }
     }
 
@@ -98,6 +100,8 @@ sealed class CountDescriptor<T : Comparable<T>> : Descriptor<T>() {
                     content.subtreeSize
                 }
             }
+
+            else -> throw AssertionError("Unknown node type: $node")
         }
     }
 }

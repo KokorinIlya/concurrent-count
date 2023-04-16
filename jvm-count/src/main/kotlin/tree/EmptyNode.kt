@@ -1,12 +1,19 @@
 package tree
 
-sealed class TreeNode<T : Comparable<T>> : TreeNodePadding()  {
-    abstract val tree: LockFreeSet<T>
-    abstract fun dumpToString(level: Int): String
+abstract class EmptyNodeInner<T : Comparable<T>>(
+    override val tree: LockFreeSet<T>,
+    val creationTimestamp: Long,
+) : TreeNode<T>() {
+    override fun dumpToString(level: Int): String {
+        return "-".repeat(level) + "Empty"
+    }
 }
 
 @Suppress("UNUSED")
-abstract class TreeNodePadding {
+class EmptyNode<T : Comparable<T>>(
+    tree: LockFreeSet<T>,
+    creationTimestamp: Long,
+) : EmptyNodeInner<T>(tree, creationTimestamp) {
     private val p00 : Byte = 0
     private val p01 : Byte = 0
     private val p02 : Byte = 0

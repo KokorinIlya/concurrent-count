@@ -46,8 +46,6 @@ private fun <T : Comparable<T>> collectKeysInChildSubtree(
         is InnerNode -> collectKeysInSubtree(child, keys, isInsert, key)
         is EmptyNode -> {
         }
-
-        else -> throw AssertionError("Unknown node type: $child")
     }
 }
 

@@ -1,13 +1,13 @@
 package descriptors.singlekey.write
 
 import allocation.IdAllocator
-import common.lazyAssert
 import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import descriptors.singlekey.SingleKeyOperationDescriptor
 import queue.common.AbstractQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
+import common.lazyAssert
 
 abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyOperationDescriptor<T, Boolean>() {
     abstract override val result: SingleKeyWriteOperationResult
@@ -71,31 +71,24 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                         QueueTraverseResult.KEY_EXISTS -> {
                             return true
                         }
-
                         QueueTraverseResult.KEY_NOT_EXISTS -> {
                             return false
                         }
-
                         QueueTraverseResult.ANSWER_NOT_NEEDED -> {
                             lazyAssert { result.decisionMade() }
                             return null
                         }
-
                         QueueTraverseResult.UNABLE_TO_DETERMINE -> {
                             curNode = curNode.route(key)
                         }
                     }
                 }
-
                 is KeyNode -> {
                     return curNode.key == key
                 }
-
                 is EmptyNode -> {
                     return false
                 }
-
-                else -> throw AssertionError("Unknown node type: $curNode")
             }
         }
     }
@@ -129,7 +122,6 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
                     shouldBeExecuted(keyExists)
                 }
             }
-
             SingleKeyWriteOperationResult.Status.SHOULD_BE_EXECUTED -> true
             SingleKeyWriteOperationResult.Status.DECLINED -> false
         }
@@ -151,7 +143,6 @@ abstract class SingleKeyWriteOperationDescriptor<T : Comparable<T>> : SingleKeyO
             is EmptyNode -> processEmptyChild(curNode, modifiedChild)
             is KeyNode -> processKeyChild(curNode, modifiedChild)
             is InnerNode -> processInnerChild(modifiedChild)
-            else -> throw AssertionError("Unknown node type: $modifiedChild")
         }
     }
 }

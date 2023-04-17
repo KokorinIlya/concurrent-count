@@ -5,16 +5,11 @@ import common.lazyAssert
 import queue.common.RootQueue
 import queue.ms.QueueNode
 import java.util.concurrent.ThreadLocalRandom
-import java.util.concurrent.atomic.AtomicReferenceArray
-import java.util.concurrent.locks.ReentrantLock
 
 class RootFcMichaelScottQueue<T : TimestampedValue>(
     initValue: T,
     fcSize: Int = 32,
-) : RootQueue<T>, AbstractFcMichaelScottQueue<T>(initValue) {
-    private val fcLock = ReentrantLock()
-    private val fcArray = AtomicReferenceArray<T?>(fcSize)
-
+) : RootQueue<T>, AbstractFcMichaelScottQueue<T>(initValue, fcSize) {
     override fun pushAndAcquireTimestamp(value: T): Long {
         var fcIndex = -1
         while (true) {
@@ -26,7 +21,8 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
 
                     for (i in 0 until fcArray.length()) {
                         fcArray.get(i)?.let { otherValue ->
-                            pushWithLock(otherValue)
+                            @Suppress("UNCHECKED_CAST")
+                            pushWithLock(otherValue as T)
                             lazyAssert { fcArray.get(i) == otherValue }
                             fcArray.set(i, null)
                         }
@@ -57,9 +53,8 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
         lazyAssert { fcLock.isHeldByCurrentThread }
 
         val newTail = QueueNode(data = value, next = null)
-        val curTail = tail
 
-        val maxTimestamp = curTail.data.timestamp
+        val maxTimestamp = tail.data.timestamp
         val newTimestamp = maxTimestamp + 1
         value.timestamp = newTimestamp
 

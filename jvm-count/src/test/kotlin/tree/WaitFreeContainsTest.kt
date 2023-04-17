@@ -17,7 +17,7 @@ class WaitFreeContainsTest {
             if (testNum % 10 == 0) {
                 println(testNum)
             }
-            val set = LockFreeSet<Int>()
+            val set = LockFreeSet<Int>(32)
             val threadsFinished = AtomicInteger(0)
 
             generators.map { curGen ->

@@ -5,6 +5,7 @@ import queue.common.AbstractQueue
 
 interface ParentNode<T : Comparable<T>> {
     val queue: AbstractQueue<Descriptor<T>>
+    val depth: Int
 
     fun route(x: T): TreeNode<T>
 

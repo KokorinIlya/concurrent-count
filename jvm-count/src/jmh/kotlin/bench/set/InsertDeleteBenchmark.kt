@@ -2,6 +2,7 @@ package bench.set
 
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.ThreadParams
 import tree.LockFreeSet
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
@@ -25,9 +26,9 @@ open class InsertDeleteBenchmark {
 
     @Suppress("DuplicatedCode")
     @Setup(Level.Iteration)
-    fun init() {
+    fun init(threadParams: ThreadParams) {
         lazyAssert { false }
-        val newSet = LockFreeSet<Long>() { a, b ->
+        val newSet = LockFreeSet<Long>(threadParams.threadCount) { a, b ->
             max(a + 1, a / 2 + b / 2)
         }
         var s = 0

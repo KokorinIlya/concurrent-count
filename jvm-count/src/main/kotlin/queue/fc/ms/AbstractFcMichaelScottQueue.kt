@@ -5,11 +5,19 @@ import common.lazyAssert
 import queue.common.AbstractQueue
 import queue.ms.LockFreeQueueTraverser
 import queue.ms.QueueNode
+import java.util.concurrent.atomic.AtomicReferenceArray
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.locks.ReentrantLock
 
-abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(initValue: T) : AbstractQueue<T> {
+abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
+        initValue: T,
+        fcSize: Int,
+) : AbstractQueue<T> {
+    protected val fcLock = ReentrantLock()
+    protected val fcArray = AtomicReferenceArray<Any?>(fcSize)
+
     @Volatile
-    private var head: QueueNode<T>
+    protected var head: QueueNode<T>
 
     @Volatile
     protected var tail: QueueNode<T>
@@ -17,9 +25,9 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(initValue: T) :
     companion object {
         @Suppress("HasPlatformType")
         val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            AbstractFcMichaelScottQueue::class.java,
-            QueueNode::class.java,
-            "head"
+                AbstractFcMichaelScottQueue::class.java,
+                QueueNode::class.java,
+                "head"
         )
     }
 

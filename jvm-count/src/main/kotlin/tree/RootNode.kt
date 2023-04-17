@@ -1,5 +1,6 @@
 package tree
 
+import common.lazyAssert
 import descriptors.Descriptor
 import queue.common.RootQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -17,6 +18,9 @@ class RootNode<T : Comparable<T>>(
         )
     }
 
+    override val depth: Int
+        get() = -1
+
     fun executeUntilTimestamp(timestamp: Long) {
         while (true) {
             val curDescriptor = queue.peek() ?: return
@@ -33,6 +37,7 @@ class RootNode<T : Comparable<T>>(
     }
 
     override fun route(x: T): TreeNode<T> {
+        lazyAssert { root.let { it !is ParentNode<*> || it.depth == 0 } }
         return root
     }
 }

@@ -2,8 +2,6 @@ package descriptors.singlekey.write
 
 import allocation.IdAllocator
 import common.lazyAssert
-import descriptors.DummyDescriptor
-import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
 
@@ -44,22 +42,16 @@ class InsertDescriptor<T : Comparable<T>>(
                 val tree = child.tree
 
                 @Suppress("RemoveExplicitTypeArguments")
-                val innerNode = InnerNode<T>(
+                val innerNode = InnerNode.new(
                     tree = tree,
-                    queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(timestamp)),
-//                    queue = NonRootCircularBufferQueue(creationTimestamp = timestamp),
-//                    queue = NonRootArrayQueue(initValue = DummyDescriptor<T>(timestamp)),
-                    id = nodeIdAllocator.allocateId(),
-                    initialSize = 2,
                     left = leftChild,
                     right = rightChild,
-                    content = InnerNodeContent(
-                        lastModificationTimestamp = timestamp,
-                        modificationsCount = 0,
-                        subtreeSize = 2,
-                    ),
+                    id = nodeIdAllocator.allocateId(),
+                    timestamp = timestamp,
+                    initialSize = 2,
 //                    rightSubtreeMin = rightChild.key!!
                     rightSubtreeMin = tree.average(leftChild.key, rightChild.key),
+                    depth = curNode.depth + 1
                 )
                 curNode.casChild(child, innerNode)
                 result.tryFinish()

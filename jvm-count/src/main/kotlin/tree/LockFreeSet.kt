@@ -14,11 +14,16 @@ import initiator.singlekey.executeSingleKeyOperation
 import queue.fc.ms.RootFcMichaelScottQueue
 import result.TimestampLinearizedResult
 
-class LockFreeSet<T : Comparable<T>>(val average: (T, T) -> T = { _, x -> x }) : CountSet<T>, CountLinearizableSet<T> {
+class LockFreeSet<T : Comparable<T>>(
+    val threadsCount: Int,
+    val average: (T, T) -> T = { _, x -> x },
+) : CountSet<T>, CountLinearizableSet<T> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
     val root: RootNode<T>
 
     init {
+        check(threadsCount > 0) { "threadsCount must be positive" }
+
         val initDescriptor = DummyDescriptor<T>(0L)
         @Suppress("RemoveExplicitTypeArguments")
         root = RootNode<T>(

@@ -2,8 +2,6 @@ package tree
 
 import allocation.IdAllocator
 import common.lazyAssert
-import descriptors.DummyDescriptor
-import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 
 private const val THRESHOLD = 4
@@ -68,7 +66,8 @@ private fun <T : Comparable<T>> buildSubtreeFromKeys(
     startIndex: Int,
     endIndex: Int,
     curOperationTimestamp: Long,
-    nodeIdAllocator: IdAllocator
+    nodeIdAllocator: IdAllocator,
+    depth: Int,
 ): TreeNode<T> {
     if (startIndex == endIndex) {
         return EmptyNode(tree = tree, creationTimestamp = curOperationTimestamp)
@@ -80,26 +79,26 @@ private fun <T : Comparable<T>> buildSubtreeFromKeys(
 //    val rightSubtreeMin = keys[midIndex]
     val rightSubtreeMin = tree.average(keys[midIndex - 1], keys[midIndex])
 
-    val left = buildSubtreeFromKeys(tree, keys, startIndex, midIndex, curOperationTimestamp, nodeIdAllocator)
-    val right = buildSubtreeFromKeys(tree, keys, midIndex, endIndex, curOperationTimestamp, nodeIdAllocator)
+    val left = buildSubtreeFromKeys(
+        tree, keys, startIndex, midIndex,
+        curOperationTimestamp, nodeIdAllocator, depth + 1
+    )
+    val right = buildSubtreeFromKeys(
+        tree, keys, midIndex, endIndex,
+        curOperationTimestamp, nodeIdAllocator, depth + 1
+    )
 
     val subtreeSize = endIndex - startIndex
 
-    return InnerNode(
+    return InnerNode.new(
         tree = tree,
-        content = InnerNodeContent(
-            lastModificationTimestamp = curOperationTimestamp,
-            modificationsCount = 0,
-            subtreeSize = subtreeSize,
-        ),
-        id = nodeIdAllocator.allocateId(),
-        initialSize = subtreeSize,
         left = left,
         right = right,
-        queue = NonRootLockFreeQueue(initValue = DummyDescriptor(curOperationTimestamp)),
-//        queue = NonRootCircularBufferQueue(creationTimestamp = curOperationTimestamp),
-//        queue = NonRootArrayQueue(initValue = DummyDescriptor(curOperationTimestamp)),
+        timestamp = curOperationTimestamp,
+        id = nodeIdAllocator.allocateId(),
+        initialSize = subtreeSize,
         rightSubtreeMin = rightSubtreeMin,
+        depth = depth
     )
 }
 
@@ -132,7 +131,8 @@ private fun <T : Comparable<T>> getRebuilt(
         startIndex = 0,
         endIndex = sortedKeys.size,
         curOperationTimestamp = curOperationTimestamp,
-        nodeIdAllocator = nodeIdAllocator
+        nodeIdAllocator = nodeIdAllocator,
+        depth = innerNode.depth,
     )
 }
 

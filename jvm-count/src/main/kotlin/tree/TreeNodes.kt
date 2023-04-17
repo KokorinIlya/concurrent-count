@@ -1,7 +1,11 @@
 package tree
 
+import common.lazyAssert
 import descriptors.Descriptor
+import descriptors.DummyDescriptor
 import queue.common.NonRootQueue
+import queue.fc.ms.NonRootFcMichaelScottQueue
+import queue.ms.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 sealed class TreeNode<T : Comparable<T>> {
@@ -28,17 +32,51 @@ data class EmptyNode<T : Comparable<T>>(
     }
 }
 
-data class InnerNode<T : Comparable<T>>(
+class InnerNode<T : Comparable<T>> private constructor(
     override val tree: LockFreeSet<T>,
     @Volatile var left: TreeNode<T>,
     @Volatile var right: TreeNode<T>,
     @Volatile var content: InnerNodeContent<T>,
-    override val queue: NonRootQueue<Descriptor<T>>,
     val rightSubtreeMin: T,
     val id: Long,
     val initialSize: Int,
+    override val queue: NonRootQueue<Descriptor<T>>,
+    override val depth: Int,
 ) : TreeNode<T>(), ParentNode<T> {
     companion object {
+        fun <T : Comparable<T>> new(
+            tree: LockFreeSet<T>,
+            left: TreeNode<T>,
+            right: TreeNode<T>,
+            timestamp: Long,
+            rightSubtreeMin: T,
+            id: Long,
+            initialSize: Int,
+            depth: Int,
+        ): InnerNode<T> {
+            val fcSize = tree.threadsCount shr depth
+            val queue: NonRootQueue<Descriptor<T>> = if (fcSize > 0) {
+                NonRootFcMichaelScottQueue(initValue = DummyDescriptor(timestamp), fcSize = fcSize)
+            } else {
+                NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))
+            }
+            return InnerNode(
+                tree = tree,
+                left = left,
+                right = right,
+                content = InnerNodeContent(
+                    lastModificationTimestamp = timestamp,
+                    modificationsCount = 0,
+                    subtreeSize = initialSize,
+                ),
+                rightSubtreeMin = rightSubtreeMin,
+                id = id,
+                initialSize = initialSize,
+                queue = queue,
+                depth = depth,
+            )
+        }
+
         private val leftUpdater = AtomicReferenceFieldUpdater.newUpdater(
             InnerNode::class.java,
             TreeNode::class.java,
@@ -68,6 +106,8 @@ data class InnerNode<T : Comparable<T>>(
     }
 
     override fun route(x: T): TreeNode<T> {
+        lazyAssert { left.let { it !is ParentNode<*> || it.depth == depth + 1 } }
+        lazyAssert { right.let { it !is ParentNode<*> || it.depth == depth + 1 } }
         return if (x < rightSubtreeMin) {
             left
         } else {

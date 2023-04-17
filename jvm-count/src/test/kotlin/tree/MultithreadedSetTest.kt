@@ -11,7 +11,7 @@ class MultithreadedSetTest {
         keysFrom: Int, keysTo: Int
     ) {
         doLinCheck(
-            setGetter = { LockFreeSet() },
+            setGetter = { LockFreeSet(32) },
             testsCount = testsCount, threadsCount = threadsCount,
             operationsPerThreadCount = operationsPerThreadCount,
             insertProb = insertProb, deleteProb = deleteProb, countProb = countProb,

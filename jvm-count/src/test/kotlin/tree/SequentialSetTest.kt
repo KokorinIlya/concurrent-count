@@ -10,7 +10,7 @@ import kotlin.random.Random
 class SequentialSetTest {
     @Test
     fun simpleTest() {
-        val set = LockFreeSet<Int>()
+        val set = LockFreeSet<Int>(1)
         assertTrue(set.insertTimestamped(1).result)
         assertTrue(set.containsTimestamped(1).result)
         assertFalse(set.containsTimestamped(2).result)
@@ -22,7 +22,7 @@ class SequentialSetTest {
 
     @Test
     fun failedTest() {
-        val lockFreeSet = LockFreeSet<Int>()
+        val lockFreeSet = LockFreeSet<Int>(1)
         assertTrue(lockFreeSet.insertTimestamped(71).result)
         assertEquals(1, lockFreeSet.countTimestamped(6, 81).result)
         assertTrue(lockFreeSet.insertTimestamped(22).result)
@@ -35,7 +35,7 @@ class SequentialSetTest {
 
     @Test
     fun otherFailedTest() {
-        val lockFreeSet = LockFreeSet<Int>()
+        val lockFreeSet = LockFreeSet<Int>(1)
         assertTrue(lockFreeSet.insertTimestamped(96).result)
         assertEquals(0, lockFreeSet.countTimestamped(0, 66).result)
         assertTrue(lockFreeSet.insertTimestamped(34).result)
@@ -44,7 +44,7 @@ class SequentialSetTest {
 
     @Test
     fun failedTestRebuilding() {
-        val lockFreeSet = LockFreeSet<Int>()
+        val lockFreeSet = LockFreeSet<Int>(1)
         assertTrue(lockFreeSet.insertTimestamped(1).result) // 1
         assertTrue(lockFreeSet.insertTimestamped(5).result) // 1, 5
         assertTrue(lockFreeSet.insertTimestamped(0).result) // 0, 1, 5
@@ -71,7 +71,7 @@ class SequentialSetTest {
 
                 QueueLogger.clear()
 
-                val lockFreeSet = LockFreeSet<Int>()
+                val lockFreeSet = LockFreeSet<Int>(1)
                 val sequentialSet = SequentialSet<Int>()
                 testSequentialSet(
                     operationsPerTest = operationsPerTest, random = random,

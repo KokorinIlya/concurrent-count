@@ -14,7 +14,7 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
         fcSize: Int,
 ) : AbstractQueue<T> {
     protected val fcLock = ReentrantLock()
-    protected val fcArray = AtomicReferenceArray<Any?>(fcSize)
+    protected val fcArray = AtomicReferenceArray<T?>(fcSize)
 
     @Volatile
     protected var head: QueueNode<T>

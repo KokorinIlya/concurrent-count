@@ -21,8 +21,7 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
 
                     for (i in 0 until fcArray.length()) {
                         fcArray.get(i)?.let { otherValue ->
-                            @Suppress("UNCHECKED_CAST")
-                            pushWithLock(otherValue as T)
+                            pushWithLock(otherValue)
                             lazyAssert { fcArray.get(i) == otherValue }
                             fcArray.set(i, null)
                         }

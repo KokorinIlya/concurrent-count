@@ -14,41 +14,29 @@ class NonRootFcMichaelScottQueue<T : TimestampedValue>(
         var fcIndex = -1
         while (true) {
             if (fcLock.tryLock()) {
-                var result = false
                 try {
                     if (fcIndex == -1) {
-                        result = pushWithLock(value)
+                        pushWithLock(value)
                     }
 
                     for (i in 0 until fcArray.length()) {
                         fcArray.get(i)?.let { otherValue ->
-                            when (otherValue) {
-                                is TimestampedValue -> {
-                                    @Suppress("UNCHECKED_CAST")
-                                    val res = pushWithLock(otherValue as T)
-                                    fcArray.set(i, res)
-                                }
-                            }
+                            pushWithLock(otherValue)
+                            fcArray.set(i, null)
                         }
                     }
                 } finally {
                     fcLock.unlock()
                 }
 
-                if (fcIndex == -1) {
-                    return result
-                } else {
-                    @Suppress("UNCHECKED_CAST")
-                    return fcArray.getAndSet(fcIndex, null) as Boolean
-                }
+                return false // not correct, but result is not used
             } else if (fcIndex == -1) {
                 val index = ThreadLocalRandom.current().nextInt(fcArray.length())
                 if (fcArray.compareAndSet(index, null, value)) {
                     fcIndex = index
                 }
             } else if (fcArray.get(fcIndex) != value) {
-                @Suppress("UNCHECKED_CAST")
-                return fcArray.getAndSet(fcIndex, null) as Boolean
+                return false // not correct, but result is not used
             }
 
             Thread.yield()

@@ -55,7 +55,7 @@ class InnerNode<T : Comparable<T>> private constructor(
             depth: Int,
         ): InnerNode<T> {
             val fcSize = tree.threadsCount shr depth
-            val queue: NonRootQueue<Descriptor<T>> = if (fcSize > 0) {
+            val queue: NonRootQueue<Descriptor<T>> = if (fcSize > 4) {
                 NonRootFcMichaelScottQueue(initValue = DummyDescriptor(timestamp), fcSize = fcSize)
             } else {
                 NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))

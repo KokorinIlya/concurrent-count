@@ -53,12 +53,11 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
             val nextHead = curHead.next ?: return false
 
             lazyAssert { nextHead.data.timestamp >= timestamp }
-            if (nextHead.data.timestamp > timestamp) {
-                return false
-            } else if (headUpdater.compareAndSet(this, curHead, nextHead)) {
-                return true
+            return if (nextHead.data.timestamp > timestamp) {
+                false
+            } else {
+                headUpdater.compareAndSet(this, curHead, nextHead)
             }
-
         }
     }
 

@@ -8,7 +8,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 class RootFcMichaelScottQueue<T : TimestampedValue>(
     initValue: T,
-    fcSize: Int = 32,
+    fcSize: Int,
 ) : RootQueue<T>, AbstractFcMichaelScottQueue<T>(initValue, fcSize) {
     override fun pushAndAcquireTimestamp(value: T): Long {
         var fcIndex = -1

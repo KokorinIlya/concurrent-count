@@ -30,7 +30,7 @@ class LockFreeSet<T : Comparable<T>>(
 //            queue = RootLockFreeQueue(initDescriptor),
 //            queue = RootCircularBufferQueue(),
 //            queue = RootFcQueue(RootLockFreeQueue(initDescriptor), fcSize = 32),
-            queue = RootFcMichaelScottQueue(initDescriptor),
+            queue = RootFcMichaelScottQueue(initDescriptor, fcSize = threadsCount),
             root = EmptyNode(tree = this, creationTimestamp = initDescriptor.timestamp),
             id = nodeIdAllocator.allocateId()
         )

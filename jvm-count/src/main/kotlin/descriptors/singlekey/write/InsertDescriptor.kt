@@ -3,7 +3,7 @@ package descriptors.singlekey.write
 import allocation.IdAllocator
 import common.lazyAssert
 import descriptors.DummyDescriptor
-import queue.array.NonRootArrayQueue
+import queue.ms.NonRootLockFreeQueue
 import result.SingleKeyWriteOperationResult
 import tree.*
 
@@ -46,9 +46,9 @@ class InsertDescriptor<T : Comparable<T>>(
                 @Suppress("RemoveExplicitTypeArguments")
                 val innerNode = InnerNode<T>(
                     tree = tree,
-//                    queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(timestamp)),
+                    queue = NonRootLockFreeQueue(initValue = DummyDescriptor<T>(timestamp)),
 //                    queue = NonRootCircularBufferQueue(creationTimestamp = timestamp),
-                    queue = NonRootArrayQueue(initValue = DummyDescriptor<T>(timestamp)),
+//                    queue = NonRootArrayQueue(initValue = DummyDescriptor<T>(timestamp)),
                     id = nodeIdAllocator.allocateId(),
                     initialSize = 2,
                     left = leftChild,

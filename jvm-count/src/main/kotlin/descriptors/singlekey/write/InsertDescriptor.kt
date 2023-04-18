@@ -41,7 +41,6 @@ class InsertDescriptor<T : Comparable<T>>(
 
                 val tree = child.tree
 
-                @Suppress("RemoveExplicitTypeArguments")
                 val innerNode = InnerNode.new(
                     tree = tree,
                     left = leftChild,
@@ -49,7 +48,7 @@ class InsertDescriptor<T : Comparable<T>>(
                     id = nodeIdAllocator.allocateId(),
                     timestamp = timestamp,
                     initialSize = 2,
-//                    rightSubtreeMin = rightChild.key!!
+//                    rightSubtreeMin = rightChild.key,
                     rightSubtreeMin = tree.average(leftChild.key, rightChild.key),
                     depth = curNode.depth + 1
                 )

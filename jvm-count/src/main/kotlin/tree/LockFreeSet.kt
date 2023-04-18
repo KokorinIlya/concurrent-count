@@ -4,6 +4,7 @@ import allocation.IdAllocator
 import allocation.SequentialIdAllocator
 import common.CountLinearizableSet
 import common.CountSet
+import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import descriptors.singlekey.ExistsDescriptor
 import descriptors.singlekey.write.DeleteDescriptor
@@ -11,12 +12,14 @@ import descriptors.singlekey.write.InsertDescriptor
 import initiator.count.doCount
 import initiator.singlekey.doWaitFreeContains
 import initiator.singlekey.executeSingleKeyOperation
+import queue.common.RootQueue
 import queue.fc.ms.RootFcMichaelScottQueue
+import queue.ms.RootLockFreeQueue
 import result.TimestampLinearizedResult
 
 class LockFreeSet<T : Comparable<T>>(
-    val threadsCount: Int,
-    val average: (T, T) -> T = { _, x -> x },
+        val threadsCount: Int,
+        val average: (T, T) -> T = { _, x -> x },
 ) : CountSet<T>, CountLinearizableSet<T> {
     private val nodeIdAllocator: IdAllocator = SequentialIdAllocator()
     val root: RootNode<T>
@@ -25,13 +28,19 @@ class LockFreeSet<T : Comparable<T>>(
         check(threadsCount > 0) { "threadsCount must be positive" }
 
         val initDescriptor = DummyDescriptor<T>(0L)
+        val queue: RootQueue<Descriptor<T>> = if (threadsCount > 4) {
+            RootFcMichaelScottQueue(initDescriptor, fcSize = threadsCount)
+        } else {
+            RootLockFreeQueue(initDescriptor)
+        }
         @Suppress("RemoveExplicitTypeArguments")
         root = RootNode<T>(
 //            queue = RootLockFreeQueue(initDescriptor),
 //            queue = RootCircularBufferQueue(),
 //            queue = RootFcQueue(RootLockFreeQueue(initDescriptor), fcSize = 32),
-            queue = RootFcMichaelScottQueue(initDescriptor, fcSize = threadsCount),
-            root = EmptyNode(tree = this, creationTimestamp = initDescriptor.timestamp),
+//            queue = RootFcMichaelScottQueue(initDescriptor, fcSize = threadsCount),
+            queue = queue,
+            root = EmptyNode (tree = this, creationTimestamp = initDescriptor.timestamp),
             id = nodeIdAllocator.allocateId()
         )
     }

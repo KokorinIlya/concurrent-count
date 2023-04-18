@@ -46,11 +46,13 @@ class NonRootFcMichaelScottQueue<T : TimestampedValue>(
     private fun pushWithLock(value: T): Boolean {
         lazyAssert { fcLock.isHeldByCurrentThread }
 
-        return if (tail.data.timestamp >= value.timestamp) {
+        val curTail = tail
+
+        return if (curTail.data.timestamp >= value.timestamp) {
             false
         } else {
             val newTail = QueueNode(data = value, next = null)
-            tail.next = newTail
+            curTail.next = newTail
             tail = newTail
             true
         }

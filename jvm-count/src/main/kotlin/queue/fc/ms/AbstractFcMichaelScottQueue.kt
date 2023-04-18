@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import java.util.concurrent.locks.ReentrantLock
 
 abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
-        initValue: T,
-        fcSize: Int,
+    initValue: T,
+    fcSize: Int,
 ) : AbstractQueue<T> {
     protected val fcLock = ReentrantLock()
     protected val fcArray = AtomicReferenceArray<T?>(fcSize)
@@ -25,9 +25,9 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
     companion object {
         @Suppress("HasPlatformType")
         val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                AbstractFcMichaelScottQueue::class.java,
-                QueueNode::class.java,
-                "head"
+            AbstractFcMichaelScottQueue::class.java,
+            QueueNode::class.java,
+            "head"
         )
     }
 

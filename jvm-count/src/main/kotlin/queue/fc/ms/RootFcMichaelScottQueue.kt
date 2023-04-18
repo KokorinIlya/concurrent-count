@@ -52,12 +52,13 @@ class RootFcMichaelScottQueue<T : TimestampedValue>(
         lazyAssert { fcLock.isHeldByCurrentThread }
 
         val newTail = QueueNode(data = value, next = null)
+        val curTail = tail
 
-        val maxTimestamp = tail.data.timestamp
+        val maxTimestamp = curTail.data.timestamp
         val newTimestamp = maxTimestamp + 1
         value.timestamp = newTimestamp
 
-        tail.next = newTail
+        curTail.next = newTail
         tail = newTail
         return newTimestamp
     }

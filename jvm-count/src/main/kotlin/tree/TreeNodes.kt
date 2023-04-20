@@ -4,7 +4,6 @@ import common.lazyAssert
 import descriptors.Descriptor
 import descriptors.DummyDescriptor
 import queue.common.NonRootQueue
-import queue.fc.ms.NonRootFcMichaelScottQueue
 import queue.ms.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
@@ -54,12 +53,7 @@ class InnerNode<T : Comparable<T>> private constructor(
             initialSize: Int,
             depth: Int,
         ): InnerNode<T> {
-            val fcSize = tree.threadsCount shr depth
-            val queue: NonRootQueue<Descriptor<T>> = if (fcSize > 4) {
-                NonRootFcMichaelScottQueue(initValue = DummyDescriptor(timestamp), fcSize = fcSize)
-            } else {
-                NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))
-            }
+            val queue: NonRootQueue<Descriptor<T>> = NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))
             return InnerNode(
                 tree = tree,
                 left = left,

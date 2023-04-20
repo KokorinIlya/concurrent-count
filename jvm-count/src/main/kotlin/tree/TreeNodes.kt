@@ -3,6 +3,8 @@ package tree
 import common.lazyAssert
 import descriptors.Descriptor
 import descriptors.DummyDescriptor
+import lock.AbstractBackoffLock
+import lock.BackoffLock
 import queue.common.NonRootQueue
 import queue.ms.NonRootLockFreeQueue
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -39,6 +41,7 @@ class InnerNode<T : Comparable<T>> private constructor(
     val rightSubtreeMin: T,
     val id: Long,
     val initialSize: Int,
+    val lock: AbstractBackoffLock?,
     override val queue: NonRootQueue<Descriptor<T>>,
     override val depth: Int,
 ) : TreeNode<T>(), ParentNode<T> {
@@ -54,6 +57,7 @@ class InnerNode<T : Comparable<T>> private constructor(
             depth: Int,
         ): InnerNode<T> {
             val queue: NonRootQueue<Descriptor<T>> = NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))
+            val lock = if (depth == 0) BackoffLock() else null
             return InnerNode(
                 tree = tree,
                 left = left,
@@ -66,6 +70,7 @@ class InnerNode<T : Comparable<T>> private constructor(
                 rightSubtreeMin = rightSubtreeMin,
                 id = id,
                 initialSize = initialSize,
+                lock = lock,
                 queue = queue,
                 depth = depth,
             )
@@ -89,13 +94,18 @@ class InnerNode<T : Comparable<T>> private constructor(
     }
 
     fun executeUntilTimestamp(timestamp: Long?) {
-        while (true) {
-            val curDescriptor = queue.peek() ?: return
-            if (timestamp != null && curDescriptor.timestamp > timestamp) {
-                return
+        lock?.lock()
+        try {
+            while (true) {
+                val curDescriptor = queue.peek() ?: return
+                if (timestamp != null && curDescriptor.timestamp > timestamp) {
+                    return
+                }
+                curDescriptor.processInnerNode(this)
+                queue.popIf(curDescriptor.timestamp)
             }
-            curDescriptor.processInnerNode(this)
-            queue.popIf(curDescriptor.timestamp)
+        } finally {
+            lock?.unlock()
         }
     }
 

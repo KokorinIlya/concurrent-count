@@ -1,7 +1,6 @@
 package bench.set
 
 import common.lazyAssert
-import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
 import tree.LockFreeSet
@@ -42,20 +41,17 @@ open class FullBenchmark {
     }
 
     @Benchmark
-    fun test(threadParams: ThreadParams) {
-        AffinityLock.acquireLock(threadParams.threadIndex - 1).use {
-            val x = ThreadLocalRandom.current().nextLong()
-            when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
-                INSERT -> set.insert(x)
-                DELETE -> set.delete(x)
-                CONTAINS -> set.contains(x)
-                COUNT -> {
-                    val y = ThreadLocalRandom.current().nextLong()
-                    set.count(min(x, y), max(x, y))
-                }
-
-                else -> throw AssertionError("Unknown operation")
+    fun test() {
+        val x = ThreadLocalRandom.current().nextLong()
+        when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
+            INSERT -> set.insert(x)
+            DELETE -> set.delete(x)
+            CONTAINS -> set.contains(x)
+            COUNT -> {
+                val y = ThreadLocalRandom.current().nextLong()
+                set.count(min(x, y), max(x, y))
             }
+            else -> throw AssertionError("Unknown operation")
         }
     }
 

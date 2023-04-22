@@ -1,9 +1,7 @@
 package bench.treap
 
 import common.lazyAssert
-import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
-import org.openjdk.jmh.infra.ThreadParams
 import rivals.treap.concurrent.LockTreap
 import rivals.treap.modifiable.ModifiableTreap
 import java.util.concurrent.ThreadLocalRandom
@@ -39,15 +37,13 @@ open class NoCountBenchmark {
     }
 
     @Benchmark
-    fun test(threadParams: ThreadParams) {
-        AffinityLock.acquireLock(threadParams.threadIndex - 1).use {
-            val x = ThreadLocalRandom.current().nextLong()
-            when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
-                INSERT -> set.insert(x)
-                DELETE -> set.delete(x)
-                CONTAINS -> set.contains(x)
-                else -> throw AssertionError("Unknown operation")
-            }
+    fun test() {
+        val x = ThreadLocalRandom.current().nextLong()
+        when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
+            INSERT -> set.insert(x)
+            DELETE -> set.delete(x)
+            CONTAINS -> set.contains(x)
+            else -> throw AssertionError("Unknown operation")
         }
     }
 

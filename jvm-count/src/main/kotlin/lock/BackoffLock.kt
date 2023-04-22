@@ -1,6 +1,5 @@
 package lock
 
-import common.lazyAssert
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 
 class BackoffLock(
@@ -25,7 +24,6 @@ class BackoffLock(
     override fun tryLock(): Boolean = lockedUpdater.compareAndSet(this, UNLOCKED, LOCKED)
 
     override fun unlock() {
-        lazyAssert { locked == LOCKED }
         locked = UNLOCKED
     }
 }

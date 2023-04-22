@@ -1,7 +1,6 @@
 package bench.set
 
 import common.lazyAssert
-import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
 import tree.LockFreeSet
@@ -46,14 +45,12 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    fun test(threadParams: ThreadParams): Boolean {
-        AffinityLock.acquireLock(threadParams.threadIndex - 1).use {
-            val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
-            return if (ThreadLocalRandom.current().nextBoolean()) {
-                set.insert(key)
-            } else {
-                set.delete(key)
-            }
+    fun test(): Boolean {
+        val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
+        return if (ThreadLocalRandom.current().nextBoolean()) {
+            set.insert(key)
+        } else {
+            set.delete(key)
         }
     }
 }

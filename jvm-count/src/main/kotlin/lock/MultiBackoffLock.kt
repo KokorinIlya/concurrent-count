@@ -1,5 +1,6 @@
 package lock
 
+import common.lazyAssert
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 
 class MultiBackoffLock(
@@ -25,6 +26,7 @@ class MultiBackoffLock(
     }
 
     override fun unlock() {
-        counterUpdater.decrementAndGet(this)
+        val newCounter = counterUpdater.decrementAndGet(this)
+        lazyAssert { newCounter in 0 until maxThreads }
     }
 }

@@ -1,6 +1,7 @@
 package bench.set
 
 import common.lazyAssert
+import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
 import tree.LockFreeSet
@@ -40,9 +41,11 @@ open class SuccessfulInsertBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
-        val x = ThreadLocalRandom.current().nextLong()
-        // TODO: Is it really always successful? Why?
-        return set.insert(x)
+    fun test(threadParams: ThreadParams): Boolean {
+        AffinityLock.acquireLock(threadParams.threadIndex - 1).use {
+            val x = ThreadLocalRandom.current().nextLong()
+            // TODO: Is it really always successful? Why?
+            return set.insert(x)
+        }
     }
 }

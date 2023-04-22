@@ -1,7 +1,9 @@
 package bench.universal
 
 import common.lazyAssert
+import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
+import org.openjdk.jmh.infra.ThreadParams
 import rivals.treap.concurrent.UniversalConstructionTreap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.TimeUnit
@@ -38,9 +40,11 @@ open class CountBenchmark {
     }
 
     @Benchmark
-    fun test(): Int {
-        val x = ThreadLocalRandom.current().nextLong()
-        val y = ThreadLocalRandom.current().nextLong()
-        return set.count(min(x, y), max(x, y))
+    fun test(threadParams: ThreadParams): Int {
+        AffinityLock.acquireLock(threadParams.threadIndex - 1).use {
+            val x = ThreadLocalRandom.current().nextLong()
+            val y = ThreadLocalRandom.current().nextLong()
+            return set.count(min(x, y), max(x, y))
+        }
     }
 }

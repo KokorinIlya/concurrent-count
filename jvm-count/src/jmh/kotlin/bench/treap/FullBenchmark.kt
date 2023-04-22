@@ -1,5 +1,6 @@
 package bench.treap
 
+import bench.state.AffinityLockThreadState
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.LockTreap
@@ -39,7 +40,7 @@ open class FullBenchmark {
     }
 
     @Benchmark
-    fun test() {
+    fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState) {
         val x = ThreadLocalRandom.current().nextLong()
         when (ThreadLocalRandom.current().nextInt(OPERATIONS)) {
             INSERT -> set.insert(x)

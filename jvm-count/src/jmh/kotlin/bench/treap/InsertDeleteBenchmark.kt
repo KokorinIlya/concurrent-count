@@ -1,5 +1,6 @@
 package bench.treap
 
+import bench.state.AffinityLockThreadState
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.LockTreap
@@ -42,7 +43,7 @@ open class InsertDeleteBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState): Boolean {
         val key = ThreadLocalRandom.current().nextLong(leftBorder, rightBorder)
         return if (ThreadLocalRandom.current().nextBoolean()) {
             set.insert(key)

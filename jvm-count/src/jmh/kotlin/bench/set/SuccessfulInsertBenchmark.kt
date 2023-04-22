@@ -1,5 +1,6 @@
 package bench.set
 
+import bench.state.AffinityLockThreadState
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
@@ -40,7 +41,7 @@ open class SuccessfulInsertBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
         // TODO: Is it really always successful? Why?
         return set.insert(x)

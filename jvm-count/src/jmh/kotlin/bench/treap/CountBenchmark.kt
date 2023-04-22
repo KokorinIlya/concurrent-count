@@ -1,5 +1,6 @@
 package bench.treap
 
+import bench.state.AffinityLockThreadState
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.LockTreap
@@ -39,7 +40,7 @@ open class CountBenchmark {
     }
 
     @Benchmark
-    fun test(): Int {
+    fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState): Int {
         val x = ThreadLocalRandom.current().nextLong()
         val y = ThreadLocalRandom.current().nextLong()
         return set.count(min(x, y), max(x, y))

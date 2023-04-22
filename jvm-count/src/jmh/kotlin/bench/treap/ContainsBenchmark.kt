@@ -1,5 +1,6 @@
 package bench.treap
 
+import bench.state.AffinityLockThreadState
 import common.lazyAssert
 import org.openjdk.jmh.annotations.*
 import rivals.treap.concurrent.LockTreap
@@ -37,7 +38,7 @@ open class ContainsBenchmark {
     }
 
     @Benchmark
-    fun test(): Boolean {
+    fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState): Boolean {
         val x = ThreadLocalRandom.current().nextLong()
         return set.contains(x)
     }

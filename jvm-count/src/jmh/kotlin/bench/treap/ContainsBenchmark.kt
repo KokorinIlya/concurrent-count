@@ -37,6 +37,11 @@ open class ContainsBenchmark {
         set = newSet
     }
 
+    @TearDown(Level.Iteration)
+    fun tearDown() {
+        System.gc()
+    }
+
     @Benchmark
     fun test(@Suppress("UNUSED_PARAMETER") affinity: AffinityLockThreadState): Boolean {
         val x = ThreadLocalRandom.current().nextLong()

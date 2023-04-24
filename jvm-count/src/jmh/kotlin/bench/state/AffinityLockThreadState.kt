@@ -1,12 +1,20 @@
 package bench.state
 
+import net.openhft.affinity.AffinityLock
 import org.openjdk.jmh.annotations.*
 import org.openjdk.jmh.infra.ThreadParams
 
 @State(Scope.Thread)
-class AffinityLockThreadState {
-    @Setup(Level.Trial)
-    fun setup(threadParams: ThreadParams, benchmarkState: AffinityLockBenchmarkState) {
-        benchmarkState.bind(threadParams.threadIndex)
+open class AffinityLockThreadState {
+    private lateinit var affinityLock: AffinityLock
+
+    @Setup(Level.Iteration)
+    fun init(threadParams: ThreadParams) {
+        affinityLock = AffinityLock.acquireLock(threadParams.threadIndex + 1)
+    }
+
+    @TearDown(Level.Iteration)
+    fun tearDown() {
+        affinityLock.close()
     }
 }

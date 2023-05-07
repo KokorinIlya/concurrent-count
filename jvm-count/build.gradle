@@ -24,7 +24,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:lincheck:2.9'
     implementation 'net.openhft:affinity:3.23.3'
     implementation 'org.slf4j:slf4j-api:2.0.7'
-    implementation 'org.slf4j:slf4j-simple:2.0.7'
+    implementation 'org.slf4j:slf4j-log4j12:2.0.7'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }

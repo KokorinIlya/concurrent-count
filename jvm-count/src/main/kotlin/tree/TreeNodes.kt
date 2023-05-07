@@ -57,7 +57,8 @@ class InnerNode<T : Comparable<T>> private constructor(
             depth: Int,
         ): InnerNode<T> {
             val queue: NonRootQueue<Descriptor<T>> = NonRootLockFreeQueue(initValue = DummyDescriptor(timestamp))
-            val lock = if (depth == 0) BackoffLock() else null
+            val lock = BackoffLock(200, 8, 100_000)
+
             return InnerNode(
                 tree = tree,
                 left = left,

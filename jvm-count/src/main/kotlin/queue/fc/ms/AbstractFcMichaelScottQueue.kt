@@ -23,13 +23,17 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
     @Volatile
     protected var tail: QueueNode<T>
 
-    companion object {
+    protected companion object {
         @Suppress("HasPlatformType")
         val headUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractFcMichaelScottQueue::class.java,
             QueueNode::class.java,
             "head"
         )
+
+        val INIT_BACKOFF = 10
+        val MAX_BACKOFF = 1000
+        val BACKOFF_MULTIPLIER = 2
     }
 
     init {
@@ -63,6 +67,8 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
     }
 
     protected inline fun flatCombining(value: T, action: (T) -> Unit) {
+        var backoff = INIT_BACKOFF
+
         var fcIndex = -1
         while (true) {
             if (fcLock.tryLock()) {
@@ -90,7 +96,10 @@ abstract class AbstractFcMichaelScottQueue<T : TimestampedValue>(
                 break
             }
 
-            Thread.yield()
+            for (i in 0 until backoff) {
+                Thread.onSpinWait()
+            }
+            backoff = minOf(backoff * BACKOFF_MULTIPLIER, MAX_BACKOFF)
         }
     }
 
